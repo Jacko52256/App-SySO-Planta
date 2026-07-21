@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión SySO - Planta Industrial</title>
+    <!-- Librerías de Escaneo y Generación QR -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; --success: #28a745; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+        
+        .header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 20px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
+        input:disabled { background: #e9ecef; font-weight: bold;}
+        
+        .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--accent); color: #000; }
+        .btn-danger { background: var(--danger); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        
+        #canvasFirma { border: 2px dashed #ccc; border-radius: 6px; width: 100%; height: 150px; background: #fff; touch-action: none; }
+        #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
+        #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .view { display: none; }
+        .view.active { display: block; }
+        .hidden { display: none !important; }
+        
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
+        .tab-btn { background: none; border: none; color: white; font-weight: bold; opacity: 0.7; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 12px;}
+        .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Auditoría SySO</h2>
+        <p id="headerInfo">Autenticación Requerida</p>
+    </div>
+
+    <!-- VISTA 1: LOGIN -->
+    <div id="view-login" class="view active">
+        <div class="card">
+            <h3>Perfil de Brigada</h3>
+            <div class="form-group" style="margin-top:15px;">
+                <label>Inspector ID:</label>
+                <input type="text" id="idInspector" placeholder="Ej. Jack / J. Casaccia">
+            </div>
+            <div class="form-group">
+                <label>Grupo Operativo:</label>
+                <select id="grupoBrigada">
+                    <option value="Combate">Combate (Extintores/Hidrantes)</option>
+                    <option value="PA">Primeros Auxilios (Botiquines)</option>
+                    <option value="Evacuacion">Evacuación (Salidas/Luces)</option>
+                    <option value="Mantenimiento">Mantenimiento (Tableros/LOTO)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="iniciarSesion()">Iniciar Recorrido</button>
+        </div>
+    </div>
+
+    <!-- VISTA 2: INSPECCIÓN -->
+    <div id="view-inspeccion" class="view">
+        <div class="card">
+            <div class="form-group">
+                <label>ID de Equipo (Autocompletado):</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="idEquipo" placeholder="Escanear QR ->" style="flex:1;" disabled>
+                    <button class="btn btn-warning" style="width:auto; padding:0 20px;" onclick="activarQR()">📷 Escanear QR</button>
+                </div>
+            </div>
+            <div id="qr-reader"></div>
+            
+            <div class="form-group">
+                <label>Sección / Ubicación (Automático):</label>
+                <input type="text" id="seccionEquipo" disabled placeholder="Esperando escaneo...">
+            </div>
+
+            <hr style="margin:15px 0;">
+            <div id="moduloDinamico" class="hidden"></div>
+            
+            <div class="form-group" style="margin-top:15px;">
+                <label>Observaciones (Opcional):</label>
+                <textarea id="observaciones" placeholder="Novedades..."></textarea>
+            </div>
+
+            <label style="color:var(--danger);">Firma del Inspector (Obligatoria):</label>
+            <canvas id="canvasFirma"></canvas>
+            <button class="btn btn-outline" style="margin-bottom:15px;" onclick="limpiarFirma()">Borrar Firma</button>
+            <button class="btn btn-success" onclick="guardarRegistro()">Guardar Control</button>
+        </div>
+    </div>
+
+    <!-- VISTA 3: GENERADOR QR (ADMIN) -->
+    <div id="view-qr" class="view">
+        <div class="card">
+            <h3 style="color: var(--primary); margin-bottom: 10px;">Alta de Nuevo Equipo</h3>
+            <p style="font-size: 13px; margin-bottom: 15px;">Genera la etiqueta y guarda el equipo en la memoria maestra simultáneamente.</p>
+            
+            <div class="form-group">
+                <label>ID Asignado (Ej. EXT-080):</label>
+                <input type="text" id="qrId" placeholder="Código Único">
+            </div>
+            <div class="form-group">
+                <label>Tipo de Equipo / Capacidad:</label>
+                <input type="text" id="qrTipo" placeholder="Ej. PQS 6KG / Tablero Principal">
+            </div>
+            <div class="form-group">
+                <label>Sección de la Planta:</label>
+                <select id="qrSeccion">
+                    <option value="Silos">Silos</option>
+                    <option value="Báscula">Báscula</option>
+                    <option value="Laboratorio">Laboratorio</option>
+                    <option value="Calderas">Calderas</option>
+                    <option value="Recepción">Recepción</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grupo Responsable:</label>
+                <select id="qrGrupo">
+                    <option value="Combate">Combate</option>
+                    <option value="PA">Primeros Auxilios</option>
+                    <option value="Evacuacion">Evacuación</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-warning" onclick="generarYGuardarQR()">Generar Etiqueta & Guardar</button>
+            
+            <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px;">
+                <canvas id="qrGenerado"></canvas>
+                <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
+                <button class="btn btn-outline" onclick="descargarQR()">Descargar QR (Para Imprimir)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA 4: ADMIN / EXPORTACIÓN -->
+    <div id="view-admin" class="view">
+        <div class="card">
+            <h3 style="margin-bottom: 10px;">Cierre de Mes</h3>
+            <button class="btn btn-primary" onclick="exportarCSV()">1. Exportar Sábana (CSV)</button>
+            <button class="btn btn-success" onclick="exportarEvidencias()">2. Exportar Firmas (HTML)</button>
+            <button class="btn btn-danger" style="margin-top:20px;" onclick="purgar()">Purgar App (Nuevo Mes)</button>
+        </div>
+    </div>
+
+    <!-- NAVEGACIÓN INFERIOR -->
+    <div class="tab-bar hidden" id="menuNavegacion">
+        <button class="tab-btn active" onclick="nav('inspeccion', this)">📋<br>Inspección</button>
+        <button class="tab-btn" onclick="nav('qr', this)">🖨️<br>Alta QR</button>
+        <button class="tab-btn" onclick="nav('admin', this)">💾<br>Exportar</button>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'SySO_V3_Datos';
+        const MASTER_KEY = 'SySO_BaseMaestra';
+        let inspectorActual = ''; let grupoActual = '';
+        let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
+
+        // --- SISTEMA DE FIRMA ---
+        function initFirma() {
+            canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 150;
+            ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+            let dibujando = false;
+            
+            const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
+            const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
+            const detener = () => { dibujando = false; };
+            
+            const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+            const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+
+            canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
+            canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
+        }
+        function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
+
+        // --- NAVEGACIÓN Y LOGIN ---
+        function iniciarSesion() {
+            inspectorActual = document.getElementById('idInspector').value.trim();
+            grupoActual = document.getElementById('grupoBrigada').value;
+            if(!inspectorActual) return alert("Ingrese ID de Inspector.");
+            
+            document.getElementById('headerInfo').innerText = `${inspectorActual} | ${grupoActual}`;
+            document.getElementById('view-login').classList.remove('active');
+            document.getElementById('menuNavegacion').classList.remove('hidden');
+            nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
+            
+            generarFormularioDinamico(); initFirma();
+        }
+
+        function nav(vista, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`view-${vista}`).classList.add('active');
+            btn.classList.add('active');
+            if(vista === 'inspeccion' && !canvas) initFirma();
+        }
+
+        // --- GENERADOR QR Y BASE MAESTRA ---
+        function generarYGuardarQR() {
+            const id = document.getElementById('qrId').value.trim().toUpperCase();
+            const tipo = document.getElementById('qrTipo').value.trim();
+            const seccion = document.getElementById('qrSeccion').value;
+            const grupo = document.getElementById('qrGrupo').value;
+
+            if(!id || !tipo) return alert("Completá el ID y el Tipo de Equipo.");
+
+            // 1. Guardar en Base Maestra Local
+            let base = JSON.parse(localStorage.getItem(MASTER_KEY) || '{}');
+            base[id] = { tipo: tipo, seccion: seccion, grupo: grupo };
+            localStorage.setItem(MASTER_KEY, JSON.stringify(base));
+
+            // 2. Dibujar QR
+            if(!qriousObj) {
+                qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
+            }
+            qriousObj.value = id;
+            
+            document.getElementById('lblQR').innerText = `${id} - ${tipo} (${seccion})`;
+            document.getElementById('zonaQR').classList.remove('hidden');
+            alert(`Equipo ${id} registrado en la Base Maestra de la App y QR Generado.`);
+        }
+
+        function descargarQR() {
+            const canvasQR = document.getElementById('qrGenerado');
+            const id = document.getElementById('qrId').value.trim().toUpperCase();
+            const link = document.createElement('a');
+            link.download = `QR_${id}.png`;
+            link.href = canvasQR.toDataURL("image/png");
+            link.click();
+        }
+
+        // --- ESCÁNER QR E INSPECCIÓN ---
+        function activarQR() {
+            document.getElementById('qr-reader').style.display = 'block';
+            html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    html5QrcodeScanner.stop();
+                    document.getElementById('qr-reader').style.display = 'none';
+                    if (navigator.vibrate) navigator.vibrate(200); // Haptic feedback
+                    procesarEscaneo(decodedText);
+                }
+            ).catch(err => alert("Permití el acceso a la cámara."));
+        }
+
+        function procesarEscaneo(codigoLeido) {
+            const id = codigoLeido.toUpperCase();
+            document.getElementById('idEquipo').value = id;
+            
+            let base = JSON.parse(localStorage.getItem(MASTER_KEY) || '{}');
+            if(base[id]) {
+                if(base[id].grupo !== grupoActual) {
+                    alert(`Bloqueo de Perfil: Este equipo pertenece al grupo de ${base[id].grupo}. Tu perfil actual es ${grupoActual}.`);
+                    document.getElementById('idEquipo').value = '';
+                    return;
+                }
+                document.getElementById('seccionEquipo').value = `${base[id].seccion} (${base[id].tipo})`;
+            } else {
+                alert("Alerta: Equipo no encontrado en la Base Maestra. Pida al Jefe de Personal que genere el QR desde la app para registrarlo.");
+                document.getElementById('idEquipo').value = '';
+                document.getElementById('seccionEquipo').value = '';
+            }
+        }
+
+        function generarFormularioDinamico() {
+            const container = document.getElementById('moduloDinamico');
+            container.classList.remove('hidden');
+            let html = '';
+            
+            if(grupoActual === 'Combate') {
+                html = `
+                <div class="form-group"><label>Presión/Manómetro:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Despresurizado</option></select></div>
+                <div class="form-group"><label>Precinto y Traba:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Roto/Faltante</option></select></div>
+                <div class="form-group"><label>Estado Físico:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Dañado</option></select></div>`;
+            } else if(grupoActual === 'PA') {
+                html = `
+                <div class="form-group"><label>Inventario:</label><select id="chk1"><option value="OK">Completo</option><option value="Falla">Incompleto</option></select></div>
+                <div class="form-group"><label>Caducidad Fármacos:</label><select id="chk2"><option value="OK">Vigentes</option><option value="Falla">Vencidos</option></select></div>
+                <div class="form-group"><label>Higiene:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Contaminado</option></select></div>`;
+            } else if(grupoActual === 'Evacuacion') {
+                html = `
+                <div class="form-group"><label>Ruta de Evacuación:</label><select id="chk1"><option value="OK">Despejada</option><option value="Falla">Obstruida</option></select></div>
+                <div class="form-group"><label>Luz Emergencia:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
+                <div class="form-group"><label>Puertas/Barra:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Trancada</option></select></div>`;
+            } else if(grupoActual === 'Mantenimiento') {
+                html = `
+                <div class="form-group"><label>Candados LOTO:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Faltantes</option></select></div>
+                <div class="form-group"><label>Aislamiento:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Expuesto</option></select></div>
+                <div class="form-group"><label>Señalética:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Faltante</option></select></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function guardarRegistro() {
+            const id = document.getElementById('idEquipo').value;
+            const secc = document.getElementById('seccionEquipo').value;
+            if(!id || !secc) return alert("Escanee un equipo válido.");
+            if(firmaVacia) return alert("Firma obligatoria.");
+            
+            const registro = {
+                Fecha: new Date().toLocaleString('es-PY'), Inspector: inspectorActual, Grupo: grupoActual,
+                Seccion: secc, ID_Equipo: id,
+                Param_1: document.getElementById('chk1').value, Param_2: document.getElementById('chk2').value, Param_3: document.getElementById('chk3').value,
+                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " "),
+                Firma: canvas.toDataURL('image/png')
+            };
+
+            const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            db.push(registro); localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+            
+            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = '';
+            document.getElementById('chk1').value = 'OK'; document.getElementById('chk2').value = 'OK'; document.getElementById('chk3').value = 'OK';
+            document.getElementById('observaciones').value = ''; limpiarFirma();
+            
+            alert(`✅ Control guardado.`);
+        }
+
+        // --- EXPORTACIÓN Y CIERRE ---
+        function exportarCSV() {
+            const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if(!db.length) return alert("Sin datos.");
+            let csv = "Fecha;Inspector;Grupo;Seccion;ID_Equipo;Control_1;Control_2;Control_3;Observaciones\r\n";
+            db.forEach(r => { csv += `${r.Fecha};${r.Inspector};${r.Grupo};${r.Seccion};${r.ID_Equipo};${r.Param_1};${r.Param_2};${r.Param_3};${r.Observaciones}\r\n`; });
+            descargar(csv, 'text/csv', `Sabana_SySO_${Date.now()}.csv`);
+        }
+
+        function exportarEvidencias() {
+            const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if(!db.length) return alert("Sin datos.");
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial;} .card{border:1px solid #ccc; padding:10px; margin:10px; border-radius:5px;} img{max-height:100px; border:1px solid #000;}</style></head><body><h2>Firmas - Planta Industrial</h2>`;
+            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo} (${r.Seccion})</b></p><p>Inspector: ${r.Inspector} [${r.Grupo}]</p><img src="${r.Firma}"></div>`; });
+            html += `</body></html>`;
+            descargar(html, 'text/html', `Firmas_SySO_${Date.now()}.html`);
+        }
+
+        function descargar(contenido, tipo, nombre) {
+            const blob = new Blob([contenido], { type: `${tipo};charset=utf-8;` });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = nombre; link.click();
+        }
+        
+        function purgar() { if(confirm("¿Seguro? Se borrará el historial del mes. (La base maestra de QRs no se borrará)")) { localStorage.removeItem(STORAGE_KEY); alert("Historial purgado."); } }
+    </script>
+</body>
+</html>
