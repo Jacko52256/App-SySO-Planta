@@ -1,0 +1,17 @@
+{
+  "name": "SySO Planta Industrial",
+  "short_name": "App SySO V3",
+  "description": "Sistema de Trazabilidad de Brigadas y Generador QR",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#2F5597",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162814.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
