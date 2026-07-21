@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V4 - Planta Industrial</title>
+    <title>Gestión SySO V4.1 - Planta Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -51,7 +51,7 @@
         <p id="headerInfo">Sistema de Gestión Industrial</p>
     </div>
 
-    <!-- VISTA 0: BOOTSTRAP (Primera vez) -->
+    <!-- VISTA 0: BOOTSTRAP -->
     <div id="view-init" class="view">
         <div class="card">
             <h3 style="color:var(--danger); margin-bottom: 15px;">Sistema No Inicializado</h3>
@@ -147,7 +147,6 @@
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
             <h3>Sincronización (Token)</h3>
-            <p style="font-size: 12px; margin-bottom: 10px;">Genere el token para que los brigadistas clonen esta configuración.</p>
             <button class="btn btn-primary" onclick="generarToken()">Generar Token Maestro</button>
             <textarea id="txtTokenExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
         </div>
@@ -164,6 +163,16 @@
             </div>
             <button class="btn btn-success" style="margin-top:5px;" onclick="agregarUsuario()">+ Agregar Usuario</button>
             <div id="listaUsuarios" style="margin-top:15px; font-size:14px;"></div>
+        </div>
+
+        <!-- MÓDULO NUEVO: GESTIÓN DE GRUPOS -->
+        <div class="card">
+            <h3>Gestión de Grupos (Brigadas)</h3>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="nuevoGrupo" placeholder="Ej. Rescate Altura">
+                <button class="btn btn-success" style="width:60px;" onclick="agregarGrupo()">+</button>
+            </div>
+            <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
         <div class="card">
@@ -199,13 +208,14 @@
         let usuarioActual = null;
         let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
 
-        // --- ARRANQUE Y BOOTSTRAP ---
         document.addEventListener('DOMContentLoaded', () => {
             const rawConfig = localStorage.getItem(CFG_KEY);
             if (!rawConfig) {
                 document.getElementById('view-init').classList.add('active');
             } else {
                 config = JSON.parse(rawConfig);
+                // Migración de seguridad por si venían de versión anterior sin el array grupos
+                if(!config.grupos) config.grupos = ["Combate", "PA", "Evacuacion", "Mantenimiento", "Todos"];
                 prepararLogin();
             }
         });
@@ -227,12 +237,10 @@
 
         function guardarConfig() { localStorage.setItem(CFG_KEY, JSON.stringify(config)); }
 
-        // --- SINCRONIZACIÓN (TOKEN) ---
         function generarToken() {
             const tokenStr = btoa(encodeURIComponent(JSON.stringify(config)));
             const txt = document.getElementById('txtTokenExport');
-            txt.value = tokenStr;
-            txt.classList.remove('hidden');
+            txt.value = tokenStr; txt.classList.remove('hidden');
             txt.select(); document.execCommand('copy');
             alert("Token Copiado al portapapeles. Envíelo por WhatsApp a la brigada.");
         }
@@ -249,7 +257,6 @@
             } catch(e) { alert("Token Inválido o Corrupto."); }
         }
 
-        // --- LOGIN Y RBAC (Control de Roles) ---
         function prepararLogin() {
             const sel = document.getElementById('loginSelectUsuario');
             sel.innerHTML = '<option value="">Seleccione...</option>';
@@ -270,7 +277,6 @@
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`;
             document.getElementById('loginPin').value = '';
             
-            // RBAC: Mostrar/Ocultar funciones Admin
             const adminBtns = document.querySelectorAll('.admin-only');
             if(usuarioActual.rol === 'Admin') {
                 adminBtns.forEach(b => b.classList.remove('hidden'));
@@ -289,21 +295,20 @@
             prepararLogin();
         }
 
-        // --- GESTIÓN DINÁMICA DE ADMIN ---
         function poblarSelectsAdmin() {
-            // Panel Usuarios
             const selGrp = document.getElementById('nuevoUsuGrupo');
             selGrp.innerHTML = ''; config.grupos.forEach(g => selGrp.innerHTML += `<option value="${g}">${g}</option>`);
             
-            // Panel QRs
             const selSec = document.getElementById('qrSeccion');
             selSec.innerHTML = ''; config.secciones.forEach(s => selSec.innerHTML += `<option value="${s}">${s}</option>`);
+            
             const selGrpQR = document.getElementById('qrGrupo');
             selGrpQR.innerHTML = ''; config.grupos.filter(g => g!=='Todos').forEach(g => selGrpQR.innerHTML += `<option value="${g}">${g}</option>`);
             
             renderListas();
         }
 
+        // --- CRUD USUARIOS ---
         function agregarUsuario() {
             const nom = document.getElementById('nuevoUsuNombre').value.trim();
             const pin = document.getElementById('nuevoUsuPin').value.trim();
@@ -315,19 +320,36 @@
             guardarConfig(); renderListas();
             document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = '';
         }
-
         function borrarUsuario(id) {
             if(config.usuarios.length <= 1) return alert("No puede borrar el último usuario.");
             if(confirm("¿Borrar usuario?")) { config.usuarios = config.usuarios.filter(u => u.id !== id); guardarConfig(); renderListas(); }
         }
 
+        // --- CRUD GRUPOS ---
+        function agregarGrupo() {
+            const grp = document.getElementById('nuevoGrupo').value.trim();
+            if(!grp) return;
+            if(!config.grupos.includes(grp)) { 
+                config.grupos.push(grp); 
+                guardarConfig(); renderListas(); poblarSelectsAdmin(); 
+            }
+            document.getElementById('nuevoGrupo').value = '';
+        }
+        function borrarGrupo(grp) {
+            if(grp === 'Todos') return alert("Cortafuegos: El grupo 'Todos' es requerido por el sistema.");
+            if(confirm(`¿Borrar el grupo de brigada: ${grp}?`)) { 
+                config.grupos = config.grupos.filter(g => g !== grp); 
+                guardarConfig(); renderListas(); poblarSelectsAdmin(); 
+            }
+        }
+
+        // --- CRUD SECCIONES ---
         function agregarSeccion() {
             const sec = document.getElementById('nuevaSeccion').value.trim();
             if(!sec) return;
             if(!config.secciones.includes(sec)) { config.secciones.push(sec); guardarConfig(); renderListas(); poblarSelectsAdmin(); }
             document.getElementById('nuevaSeccion').value = '';
         }
-
         function borrarSeccion(sec) {
             if(confirm("¿Borrar sección?")) { config.secciones = config.secciones.filter(s => s !== sec); guardarConfig(); renderListas(); poblarSelectsAdmin(); }
         }
@@ -339,31 +361,35 @@
                 lstU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${badge}</span><button class="btn-danger btn-small" onclick="borrarUsuario(${u.id})">X</button></div>`;
             });
             
+            const lstG = document.getElementById('listaGrupos'); lstG.innerHTML = '';
+            config.grupos.forEach(g => {
+                if(g !== 'Todos') {
+                    lstG.innerHTML += `<div class="list-item"><span>${g}</span><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`;
+                }
+            });
+
             const lstS = document.getElementById('listaSecciones'); lstS.innerHTML = '';
             config.secciones.forEach(s => {
                 lstS.innerHTML += `<div class="list-item"><span>${s}</span><button class="btn-danger btn-small" onclick="borrarSeccion('${s}')">X</button></div>`;
             });
         }
 
-        // --- SISTEMA DE FIRMA ---
+        // --- FIRMA ---
         function initFirma() {
             canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
             const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 150;
             ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
             let dibujando = false;
-            
             const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
             const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
             const detener = () => { dibujando = false; };
             const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
             const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
-
             canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
             canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
         }
         function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
 
-        // --- NAVEGACIÓN ---
         function nav(vista, btn) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -373,7 +399,6 @@
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
         }
 
-        // --- ESCÁNER E INSPECCIÓN ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block';
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
@@ -392,15 +417,14 @@
             
             if(config.equipos[id]) {
                 const eq = config.equipos[id];
-                // RBAC: Si no es Admin y el equipo no es de su grupo, bloquear.
                 if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) {
-                    alert(`Bloqueo: Perfil ${usuarioActual.grupo} no autorizado para inspeccionar equipos de ${eq.grupo}.`);
+                    alert(`Bloqueo: Perfil ${usuarioActual.grupo} no autorizado para equipos de ${eq.grupo}.`);
                     document.getElementById('idEquipo').value = ''; return;
                 }
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`;
                 generarFormularioDinamico(eq.grupo);
             } else {
-                alert("Equipo no encontrado. Solicite a RRHH/Jefatura actualizar la Base Maestra.");
+                alert("Equipo no encontrado. Solicite actualizar Base.");
                 document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = '';
                 document.getElementById('moduloDinamico').classList.add('hidden');
             }
@@ -419,7 +443,6 @@
                         <div class="form-group"><label>Caducidad:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
                         <div class="form-group"><label>Higiene:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
             } else {
-                // Generico
                 html = `<div class="form-group"><label>Estado Gral:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
                         <div class="form-group"><label>Señalética:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
                         <div class="form-group"><label>Accesibilidad:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
@@ -450,7 +473,6 @@
             alert(`✅ Control guardado.`);
         }
 
-        // --- ALTA DE QR ---
         function generarYGuardarQR() {
             const id = document.getElementById('qrId').value.trim().toUpperCase();
             const tipo = document.getElementById('qrTipo').value.trim();
@@ -474,7 +496,6 @@
             link.href = document.getElementById('qrGenerado').toDataURL("image/png"); link.click();
         }
 
-        // --- EXPORTACIÓN ---
         function exportarCSV() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             if(!db.length) return alert("Sin datos.");
