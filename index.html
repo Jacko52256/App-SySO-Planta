@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.6 - Industrial</title>
+    <title>Gestión SySO V5.7 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -94,7 +94,7 @@
         </div>
     </div>
 
-    <!-- VISTA 2: INSPECCIÓN -->
+    <!-- VISTA 2: INSPECCIÓN (CON RADAR) -->
     <div id="view-inspeccion" class="view">
         <div class="card">
             <div class="form-group">
@@ -117,7 +117,7 @@
         </div>
     </div>
 
-    <!-- VISTA 3: ALTA QR (Admin) - PREFIJOS BLOQUEADOS -->
+    <!-- VISTA 3: ALTA QR (Admin) -->
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
@@ -128,7 +128,6 @@
             <div class="form-group">
                 <label>ID Único (Prefijo + Correlativo):</label>
                 <div style="display: flex; gap: 5px;">
-                    <!-- PREFIJO EN MODO SOLO LECTURA -->
                     <input type="text" id="qrPrefijo" readonly style="flex:1; text-align:right;">
                     <input type="number" id="qrNumero" placeholder="Ej. 080" style="flex:2;">
                 </div>
@@ -260,11 +259,7 @@
             if (!rawConfig) document.getElementById('view-init').classList.add('active');
             else { 
                 config = JSON.parse(rawConfig); 
-                // Migración Silenciosa de Prefijos (Para evitar colapso de bases viejas)
-                if(!config.prefijos) {
-                    config.prefijos = {};
-                    Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; });
-                }
+                if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
                 prepararLogin(); 
             }
         });
@@ -323,47 +318,30 @@
             const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
             const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
             const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
-            
-            actualizarPrefijoUI(); // Forzar la actualización del prefijo al cargar
-            renderListas();
+            actualizarPrefijoUI(); renderListas();
         }
 
-        // --- ENLACE DINÁMICO DE PREFIJO ---
         function actualizarPrefijoUI() {
-            const grpSelect = document.getElementById('qrGrupo');
-            const prefijoInput = document.getElementById('qrPrefijo');
-            if(grpSelect && grpSelect.value) {
-                prefijoInput.value = config.prefijos[grpSelect.value] || '';
-            }
+            const grpSelect = document.getElementById('qrGrupo'); const prefijoInput = document.getElementById('qrPrefijo');
+            if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; }
         }
 
-        // --- CRUD GRUPOS (CON PREFIJO) ---
+        // --- CRUD GRUPOS ---
         function cargarEdicionGrupo(nom) {
-            document.getElementById('nuevoGrupoNom').value = nom; 
-            document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || '';
-            document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
+            document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
             editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info');
         }
         function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarGrupo() {
-            const nom = document.getElementById('nuevoGrupoNom').value.trim(); 
-            const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); 
-            const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
-            if(!nom || !paramsStr || !pref) return alert("Faltan datos o el Prefijo está vacío.");
-            
-            const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
-            
+            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
+            if(!nom || !paramsStr || !pref) return alert("Faltan datos."); const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
             if(editGrupoNom) {
-                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nombre.");
+                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe.");
                 for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; }
                 config.usuarios.forEach(u => { if(u.grupo === editGrupoNom) u.grupo = nom; });
                 if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; }
             } else { if(config.grupos[nom]) return alert("El grupo ya existe."); }
-            
-            config.grupos[nom] = nuevosParams; 
-            config.prefijos[nom] = pref; // Guardado del prefijo en la Matriz
-            
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
+            config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
         }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
@@ -377,7 +355,6 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin();
         }
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        
         function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarSeccion() {
@@ -391,53 +368,26 @@
         }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD EQUIPOS (QR) CON AUTO-PREFIJO ---
+        // --- CRUD EQUIPOS ---
         function cargarEdicionQR(id) {
-            const eq = config.equipos[id]; if(!eq) return;
-            
-            document.getElementById('qrGrupo').value = eq.grupo;
-            const prefijoOficial = config.prefijos[eq.grupo] || '';
-            
+            const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || '';
             const match = id.match(/^(.*?)(\d+)$/);
-            if (match) {
-                document.getElementById('qrPrefijo').value = prefijoOficial; 
-                document.getElementById('qrNumero').value = match[2];  
-            } else {
-                document.getElementById('qrPrefijo').value = prefijoOficial;
-                document.getElementById('qrNumero').value = '';
-            }
-            
+            if (match) { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = match[2]; } 
+            else { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = ''; }
             document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
             editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden');
         }
-        function cancelarEdicionQR() { 
-            editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; 
-            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); 
-            actualizarPrefijoUI(); // Restaura el prefijo del select actual
-        }
-        
+        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
         function guardarQR() {
-            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase();
-            const numero = document.getElementById('qrNumero').value.trim();
-            const id = prefijo + numero;
+            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero;
             const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
-            
-            if(!id || !tipo || !numero) return alert("Número correlativo y Tipo son obligatorios");
-            
-            if(editQRId && id !== editQRId) {
-                if(config.equipos[id]) return alert("El nuevo ID correlativo ya está en uso en este grupo.");
-                delete config.equipos[editQRId];
-            }
-            
+            if(!id || !tipo || !numero) return alert("Faltan datos correlativos.");
+            if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); delete config.equipos[editQRId]; }
             config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
             qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
-            
-            editQRId = null; document.getElementById('qrNumero').value = ''; 
-            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning');
-            poblarAdmin();
+            editQRId = null; document.getElementById('qrNumero').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin();
         }
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
@@ -466,12 +416,40 @@
                 container.innerHTML = html;
             } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
+        
         function guardarRegistro() {
             const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
             params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
             const registro = { Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
-            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; alert(`✅ Guardado.`);
+            
+            // --- MOTOR DE NAVEGACIÓN SECUENCIAL (RADAR) ---
+            let mensajeRadar = "✅ Control Guardado exitosamente.";
+            const match = id.match(/^(.*?)(\d+)$/);
+            if(match) {
+                const prefijo = match[1];
+                const numeroActual = parseInt(match[2], 10);
+                const padding = match[2].length;
+                let proximoId = null; let proximoEq = null;
+
+                // Bucle de búsqueda (ventana de 50 saltos para sortear equipos dados de baja)
+                for(let i = 1; i <= 50; i++) {
+                    const nextNumStr = String(numeroActual + i).padStart(padding, '0');
+                    const testId = prefijo + nextNumStr;
+                    if(config.equipos[testId]) { proximoId = testId; proximoEq = config.equipos[testId]; break; }
+                }
+
+                if(proximoEq) {
+                    mensajeRadar += `\n\n📍 PRÓXIMO OBJETIVO EN RUTA:\n- Equipo: ${proximoId}\n- Ubicación: ${proximoEq.ubicacion || 'No especificada'}\n- Sección: ${proximoEq.seccion}`;
+                } else {
+                    mensajeRadar += `\n\n🏁 Fin de la ruta para el bloque ${prefijo}. No se detectaron más equipos correlativos activos en la base de datos.`;
+                }
+            }
+            
+            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; 
+            
+            // Despliegue del Radar
+            alert(mensajeRadar);
         }
 
         // --- SISTEMA DE CIERRE Y FIRMA (MODAL) ---
