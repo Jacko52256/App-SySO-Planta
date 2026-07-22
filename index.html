@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.4 - Industrial</title>
+    <title>Gestión SySO V5.6 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
-        input:disabled { background: #e9ecef; font-weight: bold; color:#555;}
+        input:disabled, input[readonly] { background: #e9ecef; font-weight: bold; color: var(--primary); border: 1px solid #ced4da; }
         
         .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: var(--primary); }
@@ -117,15 +117,26 @@
         </div>
     </div>
 
-    <!-- VISTA 3: ALTA QR (Admin) CON INVENTARIO EDITABLE -->
+    <!-- VISTA 3: ALTA QR (Admin) - PREFIJOS BLOQUEADOS -->
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
-            <div class="form-group"><label>ID Único (Ej. EXT-080):</label><input type="text" id="qrId"></div>
-            <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo"></div>
+            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo según el grupo. Tipeá solo el N° correlativo.</p>
+            
+            <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
+
+            <div class="form-group">
+                <label>ID Único (Prefijo + Correlativo):</label>
+                <div style="display: flex; gap: 5px;">
+                    <!-- PREFIJO EN MODO SOLO LECTURA -->
+                    <input type="text" id="qrPrefijo" readonly style="flex:1; text-align:right;">
+                    <input type="number" id="qrNumero" placeholder="Ej. 080" style="flex:2;">
+                </div>
+            </div>
+            
+            <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo" placeholder="Ej. PQS 5kg"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
             <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
-            <div class="form-group"><label>Grupo (Formulario):</label><select id="qrGrupo"></select></div>
             
             <div style="display:flex; gap:10px;">
                 <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
@@ -135,7 +146,7 @@
             <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid #eee;">
                 <canvas id="qrGenerado"></canvas>
                 <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
-                <button class="btn btn-outline" onclick="descargar(document.getElementById('qrGenerado').toDataURL('image/png'), 'image/png', 'QR_'+document.getElementById('qrId').value+'.png')">Descargar Etiqueta</button>
+                <button class="btn btn-outline" onclick="descargar(document.getElementById('qrGenerado').toDataURL('image/png'), 'image/png', 'QR_'+document.getElementById('qrPrefijo').value.toUpperCase()+document.getElementById('qrNumero').value+'.png')">Descargar Etiqueta</button>
             </div>
         </div>
         
@@ -156,9 +167,11 @@
         </div>
 
         <div class="card">
-            <h3>Grupos y Formularios</h3>
-            <input type="text" id="nuevoGrupoNom" placeholder="Nombre (Ej. Vehículos)" class="form-group">
-            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (separado por comas)" class="form-group">
+            <h3>Grupos y Formularios Estrictos</h3>
+            <p style="font-size: 11px; margin-bottom: 10px;">Define el prefijo oficial para bloquear errores de tipeo en terreno.</p>
+            <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Extintores)" class="form-group">
+            <input type="text" id="nuevoGrupoPrefijo" placeholder="Prefijo Oficial (Ej. EXT-)" class="form-group" style="border: 2px solid var(--primary);">
+            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite)" class="form-group">
             <div style="display:flex; gap:10px;">
                 <button id="btnGuardarGrupo" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarGrupo()">+ Guardar Grupo</button>
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionGrupo()">Cancelar</button>
@@ -226,27 +239,34 @@
         const CFG_KEY = 'SySO_V5_Config';
         const DB_KEY = 'SySO_V5_Data';
         
-        let config = { usuarios: [], secciones: [], equipos: {}, grupos: { "Combate": ["Presión", "Precinto", "Estado Físico"], "PA": ["Insumos", "Caducidad", "Higiene"], "Todos": [] } };
+        let config = { 
+            usuarios: [], secciones: [], equipos: {}, prefijos: {},
+            grupos: { "Combate Extintores": ["Manómetro", "Sello", "Boquilla", "Cuerpo"], "Combate Hidrantes": ["Caudal", "Presión", "Manguera", "Pico"], "Todos": [] } 
+        };
+        
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj;
         let canvas, ctx, firmaVacia = true;
-
-        // Variables de Estado de Edición
         let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const magicToken = urlParams.get('t');
             if (magicToken) {
-                try {
-                    const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim())));
-                    if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; }
-                } catch(e) {}
+                try { const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim()))); if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; } } catch(e) {}
             }
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
             if (!rawConfig) document.getElementById('view-init').classList.add('active');
-            else { config = JSON.parse(rawConfig); prepararLogin(); }
+            else { 
+                config = JSON.parse(rawConfig); 
+                // Migración Silenciosa de Prefijos (Para evitar colapso de bases viejas)
+                if(!config.prefijos) {
+                    config.prefijos = {};
+                    Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; });
+                }
+                prepararLogin(); 
+            }
         });
 
         function inicializarSistema() {
@@ -254,10 +274,10 @@
             if(!nom || !pin) return alert("Faltan datos.");
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
+            config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" };
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
-        // TOKENS
         function generarEnlaceMagico() {
             const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
             const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado.");
@@ -274,7 +294,6 @@
             try { const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); } } catch(e) { alert("Token Inválido."); }
         }
 
-        // LOGIN
         function prepararLogin() {
             const sel = document.getElementById('loginSelectUsuario'); sel.innerHTML = '<option value="">Seleccione...</option>';
             config.usuarios.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
@@ -304,98 +323,110 @@
             const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
             const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
             const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
+            
+            actualizarPrefijoUI(); // Forzar la actualización del prefijo al cargar
             renderListas();
         }
 
-        // --- CRUD GRUPOS ---
+        // --- ENLACE DINÁMICO DE PREFIJO ---
+        function actualizarPrefijoUI() {
+            const grpSelect = document.getElementById('qrGrupo');
+            const prefijoInput = document.getElementById('qrPrefijo');
+            if(grpSelect && grpSelect.value) {
+                prefijoInput.value = config.prefijos[grpSelect.value] || '';
+            }
+        }
+
+        // --- CRUD GRUPOS (CON PREFIJO) ---
         function cargarEdicionGrupo(nom) {
-            document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
+            document.getElementById('nuevoGrupoNom').value = nom; 
+            document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || '';
+            document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
             editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info');
         }
-        function cancelarEdicionGrupo() {
-            editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = '';
-            const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success');
-        }
+        function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarGrupo() {
-            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
-            if(!nom || !paramsStr) return alert("Faltan datos.");
+            const nom = document.getElementById('nuevoGrupoNom').value.trim(); 
+            const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); 
+            const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
+            if(!nom || !paramsStr || !pref) return alert("Faltan datos o el Prefijo está vacío.");
+            
             const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
-
+            
             if(editGrupoNom) {
-                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nuevo nombre.");
-                // Actualizar Cascada en Equipos
+                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nombre.");
                 for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; }
-                // Actualizar Cascada en Usuarios
                 config.usuarios.forEach(u => { if(u.grupo === editGrupoNom) u.grupo = nom; });
-                if(nom !== editGrupoNom) delete config.grupos[editGrupoNom];
+                if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; }
             } else { if(config.grupos[nom]) return alert("El grupo ya existe."); }
             
-            config.grupos[nom] = nuevosParams; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
+            config.grupos[nom] = nuevosParams; 
+            config.prefijos[nom] = pref; // Guardado del prefijo en la Matriz
+            
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
         }
-        function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp} y dejar equipos sin grupo?`)) { delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD USUARIOS ---
-        function cargarEdicionUsu(id) {
-            const u = config.usuarios.find(x => x.id === id); if(!u) return;
-            document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin;
-            document.getElementById('nuevoUsuRol').value = u.rol; document.getElementById('nuevoUsuGrupo').value = u.grupo;
-            editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info');
-        }
-        function cancelarEdicionUsu() {
-            editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = '';
-            const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success');
-        }
+        // --- CRUD USUARIOS & SECCIONES ---
+        function cargarEdicionUsu(id) { const u = config.usuarios.find(x => x.id === id); if(!u) return; document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; document.getElementById('nuevoUsuGrupo').value = u.grupo; editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); }
+        function cancelarEdicionUsu() { editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarUsuario() {
-            const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim();
-            if(!nom || !pin) return;
-            if(editUsuId) {
-                const u = config.usuarios.find(x => x.id === editUsuId);
-                u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = document.getElementById('nuevoUsuGrupo').value;
-            } else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value }); }
+            const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim(); if(!nom || !pin) return;
+            if(editUsuId) { const u = config.usuarios.find(x => x.id === editUsuId); u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = document.getElementById('nuevoUsuGrupo').value; }
+            else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value }); }
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin();
         }
-        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar usuario?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-
-        // --- CRUD SECCIONES ---
-        function cargarEdicionSec(sec) {
-            document.getElementById('nuevaSeccion').value = sec; editSecNom = sec;
-            const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info');
-        }
-        function cancelarEdicionSec() {
-            editSecNom = null; document.getElementById('nuevaSeccion').value = '';
-            const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success');
-        }
+        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        
+        function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
+        function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarSeccion() {
             const sec = document.getElementById('nuevaSeccion').value.trim(); if(!sec) return;
             if(editSecNom) {
-                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Esa sección ya existe.");
+                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe.");
                 for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; }
                 config.secciones = config.secciones.map(s => s === editSecNom ? sec : s);
             } else { if(config.secciones.includes(sec)) return; config.secciones.push(sec); }
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionSec(); poblarAdmin();
         }
-        function borrarSeccion(sec) { if(confirm("¿Borrar sección?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD EQUIPOS (QR) ---
+        // --- CRUD EQUIPOS (QR) CON AUTO-PREFIJO ---
         function cargarEdicionQR(id) {
             const eq = config.equipos[id]; if(!eq) return;
-            document.getElementById('qrId').value = id; document.getElementById('qrTipo').value = eq.tipo;
-            document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
+            
             document.getElementById('qrGrupo').value = eq.grupo;
-            editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info');
-            document.getElementById('zonaQR').classList.add('hidden'); // Ocultar QR viejo hasta q guarde
+            const prefijoOficial = config.prefijos[eq.grupo] || '';
+            
+            const match = id.match(/^(.*?)(\d+)$/);
+            if (match) {
+                document.getElementById('qrPrefijo').value = prefijoOficial; 
+                document.getElementById('qrNumero').value = match[2];  
+            } else {
+                document.getElementById('qrPrefijo').value = prefijoOficial;
+                document.getElementById('qrNumero').value = '';
+            }
+            
+            document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
+            editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden');
         }
-        function cancelarEdicionQR() {
-            editQRId = null; document.getElementById('qrId').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = '';
-            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning');
+        function cancelarEdicionQR() { 
+            editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; 
+            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); 
+            actualizarPrefijoUI(); // Restaura el prefijo del select actual
         }
+        
         function guardarQR() {
-            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
-            if(!id || !tipo) return alert("ID y Tipo son obligatorios");
+            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase();
+            const numero = document.getElementById('qrNumero').value.trim();
+            const id = prefijo + numero;
+            const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
+            
+            if(!id || !tipo || !numero) return alert("Número correlativo y Tipo son obligatorios");
             
             if(editQRId && id !== editQRId) {
-                if(config.equipos[id]) return alert("El nuevo ID ya está en uso por otro equipo.");
-                delete config.equipos[editQRId]; // Borrar la llave vieja
+                if(config.equipos[id]) return alert("El nuevo ID correlativo ya está en uso en este grupo.");
+                delete config.equipos[editQRId];
             }
             
             config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
@@ -403,39 +434,32 @@
             
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
             qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
-            cancelarEdicionQR(); poblarAdmin(); // Refresca la lista
+            
+            editQRId = null; document.getElementById('qrNumero').value = ''; 
+            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning');
+            poblarAdmin();
         }
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
-            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
+            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small>${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
             config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
             const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
             config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
-            
-            const lQ = document.getElementById('listaEquipos'); if(lQ) {
-                lQ.innerHTML = '';
-                Object.keys(config.equipos).forEach(id => {
-                    const eq = config.equipos[id];
-                    lQ.innerHTML += `<div class="list-item"><div><b>${id}</b> (${eq.tipo})<br><small>${eq.seccion} | ${eq.grupo}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${id}')">❌</button></div></div>`;
-                });
-            }
+            const lQ = document.getElementById('listaEquipos'); if(lQ) { lQ.innerHTML = ''; Object.keys(config.equipos).forEach(id => { const eq = config.equipos[id]; lQ.innerHTML += `<div class="list-item"><div><b>${id}</b> (${eq.tipo})<br><small>${eq.seccion} | ${eq.grupo}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${id}')">❌</button></div></div>`; }); }
         }
 
         // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
-                (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }
-            ).catch(err => alert("Permití cámara."));
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
         }
         function procesarEscaneo(id) {
             id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
-                const eq = config.equipos[id];
-                if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
+                const eq = config.equipos[id]; if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
                 const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = ''; const params = config.grupos[eq.grupo];
                 if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
@@ -443,8 +467,7 @@
             } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
         function guardarRegistro() {
-            const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR.");
-            const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
+            const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
             params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
             const registro = { Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
@@ -453,45 +476,25 @@
 
         // --- SISTEMA DE CIERRE Y FIRMA (MODAL) ---
         function abrirModalCierre() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones.");
-            document.getElementById('modalCierre').classList.remove('hidden');
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones."); document.getElementById('modalCierre').classList.remove('hidden');
             setTimeout(() => {
-                canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
-                const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200;
-                ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-                let dibujando = false; firmaVacia = true;
-                const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
-                const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
-                const detener = () => { dibujando = false; };
-                const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
-                const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
-                const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone;
-                ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-                canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
-                canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
+                canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200;
+                ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; let dibujando = false; firmaVacia = true;
+                const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); }; const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); }; const detener = () => { dibujando = false; };
+                const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX; const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+                const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone; ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+                canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener); canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
             }, 50);
         }
-        function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); }
-        function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
+        function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); } function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
         
         async function confirmarFirmaYEnviar() {
-            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre();
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            
+            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre(); const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
-            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"];
-            for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
-            let csv = head.join(";") + "\r\n";
-            db.forEach(r => {
-                let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo];
-                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones); csv += row.join(";") + "\r\n";
-            });
-
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px;} table{width:100%; border-collapse:collapse; margin-bottom:30px; font-size:12px;} th,td{border:1px solid #ccc; padding:8px; text-align:left;} th{background:#2F5597; color:white;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center;} img{max-width:100%; height:auto;}</style></head><body>`;
-            html += `<h2>Manifiesto de Inspección SySO</h2><p><b>Inspector:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
-            db.forEach(r => { html += `<tr><td>${r.Fecha}</td><td>${r.ID_Equipo}</td><td>${r.Seccion}</td><td>${r.Ubicacion}</td></tr>`; });
-            html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
-
+            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
+            let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones); csv += row.join(";") + "\r\n"; });
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px;} table{width:100%; border-collapse:collapse; margin-bottom:30px; font-size:12px;} th,td{border:1px solid #ccc; padding:8px; text-align:left;} th{background:#2F5597; color:white;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center;} img{max-width:100%; height:auto;}</style></head><body><h2>Manifiesto de Inspección SySO</h2><p><b>Inspector:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
+            db.forEach(r => { html += `<tr><td>${r.Fecha}</td><td>${r.ID_Equipo}</td><td>${r.Seccion}</td><td>${r.Ubicacion}</td></tr>`; }); html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
             const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' }); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
             if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML] }); } catch (err) {} }
             else { const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click(); setTimeout(()=>{const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();}, 500); }
