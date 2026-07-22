@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.10 - Industrial</title>
+    <title>Gestión SySO V5.11 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -15,7 +15,7 @@
         .header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .card { background: white; padding: 20px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        .form-group { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; position: relative; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
         input:disabled, input[readonly] { background: #e9ecef; font-weight: bold; color: var(--primary); border: 1px solid #ced4da; }
@@ -52,6 +52,11 @@
         .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
         #canvasFirma { border: 2px dashed #ccc; border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        /* Estilos del Autocompletado Custom */
+        #dropdownUsuarios { display:none; position:absolute; width:100%; background:white; border:1px solid #ccc; border-radius:0 0 6px 6px; max-height:160px; overflow-y:auto; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); top: 100%; margin-top:-2px;}
+        .dropdown-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; color: var(--primary); font-weight: bold; }
+        .dropdown-item:active { background-color: #f4f6f9; }
     </style>
 </head>
 <body>
@@ -78,16 +83,18 @@
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN (Con Datalist Integrado) -->
+    <!-- VISTA 1: LOGIN (Con Buscador Universal) -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
-            <p style="font-size:12px; color:#555; margin-bottom:15px;">Escribí tu nombre para buscar en la lista.</p>
+            <p style="font-size:12px; color:#555; margin-bottom:15px;">Escribí tu nombre para filtrar la lista.</p>
+            
             <div class="form-group">
                 <label>Usuario:</label>
-                <input type="text" id="loginInputUsuario" list="listaUsuariosData" placeholder="Tipeá tu nombre aquí...">
-                <datalist id="listaUsuariosData"></datalist>
+                <input type="text" id="loginInputUsuario" placeholder="Tipeá tu nombre aquí..." autocomplete="off" onkeyup="filtrarUsuarios()" onfocus="filtrarUsuarios()">
+                <div id="dropdownUsuarios"></div>
             </div>
+            
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
@@ -282,6 +289,37 @@
             }
         });
 
+        // --- MOTOR DE AUTOCOMPLETADO UNIVERSAL ---
+        function filtrarUsuarios() {
+            const input = document.getElementById('loginInputUsuario').value.toLowerCase();
+            const dropdown = document.getElementById('dropdownUsuarios');
+            dropdown.innerHTML = '';
+            
+            const filtrados = config.usuarios.filter(u => u.nombre.toLowerCase().includes(input));
+            
+            if (filtrados.length === 0) { dropdown.style.display = 'none'; return; }
+            
+            filtrados.forEach(u => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.innerText = u.nombre;
+                div.onclick = function() {
+                    document.getElementById('loginInputUsuario').value = u.nombre;
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(div);
+            });
+            dropdown.style.display = 'block';
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.id !== 'loginInputUsuario') {
+                const dropdown = document.getElementById('dropdownUsuarios');
+                if(dropdown) dropdown.style.display = 'none';
+            }
+        });
+        // ----------------------------------------
+
         function inicializarSistema() {
             const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim();
             if(!nom || !pin) return alert("Faltan datos.");
@@ -292,7 +330,6 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
-        // --- ENLACES MAGICO Y TOKENS ---
         function generarEnlaceMagico() {
             const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
             const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado.");
@@ -310,8 +347,7 @@
         }
 
         function prepararLogin() {
-            const dl = document.getElementById('listaUsuariosData'); dl.innerHTML = '';
-            config.usuarios.forEach(u => dl.innerHTML += `<option value="${u.nombre}"></option>`);
+            document.getElementById('loginInputUsuario').value = '';
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active');
         }
 
@@ -480,7 +516,7 @@
                 if(val === 'Falla') fallasDetectadas.push(p);
             });
             
-            // --- VALIDACIÓN DE FOTO OBLIGATORIA (CONTINGENCIA) ---
+            // --- VALIDACIÓN DE FOTO OBLIGATORIA ---
             if(fallasDetectadas.length > 0 && !fotoActualBase64) {
                 return alert("⛔ BLOQUEO DE SEGURIDAD:\nHa detectado una falla en los controles.\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar el registro.");
             }
