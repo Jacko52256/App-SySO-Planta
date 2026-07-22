@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.7 - Industrial</title>
+    <title>Gestión SySO V5.9 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -27,6 +27,7 @@
         .btn-danger { background: var(--danger); }
         .btn-info { background: var(--edit); }
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-camera { background: #6c757d; display:flex; align-items:center; justify-content:center; gap:10px;}
         
         .action-btns { display: flex; gap: 5px; }
         .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; color: white; }
@@ -35,6 +36,8 @@
         
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed #ccc; display: none;}
         
         .view { display: none; }
         .view.active { display: block; }
@@ -94,7 +97,7 @@
         </div>
     </div>
 
-    <!-- VISTA 2: INSPECCIÓN (CON RADAR) -->
+    <!-- VISTA 2: INSPECCIÓN -->
     <div id="view-inspeccion" class="view">
         <div class="card">
             <div class="form-group">
@@ -112,7 +115,15 @@
             <hr style="margin:15px 0;">
             <div id="moduloDinamico" class="hidden"></div>
             
-            <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones"></textarea></div>
+            <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..."></textarea></div>
+            
+            <div class="form-group" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:15px;">
+                <label style="color:#6c757d;">¿Se detectó una falla grave?</label>
+                <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
+                <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia (Opcional)</button>
+                <img id="previewBox" src="" alt="Previsualización">
+            </div>
+
             <button class="btn btn-success" style="margin-top:15px;" onclick="guardarRegistro()">Guardar Control</button>
         </div>
     </div>
@@ -167,7 +178,6 @@
 
         <div class="card">
             <h3>Grupos y Formularios Estrictos</h3>
-            <p style="font-size: 11px; margin-bottom: 10px;">Define el prefijo oficial para bloquear errores de tipeo en terreno.</p>
             <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Extintores)" class="form-group">
             <input type="text" id="nuevoGrupoPrefijo" placeholder="Prefijo Oficial (Ej. EXT-)" class="form-group" style="border: 2px solid var(--primary);">
             <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite)" class="form-group">
@@ -208,7 +218,7 @@
         <div class="card" style="background:#fff3cd; border: 2px solid var(--accent);">
             <h3 style="margin-bottom: 10px; color:#856404;">Cierre de Turno / Mes</h3>
             <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
-            <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial de Inspecciones</button>
+            <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
     </div>
 
@@ -237,15 +247,17 @@
     <script>
         const CFG_KEY = 'SySO_V5_Config';
         const DB_KEY = 'SySO_V5_Data';
+        const PHOTO_KEY = 'SySO_V5_Photos';
         
         let config = { 
-            usuarios: [], secciones: [], equipos: {}, prefijos: {},
+            usuarios: [], secciones: [], equipos: {}, prefijos: {}, fallas: {},
             grupos: { "Combate Extintores": ["Manómetro", "Sello", "Boquilla", "Cuerpo"], "Combate Hidrantes": ["Caudal", "Presión", "Manguera", "Pico"], "Todos": [] } 
         };
         
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj;
         let canvas, ctx, firmaVacia = true;
         let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null;
+        let fotoActualBase64 = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -260,6 +272,7 @@
             else { 
                 config = JSON.parse(rawConfig); 
                 if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
+                if(!config.fallas) config.fallas = {}; // Inyección segura de la matriz de fallas en sistemas viejos
                 prepararLogin(); 
             }
         });
@@ -270,9 +283,11 @@
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" };
+            config.fallas = {};
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
+        // --- ENLACES MAGICO Y TOKENS ---
         function generarEnlaceMagico() {
             const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
             const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado.");
@@ -326,11 +341,8 @@
             if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; }
         }
 
-        // --- CRUD GRUPOS ---
-        function cargarEdicionGrupo(nom) {
-            document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
-            editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info');
-        }
+        // --- CRUD (Admin) ---
+        function cargarEdicionGrupo(nom) { document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', '); editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarGrupo() {
             const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
@@ -345,7 +357,6 @@
         }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD USUARIOS & SECCIONES ---
         function cargarEdicionUsu(id) { const u = config.usuarios.find(x => x.id === id); if(!u) return; document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; document.getElementById('nuevoUsuGrupo').value = u.grupo; editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionUsu() { editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarUsuario() {
@@ -368,7 +379,6 @@
         }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD EQUIPOS ---
         function cargarEdicionQR(id) {
             const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || '';
             const match = id.match(/^(.*?)(\d+)$/);
@@ -377,7 +387,7 @@
             document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
             editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden');
         }
-        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
+        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
         function guardarQR() {
             const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero;
             const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
@@ -401,54 +411,104 @@
             const lQ = document.getElementById('listaEquipos'); if(lQ) { lQ.innerHTML = ''; Object.keys(config.equipos).forEach(id => { const eq = config.equipos[id]; lQ.innerHTML += `<div class="list-item"><div><b>${id}</b> (${eq.tipo})<br><small>${eq.seccion} | ${eq.grupo}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${id}')">❌</button></div></div>`; }); }
         }
 
-        // --- INSPECCIÓN Y ESCANEO ---
+        function procesarFoto(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvasResize = document.createElement('canvas'); const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width;
+                    canvasResize.width = MAX_WIDTH; canvasResize.height = img.height * scaleSize;
+                    const ctxResize = canvasResize.getContext('2d'); ctxResize.drawImage(img, 0, 0, canvasResize.width, canvasResize.height);
+                    fotoActualBase64 = canvasResize.toDataURL('image/jpeg', 0.7);
+                    const preview = document.getElementById('previewBox'); preview.src = fotoActualBase64; preview.style.display = 'block';
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // --- INSPECCIÓN Y ESCANEO CON ALERTA DE FALLA PREVIA ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
         }
+        
         function procesarEscaneo(id) {
             id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
-                const eq = config.equipos[id]; if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
-                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
-                const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = ''; const params = config.grupos[eq.grupo];
+                const eq = config.equipos[id]; 
+                if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
+                
+                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; 
+                document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+                
+                const container = document.getElementById('moduloDinamico'); 
+                container.classList.remove('hidden'); 
+                
+                // INYECCIÓN DE ALERTA DE FALLA (CICLO CERRADO)
+                let warningHTML = '';
+                if(config.fallas && config.fallas[id]) {
+                    warningHTML = `<div style="background:#ffeeba; color:#856404; padding:10px; border-left:4px solid #ffc107; margin-bottom:15px; border-radius:4px; font-size:13px;"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>El mes anterior se reportó falla en: <i>${config.fallas[id]}</i>. Verifique si fue solucionado.</div>`;
+                }
+
+                let html = ''; const params = config.grupos[eq.grupo];
                 if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
-                container.innerHTML = html;
+                
+                container.innerHTML = warningHTML + html;
             } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
         
         function guardarRegistro() {
             const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
-            params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
-            const registro = { Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
+            
+            let fallasDetectadas = [];
+            params.forEach((p, index) => { 
+                let val = document.getElementById(`dynChk_${index}`).value;
+                resp[`Control_${index+1}`] = val; 
+                if(val === 'Falla') fallasDetectadas.push(p);
+            });
+            
+            // --- MOTOR DE AUTO-RESOLUCIÓN DE FALLAS ---
+            if(!config.fallas) config.fallas = {};
+            if(fallasDetectadas.length > 0) {
+                config.fallas[id] = fallasDetectadas.join(", "); // Guardar en bóveda maestra
+            } else {
+                delete config.fallas[id]; // Si está todo OK, se limpia la falla antigua
+            }
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); // Persistir la matriz
+            
+            // Guardar Inspección Mensual
+            const timestampLocal = new Date().toLocaleString('es-PY');
+            const registro = { Fecha: timestampLocal, Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
-            // --- MOTOR DE NAVEGACIÓN SECUENCIAL (RADAR) ---
+            // Guardar Evidencia
+            if (fotoActualBase64) {
+                const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB));
+            }
+
+            // Radar de Siguiente Ruta con Alerta Preventiva
             let mensajeRadar = "✅ Control Guardado exitosamente.";
             const match = id.match(/^(.*?)(\d+)$/);
             if(match) {
-                const prefijo = match[1];
-                const numeroActual = parseInt(match[2], 10);
-                const padding = match[2].length;
+                const prefijo = match[1]; const numeroActual = parseInt(match[2], 10); const padding = match[2].length;
                 let proximoId = null; let proximoEq = null;
-
-                // Bucle de búsqueda (ventana de 50 saltos para sortear equipos dados de baja)
                 for(let i = 1; i <= 50; i++) {
-                    const nextNumStr = String(numeroActual + i).padStart(padding, '0');
-                    const testId = prefijo + nextNumStr;
+                    const nextNumStr = String(numeroActual + i).padStart(padding, '0'); const testId = prefijo + nextNumStr;
                     if(config.equipos[testId]) { proximoId = testId; proximoEq = config.equipos[testId]; break; }
                 }
-
                 if(proximoEq) {
-                    mensajeRadar += `\n\n📍 PRÓXIMO OBJETIVO EN RUTA:\n- Equipo: ${proximoId}\n- Ubicación: ${proximoEq.ubicacion || 'No especificada'}\n- Sección: ${proximoEq.seccion}`;
-                } else {
-                    mensajeRadar += `\n\n🏁 Fin de la ruta para el bloque ${prefijo}. No se detectaron más equipos correlativos activos en la base de datos.`;
+                    let avisoFalla = (config.fallas && config.fallas[proximoId]) ? '\n🚨 ALERTA: Presenta falla pendiente del mes pasado.' : '';
+                    mensajeRadar += `\n\n📍 PRÓXIMO OBJETIVO:\n- Equipo: ${proximoId}\n- Ubicación: ${proximoEq.ubicacion || 'N/A'}\n- Sección: ${proximoEq.seccion}${avisoFalla}`;
                 }
+                else mensajeRadar += `\n\n🏁 Fin de la ruta para el bloque ${prefijo}.`;
             }
             
+            // Limpieza
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; 
+            document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null;
             
-            // Despliegue del Radar
             alert(mensajeRadar);
         }
 
@@ -467,17 +527,49 @@
         function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); } function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
         
         async function confirmarFirmaYEnviar() {
-            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre(); const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre(); 
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
+            
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
             let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones); csv += row.join(";") + "\r\n"; });
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px;} table{width:100%; border-collapse:collapse; margin-bottom:30px; font-size:12px;} th,td{border:1px solid #ccc; padding:8px; text-align:left;} th{background:#2F5597; color:white;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center;} img{max-width:100%; height:auto;}</style></head><body><h2>Manifiesto de Inspección SySO</h2><p><b>Inspector:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
-            db.forEach(r => { html += `<tr><td>${r.Fecha}</td><td>${r.ID_Equipo}</td><td>${r.Seccion}</td><td>${r.Ubicacion}</td></tr>`; }); html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
+            
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#f4f6f9;} .card{background:#fff; border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; background:#fff; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><hr>`;
+            
+            db.forEach(r => { 
+                let detallesControles = "";
+                Object.keys(r.Controles).forEach(k => { 
+                    let valor = r.Controles[k];
+                    let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor;
+                    detallesControles += `${k}: ${spanValor} | `; 
+                });
+                
+                const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha];
+                const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : '';
+
+                html += `<div class="card">
+                            <h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3>
+                            <p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p>
+                            <p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p>
+                            <p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p>
+                            <p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>
+                            ${imgTag}
+                         </div>`; 
+            }); 
+            html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
+
             const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' }); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
-            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML] }); } catch (err) {} }
+            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Reporte SySO', text: 'Adjunto registros y evidencias fotográficas.' }); } catch (err) {} }
             else { const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click(); setTimeout(()=>{const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();}, 500); }
         }
-        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES?")) { localStorage.removeItem(DB_KEY); alert("Purgado."); } }
+        function purgarHistorial() { 
+            if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { 
+                localStorage.removeItem(DB_KEY); 
+                localStorage.removeItem(PHOTO_KEY); 
+                alert("Historial purgado con éxito."); 
+            } 
+        }
     </script>
 </body>
 </html>
