@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V4.1 - Planta Industrial</title>
+    <title>Gestión SySO V5 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -55,23 +55,19 @@
     <div id="view-init" class="view">
         <div class="card">
             <h3 style="color:var(--danger); margin-bottom: 15px;">Sistema No Inicializado</h3>
-            <p style="font-size: 14px; margin-bottom: 20px;">Este dispositivo no tiene configuración base. Elija una opción:</p>
-            
-            <button class="btn btn-primary" onclick="mostrarCrearAdmin()">1. Crear Base (Soy Jefe/Admin)</button>
-            <button class="btn btn-outline" onclick="mostrarImportarToken()">2. Importar Token (Soy Brigadista)</button>
+            <button class="btn btn-primary" onclick="mostrarCrearAdmin()">1. Crear Base (Jefe/Admin)</button>
+            <button class="btn btn-outline" onclick="mostrarImportarToken()">2. Importar Token</button>
             
             <div id="divCrearAdmin" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <label>Nombre del Super-Admin:</label>
-                <input type="text" id="initAdminName" placeholder="Ej. Jack Wiens" class="form-group">
-                <label>PIN de Acceso (Numérico):</label>
-                <input type="password" id="initAdminPin" placeholder="Ej. 1234" class="form-group" pattern="[0-9]*" inputmode="numeric">
-                <button class="btn btn-success" onclick="inicializarSistema()">Inicializar Sistema</button>
+                <label>Super-Admin:</label><input type="text" id="initAdminName" placeholder="Ej. Jack">
+                <label>PIN de Acceso:</label><input type="password" id="initAdminPin" placeholder="Ej. 1234" pattern="[0-9]*" inputmode="numeric">
+                <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar</button>
             </div>
             
             <div id="divImportarToken" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <label>Pegue el Token proporcionado por RRHH:</label>
-                <textarea id="initToken" placeholder="eyJ1c2VycyI..." style="height: 100px; font-family: monospace;"></textarea>
-                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
+                <label>Pegue el Token Maestro:</label>
+                <textarea id="initToken" style="height: 100px;"></textarea>
+                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar</button>
             </div>
         </div>
     </div>
@@ -80,14 +76,8 @@
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
-            <div class="form-group" style="margin-top:15px;">
-                <label>Usuario Autorizado:</label>
-                <select id="loginSelectUsuario"></select>
-            </div>
-            <div class="form-group">
-                <label>PIN de Seguridad:</label>
-                <input type="password" id="loginPin" placeholder="Ingrese PIN" pattern="[0-9]*" inputmode="numeric">
-            </div>
+            <div class="form-group" style="margin-top:15px;"><label>Usuario:</label><select id="loginSelectUsuario"></select></div>
+            <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
     </div>
@@ -98,24 +88,19 @@
             <div class="form-group">
                 <label>ID de Equipo:</label>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="idEquipo" placeholder="Escanear QR ->" style="flex:1;" disabled>
-                    <button class="btn btn-warning" style="width:auto; padding:0 20px;" onclick="activarQR()">📷 QR</button>
+                    <input type="text" id="idEquipo" placeholder="Escanear ->" disabled style="flex:1;">
+                    <button class="btn btn-warning" style="width:auto; padding:0 15px;" onclick="activarQR()">📷 QR</button>
                 </div>
             </div>
             <div id="qr-reader"></div>
             
-            <div class="form-group">
-                <label>Sección / Ubicación:</label>
-                <input type="text" id="seccionEquipo" disabled placeholder="Esperando equipo...">
-            </div>
+            <div class="form-group"><label>Sección / Ubicación:</label><input type="text" id="seccionEquipo" disabled></div>
 
             <hr style="margin:15px 0;">
+            <!-- Contenedor del Formulario Dinámico -->
             <div id="moduloDinamico" class="hidden"></div>
             
-            <div class="form-group" style="margin-top:15px;">
-                <label>Observaciones (Opcional):</label>
-                <textarea id="observaciones" placeholder="Novedades..."></textarea>
-            </div>
+            <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones"></textarea></div>
 
             <label style="color:var(--danger);">Firma del Inspector:</label>
             <canvas id="canvasFirma"></canvas>
@@ -124,31 +109,40 @@
         </div>
     </div>
 
-    <!-- VISTA 3: GENERADOR QR (Solo Admin) -->
+    <!-- VISTA 3: ALTA QR (Admin) -->
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Alta de Nuevo Equipo</h3>
             <div class="form-group"><label>ID (Ej. EXT-080):</label><input type="text" id="qrId"></div>
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
-            <div class="form-group"><label>Grupo Asignado:</label><select id="qrGrupo"></select></div>
+            <div class="form-group"><label>Grupo (Formulario):</label><select id="qrGrupo"></select></div>
             
             <button class="btn btn-warning" onclick="generarYGuardarQR()">Guardar y Etiquetar</button>
-            
             <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px;">
                 <canvas id="qrGenerado"></canvas>
                 <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
-                <button class="btn btn-outline" onclick="descargarQR()">Descargar QR</button>
+                <button class="btn btn-outline" onclick="descargar(document.getElementById('qrGenerado').toDataURL('image/png'), 'image/png', 'QR_'+document.getElementById('qrId').value+'.png')">Descargar Etiqueta</button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA 4: PANEL ADMIN -->
+    <!-- VISTA 4: ADMIN -->
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
-            <h3>Sincronización (Token)</h3>
-            <button class="btn btn-primary" onclick="generarToken()">Generar Token Maestro</button>
-            <textarea id="txtTokenExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
+            <h3>Sincronización de Dispositivos</h3>
+            <button class="btn btn-primary" onclick="generarToken()">1. Generar Token (Brigada)</button>
+            <button class="btn btn-warning" onclick="generarEstructuraExcel()">2. Estructura para Excel (Macro)</button>
+            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
+        </div>
+
+        <div class="card">
+            <h3>Grupos y Formularios Dinámicos</h3>
+            <p style="font-size:12px; margin-bottom:10px;">Crea el grupo y define qué se evaluará (separa por comas).</p>
+            <input type="text" id="nuevoGrupoNom" placeholder="Nombre (Ej. Vehículos)" class="form-group">
+            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite, Luces)" class="form-group">
+            <button class="btn btn-success" onclick="agregarGrupo()">+ Guardar Grupo y Formulario</button>
+            <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
         <div class="card">
@@ -165,18 +159,8 @@
             <div id="listaUsuarios" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
-        <!-- MÓDULO NUEVO: GESTIÓN DE GRUPOS -->
         <div class="card">
-            <h3>Gestión de Grupos (Brigadas)</h3>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="nuevoGrupo" placeholder="Ej. Rescate Altura">
-                <button class="btn btn-success" style="width:60px;" onclick="agregarGrupo()">+</button>
-            </div>
-            <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
-        </div>
-
-        <div class="card">
-            <h3>Gestión de Secciones (Planta)</h3>
+            <h3>Secciones (Planta)</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur">
                 <button class="btn btn-success" style="width:60px;" onclick="agregarSeccion()">+</button>
@@ -185,14 +169,14 @@
         </div>
 
         <div class="card" style="background:#e9ecef;">
-            <h3 style="margin-bottom: 10px;">Cierre Operativo</h3>
-            <button class="btn btn-primary" onclick="exportarCSV()">1. Exportar CSV (Excel)</button>
-            <button class="btn btn-success" onclick="exportarEvidencias()">2. Exportar Firmas (HTML)</button>
+            <h3 style="margin-bottom: 10px;">Cierre Operativo (Enviar Info)</h3>
+            <button class="btn btn-primary" onclick="compartirCSV()">1. Enviar CSV (WhatsApp/Mail)</button>
+            <button class="btn btn-success" onclick="compartirEvidencias()">2. Enviar Firmas HTML</button>
             <button class="btn btn-danger" style="margin-top:20px;" onclick="purgarHistorial()">Vaciar Historial del Mes</button>
         </div>
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR -->
+    <!-- NAVEGACIÓN -->
     <div class="tab-bar hidden" id="menuNavegacion">
         <button class="tab-btn active" onclick="nav('inspeccion', this)">📋<br>Inspección</button>
         <button class="tab-btn admin-only" onclick="nav('qr', this)">🖨️<br>Alta QR</button>
@@ -201,177 +185,144 @@
     </div>
 
     <script>
-        const CFG_KEY = 'SySO_V4_Config';
-        const DB_KEY = 'SySO_V4_Data';
+        const CFG_KEY = 'SySO_V5_Config';
+        const DB_KEY = 'SySO_V5_Data';
         
-        let config = { usuarios: [], secciones: [], grupos: ["Combate", "PA", "Evacuacion", "Mantenimiento", "Todos"], equipos: {} };
+        // Estructura Dinámica V5
+        let config = { 
+            usuarios: [], secciones: [], equipos: {},
+            grupos: {
+                "Combate": ["Presión", "Precinto", "Estado Físico"],
+                "PA": ["Insumos", "Caducidad", "Higiene"],
+                "Todos": [] // Rol Master
+            }
+        };
+        
         let usuarioActual = null;
         let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
 
         document.addEventListener('DOMContentLoaded', () => {
             const rawConfig = localStorage.getItem(CFG_KEY);
-            if (!rawConfig) {
-                document.getElementById('view-init').classList.add('active');
-            } else {
-                config = JSON.parse(rawConfig);
-                // Migración de seguridad por si venían de versión anterior sin el array grupos
-                if(!config.grupos) config.grupos = ["Combate", "PA", "Evacuacion", "Mantenimiento", "Todos"];
-                prepararLogin();
-            }
+            if (!rawConfig) document.getElementById('view-init').classList.add('active');
+            else { config = JSON.parse(rawConfig); prepararLogin(); }
         });
 
         function mostrarCrearAdmin() { document.getElementById('divCrearAdmin').classList.remove('hidden'); document.getElementById('divImportarToken').classList.add('hidden'); }
         function mostrarImportarToken() { document.getElementById('divImportarToken').classList.remove('hidden'); document.getElementById('divCrearAdmin').classList.add('hidden'); }
 
         function inicializarSistema() {
-            const nombre = document.getElementById('initAdminName').value.trim();
+            const nom = document.getElementById('initAdminName').value.trim();
             const pin = document.getElementById('initAdminPin').value.trim();
-            if(!nombre || !pin) return alert("Complete los datos.");
+            if(!nom || !pin) return alert("Complete datos.");
             
-            config.usuarios.push({ id: Date.now(), nombre: nombre, pin: pin, rol: 'Admin', grupo: 'Todos' });
+            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
-            guardarConfig();
-            alert("Sistema Inicializado. Por favor, inicie sesión.");
-            location.reload();
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
+            alert("Sistema Inicializado."); location.reload();
         }
-
-        function guardarConfig() { localStorage.setItem(CFG_KEY, JSON.stringify(config)); }
 
         function generarToken() {
-            const tokenStr = btoa(encodeURIComponent(JSON.stringify(config)));
-            const txt = document.getElementById('txtTokenExport');
-            txt.value = tokenStr; txt.classList.remove('hidden');
-            txt.select(); document.execCommand('copy');
-            alert("Token Copiado al portapapeles. Envíelo por WhatsApp a la brigada.");
+            const str = btoa(encodeURIComponent(JSON.stringify(config)));
+            const txt = document.getElementById('txtAdminExport');
+            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
+            alert("Token Brigada copiado. Pegalo en WhatsApp.");
         }
 
-        function sincronizarConToken(tokenStr) {
-            if(!tokenStr) return alert("Pegue el token.");
+        function generarEstructuraExcel() {
+            // Este es el payload que la macro de Excel leerá para auto-construirse
+            const schema = { grupos: config.grupos };
+            const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
+            const txt = document.getElementById('txtAdminExport');
+            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
+            alert("Código de Planilla copiado. Pegalo en la Macro de tu Excel Maestro.");
+        }
+
+        function sincronizarConToken(str) {
+            if(!str) return alert("Pegue el token.");
             try {
-                const newConfig = JSON.parse(decodeURIComponent(atob(tokenStr.trim())));
-                if(newConfig.usuarios && newConfig.equipos) {
-                    localStorage.setItem(CFG_KEY, JSON.stringify(newConfig));
-                    alert("Dispositivo Sincronizado con Éxito.");
-                    location.reload();
-                } else { throw new Error(); }
-            } catch(e) { alert("Token Inválido o Corrupto."); }
+                const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
+                if(newCfg.usuarios && newCfg.grupos) {
+                    localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("Éxito."); location.reload();
+                } else throw new Error();
+            } catch(e) { alert("Token Inválido."); }
         }
 
         function prepararLogin() {
             const sel = document.getElementById('loginSelectUsuario');
             sel.innerHTML = '<option value="">Seleccione...</option>';
             config.usuarios.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById('view-login').classList.add('active');
         }
 
         function validarAcceso() {
-            const idUsu = document.getElementById('loginSelectUsuario').value;
+            const id = document.getElementById('loginSelectUsuario').value;
             const pin = document.getElementById('loginPin').value;
-            if(!idUsu || !pin) return alert("Datos incompletos.");
-            
-            usuarioActual = config.usuarios.find(u => u.id == idUsu && u.pin == pin);
+            usuarioActual = config.usuarios.find(u => u.id == id && u.pin == pin);
             if(!usuarioActual) return alert("PIN Incorrecto.");
 
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`;
             document.getElementById('loginPin').value = '';
             
             const adminBtns = document.querySelectorAll('.admin-only');
-            if(usuarioActual.rol === 'Admin') {
-                adminBtns.forEach(b => b.classList.remove('hidden'));
-                poblarSelectsAdmin();
-            } else {
-                adminBtns.forEach(b => b.classList.add('hidden'));
-            }
+            if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
+            else { adminBtns.forEach(b => b.classList.add('hidden')); }
             
             document.getElementById('menuNavegacion').classList.remove('hidden');
             nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
         }
 
-        function cerrarSesion() {
-            usuarioActual = null;
-            document.getElementById('menuNavegacion').classList.add('hidden');
-            prepararLogin();
-        }
+        function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
 
-        function poblarSelectsAdmin() {
-            const selGrp = document.getElementById('nuevoUsuGrupo');
-            selGrp.innerHTML = ''; config.grupos.forEach(g => selGrp.innerHTML += `<option value="${g}">${g}</option>`);
-            
-            const selSec = document.getElementById('qrSeccion');
-            selSec.innerHTML = ''; config.secciones.forEach(s => selSec.innerHTML += `<option value="${s}">${s}</option>`);
-            
-            const selGrpQR = document.getElementById('qrGrupo');
-            selGrpQR.innerHTML = ''; config.grupos.filter(g => g!=='Todos').forEach(g => selGrpQR.innerHTML += `<option value="${g}">${g}</option>`);
-            
+        function poblarAdmin() {
+            const grpKeys = Object.keys(config.grupos);
+            const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
+            const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
+            const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
             renderListas();
         }
 
-        // --- CRUD USUARIOS ---
+        // --- CRUD V5 ---
+        function agregarGrupo() {
+            const nom = document.getElementById('nuevoGrupoNom').value.trim();
+            const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
+            if(!nom || !paramsStr) return alert("Especifique Nombre y Checklists.");
+            
+            const arr = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
+            config.grupos[nom] = arr;
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
+            document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = '';
+            poblarAdmin();
+        }
+
+        function borrarGrupo(grp) {
+            if(grp === 'Todos') return alert("Protegido por Sistema.");
+            if(confirm(`¿Borrar el grupo ${grp}?`)) {
+                delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin();
+            }
+        }
+
         function agregarUsuario() {
             const nom = document.getElementById('nuevoUsuNombre').value.trim();
             const pin = document.getElementById('nuevoUsuPin').value.trim();
-            const rol = document.getElementById('nuevoUsuRol').value;
-            const grp = document.getElementById('nuevoUsuGrupo').value;
-            if(!nom || !pin) return alert("Faltan datos.");
-            
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: rol, grupo: grp });
-            guardarConfig(); renderListas();
-            document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = '';
+            if(!nom || !pin) return;
+            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value });
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; poblarAdmin();
         }
-        function borrarUsuario(id) {
-            if(config.usuarios.length <= 1) return alert("No puede borrar el último usuario.");
-            if(confirm("¿Borrar usuario?")) { config.usuarios = config.usuarios.filter(u => u.id !== id); guardarConfig(); renderListas(); }
-        }
-
-        // --- CRUD GRUPOS ---
-        function agregarGrupo() {
-            const grp = document.getElementById('nuevoGrupo').value.trim();
-            if(!grp) return;
-            if(!config.grupos.includes(grp)) { 
-                config.grupos.push(grp); 
-                guardarConfig(); renderListas(); poblarSelectsAdmin(); 
-            }
-            document.getElementById('nuevoGrupo').value = '';
-        }
-        function borrarGrupo(grp) {
-            if(grp === 'Todos') return alert("Cortafuegos: El grupo 'Todos' es requerido por el sistema.");
-            if(confirm(`¿Borrar el grupo de brigada: ${grp}?`)) { 
-                config.grupos = config.grupos.filter(g => g !== grp); 
-                guardarConfig(); renderListas(); poblarSelectsAdmin(); 
-            }
-        }
-
-        // --- CRUD SECCIONES ---
-        function agregarSeccion() {
-            const sec = document.getElementById('nuevaSeccion').value.trim();
-            if(!sec) return;
-            if(!config.secciones.includes(sec)) { config.secciones.push(sec); guardarConfig(); renderListas(); poblarSelectsAdmin(); }
-            document.getElementById('nuevaSeccion').value = '';
-        }
-        function borrarSeccion(sec) {
-            if(confirm("¿Borrar sección?")) { config.secciones = config.secciones.filter(s => s !== sec); guardarConfig(); renderListas(); poblarSelectsAdmin(); }
-        }
+        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        
+        function agregarSeccion() { const sec = document.getElementById('nuevaSeccion').value.trim(); if(sec && !config.secciones.includes(sec)) { config.secciones.push(sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); document.getElementById('nuevaSeccion').value = ''; } }
+        function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
         function renderListas() {
-            const lstU = document.getElementById('listaUsuarios'); lstU.innerHTML = '';
-            config.usuarios.forEach(u => {
-                const badge = u.rol === 'Admin' ? '<span class="badge-admin">ADMIN</span>' : '';
-                lstU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${badge}</span><button class="btn-danger btn-small" onclick="borrarUsuario(${u.id})">X</button></div>`;
+            const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
+            Object.keys(config.grupos).forEach(g => {
+                if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`;
             });
-            
-            const lstG = document.getElementById('listaGrupos'); lstG.innerHTML = '';
-            config.grupos.forEach(g => {
-                if(g !== 'Todos') {
-                    lstG.innerHTML += `<div class="list-item"><span>${g}</span><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`;
-                }
-            });
-
-            const lstS = document.getElementById('listaSecciones'); lstS.innerHTML = '';
-            config.secciones.forEach(s => {
-                lstS.innerHTML += `<div class="list-item"><span>${s}</span><button class="btn-danger btn-small" onclick="borrarSeccion('${s}')">X</button></div>`;
-            });
+            const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
+            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><button class="btn-danger btn-small" onclick="borrarUsuario(${u.id})">X</button></div>`);
+            const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
+            config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><button class="btn-danger btn-small" onclick="borrarSeccion('${s}')">X</button></div>`);
         }
 
         // --- FIRMA ---
@@ -399,67 +350,63 @@
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
         }
 
+        // --- INSPECCIÓN Y MOTOR DINÁMICO V5 ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block';
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none';
-                    if (navigator.vibrate) navigator.vibrate(200);
-                    procesarEscaneo(decodedText);
-                }
-            ).catch(err => alert("Permití el acceso a la cámara."));
+                (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }
+            ).catch(err => alert("Permití cámara."));
         }
 
-        function procesarEscaneo(idLeido) {
-            const id = idLeido.toUpperCase();
-            document.getElementById('idEquipo').value = id;
-            
+        function procesarEscaneo(id) {
+            id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id];
                 if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) {
-                    alert(`Bloqueo: Perfil ${usuarioActual.grupo} no autorizado para equipos de ${eq.grupo}.`);
+                    alert(`Bloqueo: Sos del perfil ${usuarioActual.grupo}. Este equipo es de ${eq.grupo}.`);
                     document.getElementById('idEquipo').value = ''; return;
                 }
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`;
-                generarFormularioDinamico(eq.grupo);
+                construirFormulario(eq.grupo);
             } else {
-                alert("Equipo no encontrado. Solicite actualizar Base.");
-                document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = '';
-                document.getElementById('moduloDinamico').classList.add('hidden');
+                alert("Equipo no existe. Solicitar Alta.");
+                document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden');
             }
         }
 
-        function generarFormularioDinamico(grupoEq) {
+        function construirFormulario(grupoNom) {
             const container = document.getElementById('moduloDinamico');
             container.classList.remove('hidden'); let html = '';
             
-            if(grupoEq === 'Combate') {
-                html = `<div class="form-group"><label>Manómetro:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Precinto:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Estado Físico:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
-            } else if(grupoEq === 'PA') {
-                html = `<div class="form-group"><label>Inventario:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Caducidad:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Higiene:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
+            const params = config.grupos[grupoNom];
+            if(params && params.length > 0) {
+                params.forEach((p, index) => {
+                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
+                });
             } else {
-                html = `<div class="form-group"><label>Estado Gral:</label><select id="chk1"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Señalética:</label><select id="chk2"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>
-                        <div class="form-group"><label>Accesibilidad:</label><select id="chk3"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
+                html = `<p style="color:var(--danger); font-size:14px;">Error: Este grupo no tiene parámetros asignados. Edítelo en Admin.</p>`;
             }
             container.innerHTML = html;
         }
 
         function guardarRegistro() {
             const id = document.getElementById('idEquipo').value;
-            if(!id) return alert("Escanee un equipo.");
+            if(!id) return alert("Escanee QR.");
             if(firmaVacia) return alert("Firma obligatoria.");
             
             const eq = config.equipos[id];
+            const params = config.grupos[eq.grupo];
+            let resp = {};
+            
+            // Recolectar dinámicamente según la cantidad de parámetros del grupo
+            params.forEach((p, index) => {
+                resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value;
+            });
+
             const registro = {
-                Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo_Inspeccion: eq.grupo,
-                Seccion: eq.seccion, ID_Equipo: id,
-                Param_1: document.getElementById('chk1').value, Param_2: document.getElementById('chk2').value, Param_3: document.getElementById('chk3').value,
+                Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo,
+                Seccion: eq.seccion, ID_Equipo: id, Controles: resp,
                 Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " "),
                 Firma: canvas.toDataURL('image/png')
             };
@@ -468,56 +415,80 @@
             db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = '';
-            document.getElementById('moduloDinamico').classList.add('hidden');
-            document.getElementById('observaciones').value = ''; limpiarFirma();
-            alert(`✅ Control guardado.`);
+            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; limpiarFirma();
+            alert(`✅ Guardado.`);
         }
 
         function generarYGuardarQR() {
-            const id = document.getElementById('qrId').value.trim().toUpperCase();
-            const tipo = document.getElementById('qrTipo').value.trim();
-            const sec = document.getElementById('qrSeccion').value;
-            const grp = document.getElementById('qrGrupo').value;
-
-            if(!id || !tipo) return alert("Complete los datos.");
-
-            config.equipos[id] = { tipo: tipo, seccion: sec, grupo: grp };
-            guardarConfig();
-
+            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim();
+            if(!id || !tipo) return;
+            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, grupo: document.getElementById('qrGrupo').value };
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
-            qriousObj.value = id;
-            document.getElementById('lblQR').innerText = `${id} - ${tipo}`;
-            document.getElementById('zonaQR').classList.remove('hidden');
-            alert(`Equipo guardado en la Base Maestra.`);
+            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
         }
 
-        function descargarQR() {
-            const link = document.createElement('a'); link.download = `QR_${document.getElementById('qrId').value}.png`;
-            link.href = document.getElementById('qrGenerado').toDataURL("image/png"); link.click();
-        }
-
-        function exportarCSV() {
+        // --- SISTEMA DE COMPARTICIÓN NATIVO (WEB SHARE API) ---
+        async function compartirCSV() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            if(!db.length) return alert("Sin datos.");
-            let csv = "Fecha;Inspector;Grupo;Seccion;ID_Equipo;Control_1;Control_2;Control_3;Observaciones\r\n";
-            db.forEach(r => { csv += `${r.Fecha};${r.Inspector};${r.Grupo_Inspeccion};${r.Seccion};${r.ID_Equipo};${r.Param_1};${r.Param_2};${r.Param_3};${r.Observaciones}\r\n`; });
-            descargar(csv, 'text/csv', `Sabana_SySO_${Date.now()}.csv`);
+            if(!db.length) return alert("No hay datos.");
+            
+            // Buscar cuál es el grupo que más parámetros tiene (Max Cols)
+            let maxCols = 0;
+            db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
+            
+            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "ID_Equipo"];
+            for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`);
+            head.push("Observaciones");
+            
+            let csv = head.join(";") + "\r\n";
+            db.forEach(r => {
+                let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.ID_Equipo];
+                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); // Si no tiene, deja vacío
+                row.push(r.Observaciones);
+                csv += row.join(";") + "\r\n";
+            });
+
+            const file = new File([csv], `Sábana_SySO_${Date.now()}.csv`, { type: 'text/csv' });
+            enviarArchivo(file, csv, 'text/csv');
         }
 
-        function exportarEvidencias() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            if(!db.length) return alert("Sin datos.");
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial;} .card{border:1px solid #ccc; padding:10px; margin:10px; border-radius:5px;} img{max-height:100px; border:1px solid #000;}</style></head><body><h2>Firmas</h2>`;
-            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo} (${r.Seccion})</b></p><p>Inspector: ${r.Inspector}</p><img src="${r.Firma}"></div>`; });
-            html += `</body></html>`; descargar(html, 'text/html', `Firmas_SySO_${Date.now()}.html`);
+        async function compartirEvidencias() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("Sin datos.");
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial;} .card{border:1px solid #ccc; padding:10px; margin:10px; border-radius:5px;} img{max-height:100px; border:1px solid #000;}</style></head><body><h2>Firmas Industriales</h2>`;
+            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo}</b></p><p>Inspector: ${r.Inspector}</p><img src="${r.Firma}"></div>`; });
+            html += `</body></html>`;
+            
+            const file = new File([html], `Firmas_SySO_${Date.now()}.html`, { type: 'text/html' });
+            enviarArchivo(file, html, 'text/html');
+        }
+
+        async function enviarArchivo(fileObj, contentStr, mimeType) {
+            // Verificar si el celular soporta compartir archivos por WhatsApp/Mail
+            if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+                try {
+                    await navigator.share({
+                        files: [fileObj],
+                        title: 'Reporte de Inspección SySO',
+                        text: 'Adjunto registros del recorrido de planta.'
+                    });
+                } catch (err) { console.log('Cancelado por el usuario.'); }
+            } else {
+                // Modo PC: Si está en computadora y no hay WhatsApp, fuerza la descarga normal
+                descargar(contentStr, mimeType, fileObj.name);
+            }
         }
 
         function descargar(contenido, tipo, nombre) {
-            const blob = new Blob([contenido], { type: `${tipo};charset=utf-8;` });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = nombre; link.click();
+            const blob = typeof contenido === 'string' && tipo.includes('text') ? new Blob([contenido], {type: tipo}) : fetch(contenido).then(res => res.blob());
+            if(blob instanceof Promise) {
+                blob.then(b => { const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = nombre; l.click(); });
+            } else {
+                const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = nombre; l.click();
+            }
         }
         
-        function purgarHistorial() { if(confirm("Se borrarán los registros inspeccionados. La base de QRs y usuarios NO se borrará. ¿Continuar?")) { localStorage.removeItem(DB_KEY); alert("Historial purgado."); } }
+        function purgarHistorial() { if(confirm("Se borrarán los registros del mes. Las configuraciones NO se borrarán. ¿Continuar?")) { localStorage.removeItem(DB_KEY); alert("Historial de inspecciones purgado."); } }
     </script>
 </body>
 </html>
