@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.11 - Industrial</title>
+    <title>Gestión SySO V5.12 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -17,7 +17,7 @@
         
         .form-group { margin-bottom: 15px; position: relative; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
+        input[type="text"], input[type="number"], input[type="password"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
         input:disabled, input[readonly] { background: #e9ecef; font-weight: bold; color: var(--primary); border: 1px solid #ced4da; }
         
         .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
@@ -36,7 +36,6 @@
         
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
         #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed #ccc; display: none;}
         
         .view { display: none; }
@@ -48,15 +47,22 @@
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: flex-end; justify-content: center; }
-        .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
+        .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
+        .modal-content-bottom { align-self: flex-end; border-radius: 20px 20px 0 0; }
         #canvasFirma { border: 2px dashed #ccc; border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
-        /* Estilos del Autocompletado Custom */
+        @keyframes popIn { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
+        
         #dropdownUsuarios { display:none; position:absolute; width:100%; background:white; border:1px solid #ccc; border-radius:0 0 6px 6px; max-height:160px; overflow-y:auto; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); top: 100%; margin-top:-2px;}
         .dropdown-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; color: var(--primary); font-weight: bold; }
-        .dropdown-item:active { background-color: #f4f6f9; }
+        
+        .chk-container { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 6px; padding: 10px; background: #fff; }
+        .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:#333; font-size:15px; }
+        .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
+        
+        /* Cajas de Inventario */
+        .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -73,7 +79,6 @@
             <label>Pegue el Token Manual:</label>
             <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="eyJ..."></textarea>
             <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
-            
             <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #dc3545;">
                 <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro</h4>
                 <label>Super-Admin:</label><input type="text" id="initAdminName">
@@ -83,22 +88,19 @@
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN (Con Buscador Universal) -->
+    <!-- VISTA 1: LOGIN -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
             <p style="font-size:12px; color:#555; margin-bottom:15px;">Escribí tu nombre para filtrar la lista.</p>
-            
             <div class="form-group">
                 <label>Usuario:</label>
                 <input type="text" id="loginInputUsuario" placeholder="Tipeá tu nombre aquí..." autocomplete="off" onkeyup="filtrarUsuarios()" onfocus="filtrarUsuarios()">
                 <div id="dropdownUsuarios"></div>
             </div>
-            
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
-        
         <div class="card" style="background-color: #e9ecef;">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Actualización Disponible?</h4>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Pegar Token Manualmente</button>
@@ -144,10 +146,8 @@
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
-            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo según el grupo. Tipeá solo el N° correlativo.</p>
-            
+            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo. Tipeá solo el N° correlativo.</p>
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
-
             <div class="form-group">
                 <label>ID Único (Prefijo + Correlativo):</label>
                 <div style="display: flex; gap: 5px;">
@@ -155,7 +155,6 @@
                     <input type="number" id="qrNumero" placeholder="Ej. 080" style="flex:2;">
                 </div>
             </div>
-            
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo" placeholder="Ej. PQS 5kg"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
             <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
@@ -168,17 +167,17 @@
             <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid #eee;">
                 <canvas id="qrGenerado"></canvas>
                 <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
-                <button class="btn btn-outline" onclick="descargar(document.getElementById('qrGenerado').toDataURL('image/png'), 'image/png', 'QR_'+document.getElementById('qrPrefijo').value.toUpperCase()+document.getElementById('qrNumero').value+'.png')">Descargar Etiqueta</button>
+                <button class="btn btn-outline" onclick="descargarUnicoQR()">Descargar Etiqueta</button>
             </div>
         </div>
         
         <div class="card">
-            <h3 style="margin-bottom: 10px;">Inventario de Equipos Activos</h3>
+            <h3 style="margin-bottom: 10px;">Inventario por Categorías</h3>
             <div id="listaEquipos" style="font-size:12px;"></div>
         </div>
     </div>
 
-    <!-- VISTA 4: ADMIN / CIERRE -->
+    <!-- VISTA 4: CONFIGURACIÓN (Admin) -->
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
             <h3>Sincronización Mágica</h3>
@@ -201,16 +200,20 @@
         </div>
 
         <div class="card">
-            <h3>Gestión de Usuarios</h3>
+            <h3>Gestión de Personal (Perfiles Múltiples)</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevoUsuNombre" placeholder="Nombre" style="flex:2;">
                 <input type="text" id="nuevoUsuPin" placeholder="PIN" style="flex:1;" pattern="[0-9]*">
             </div>
-            <div style="display:flex; gap:5px; margin-top:5px;">
-                <select id="nuevoUsuRol" style="flex:1;"><option value="Inspector">Inspector</option><option value="Admin">Administrador</option></select>
-                <select id="nuevoUsuGrupo" style="flex:1;"></select>
+            <div style="margin-top:10px;">
+                <label>Rol:</label>
+                <select id="nuevoUsuRol"><option value="Inspector">Inspector</option><option value="Admin">Administrador</option></select>
             </div>
-            <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="margin-top:10px;">
+                <label>Grupos Habilitados (Permisos):</label>
+                <div id="nuevoUsuGrupoContainer" class="chk-container"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
                 <button id="btnGuardarUsu" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarUsuario()">+ Guardar Usuario</button>
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionUsu()">Cancelar</button>
             </div>
@@ -226,17 +229,32 @@
             </div>
             <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
         </div>
+    </div>
 
+    <!-- VISTA 5: TURNO (Inspectores y Admins) -->
+    <div id="view-turno" class="view">
         <div class="card" style="background:#fff3cd; border: 2px solid var(--accent);">
-            <h3 style="margin-bottom: 10px; color:#856404;">Cierre de Turno / Mes</h3>
+            <h3 style="margin-bottom: 5px; color:#856404;">Gestión de Turno</h3>
+            <p style="font-size:13px; color:#555; margin-bottom:15px;">Inspector Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
             <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
+        </div>
+        <div class="card">
+            <button class="btn btn-outline" onclick="cerrarSesion()">🔒 Cerrar Sesión Segura</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE RADAR GIGANTE -->
+    <div id="modalRadar" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align:center;">
+            <div id="radarBody"></div>
+            <button class="btn btn-primary" style="margin-top:20px; font-size:20px; padding:15px;" onclick="cerrarRadar()">✅ Entendido</button>
         </div>
     </div>
 
     <!-- MODAL DE FIRMA -->
-    <div id="modalCierre" class="modal-overlay hidden">
-        <div class="modal-content">
+    <div id="modalCierre" class="modal-overlay hidden" style="align-items: flex-end; padding:0;">
+        <div class="modal-content modal-content-bottom">
             <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
             <p style="font-size:12px; margin-bottom:15px; color:#555;">Dibuja tu firma para validar legalmente todos los controles y empaquetar los archivos.</p>
             <canvas id="canvasFirma"></canvas>
@@ -252,8 +270,8 @@
     <div class="tab-bar hidden" id="menuNavegacion">
         <button class="tab-btn active" onclick="nav('inspeccion', this)">📋<br>Inspección</button>
         <button class="tab-btn admin-only" onclick="nav('qr', this)">🖨️<br>Alta QR</button>
-        <button class="tab-btn admin-only" onclick="nav('admin', this)">📦<br>Cierre</button>
-        <button class="tab-btn" onclick="cerrarSesion()">🔒<br>Salir</button>
+        <button class="tab-btn admin-only" onclick="nav('admin', this)">⚙️<br>Config</button>
+        <button class="tab-btn" onclick="nav('turno', this)">📤<br>Turno</button>
     </div>
 
     <script>
@@ -285,6 +303,8 @@
                 config = JSON.parse(rawConfig); 
                 if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
                 if(!config.fallas) config.fallas = {}; 
+                // Adaptación retroactiva de usuarios viejos a array
+                config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
                 prepararLogin(); 
             }
         });
@@ -303,64 +323,44 @@
                 const div = document.createElement('div');
                 div.className = 'dropdown-item';
                 div.innerText = u.nombre;
-                div.onclick = function() {
-                    document.getElementById('loginInputUsuario').value = u.nombre;
-                    dropdown.style.display = 'none';
-                };
+                div.onclick = function() { document.getElementById('loginInputUsuario').value = u.nombre; dropdown.style.display = 'none'; };
                 dropdown.appendChild(div);
             });
             dropdown.style.display = 'block';
         }
 
         document.addEventListener('click', function(e) {
-            if (e.target.id !== 'loginInputUsuario') {
-                const dropdown = document.getElementById('dropdownUsuarios');
-                if(dropdown) dropdown.style.display = 'none';
-            }
+            if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; }
         });
-        // ----------------------------------------
 
         function inicializarSistema() {
             const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim();
             if(!nom || !pin) return alert("Faltan datos.");
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
+            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" };
             config.fallas = {};
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
-        function generarEnlaceMagico() {
-            const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
-            const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado.");
-        }
-        function generarToken() {
-            const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport');
-            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado.");
-        }
-        function generarEstructuraExcel() {
-            const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
-            const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado.");
-        }
-        function sincronizarConToken(str) {
-            try { const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); } } catch(e) { alert("Token Inválido."); }
-        }
+        function generarEnlaceMagico() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str; const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado."); }
+        function generarToken() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado."); }
+        function generarEstructuraExcel() { const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado."); }
+        function sincronizarConToken(str) { try { const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); } } catch(e) { alert("Token Inválido."); } }
 
         function prepararLogin() {
-            document.getElementById('loginInputUsuario').value = '';
+            document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = '';
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active');
         }
 
         function validarAcceso() {
-            const nom = document.getElementById('loginInputUsuario').value.trim(); 
-            const pin = document.getElementById('loginPin').value.trim();
+            const nom = document.getElementById('loginInputUsuario').value.trim(); const pin = document.getElementById('loginPin').value.trim();
             usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin);
-            
             if(!usuarioActual) return alert("Usuario o PIN Incorrecto.");
             
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; 
-            document.getElementById('loginInputUsuario').value = '';
-            document.getElementById('loginPin').value = '';
+            document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre;
+            document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = '';
             
             const adminBtns = document.querySelectorAll('.admin-only');
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
@@ -378,9 +378,14 @@
 
         function poblarAdmin() {
             const grpKeys = Object.keys(config.grupos);
-            const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
             const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
             const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
+            
+            // Llenar Casillas de Verificación de Grupos para Usuarios
+            let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo"> Acceso Total (Todos)</label>`;
+            grpKeys.forEach(g => { if(g!=='Todos') chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; });
+            document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml;
+            
             actualizarPrefijoUI(); renderListas();
         }
 
@@ -389,7 +394,7 @@
             if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; }
         }
 
-        // --- CRUD (Admin) ---
+        // --- CRUD GRUPOS ---
         function cargarEdicionGrupo(nom) { document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', '); editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarGrupo() {
@@ -398,22 +403,38 @@
             if(editGrupoNom) {
                 if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe.");
                 for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; }
-                config.usuarios.forEach(u => { if(u.grupo === editGrupoNom) u.grupo = nom; });
+                config.usuarios.forEach(u => { u.grupo = u.grupo.map(gx => gx === editGrupoNom ? nom : gx); });
                 if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; }
             } else { if(config.grupos[nom]) return alert("El grupo ya existe."); }
             config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
         }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        function cargarEdicionUsu(id) { const u = config.usuarios.find(x => x.id === id); if(!u) return; document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; document.getElementById('nuevoUsuGrupo').value = u.grupo; editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); }
-        function cancelarEdicionUsu() { editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); }
+        // --- CRUD USUARIOS (Adaptado a Array) ---
+        function cargarEdicionUsu(id) { 
+            const u = config.usuarios.find(x => x.id === id); if(!u) return; 
+            document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; 
+            const chks = document.querySelectorAll('.chk-usu-grupo');
+            chks.forEach(chk => { chk.checked = u.grupo.includes(chk.value); });
+            editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); 
+        }
+        function cancelarEdicionUsu() { 
+            editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; 
+            document.querySelectorAll('.chk-usu-grupo').forEach(chk => chk.checked = false);
+            const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); 
+        }
         function guardarUsuario() {
             const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim(); if(!nom || !pin) return;
-            if(editUsuId) { const u = config.usuarios.find(x => x.id === editUsuId); u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = document.getElementById('nuevoUsuGrupo').value; }
-            else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value }); }
+            const gruposSeleccionados = Array.from(document.querySelectorAll('.chk-usu-grupo:checked')).map(cb => cb.value);
+            if(gruposSeleccionados.length === 0) return alert("Debe asignarle al menos un grupo de permiso.");
+            
+            if(editUsuId) { const u = config.usuarios.find(x => x.id === editUsuId); u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = gruposSeleccionados; }
+            else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: gruposSeleccionados }); }
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin();
         }
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        
+        // --- CRUD SECCIONES ---
         function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarSeccion() {
@@ -427,6 +448,7 @@
         }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
+        // --- CRUD EQUIPOS ---
         function cargarEdicionQR(id) {
             const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || '';
             const match = id.match(/^(.*?)(\d+)$/);
@@ -448,17 +470,64 @@
             editQRId = null; document.getElementById('qrNumero').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin();
         }
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        
+        function descargarUnicoQR() {
+            const a = document.createElement('a'); 
+            a.href = document.getElementById('qrGenerado').toDataURL('image/png'); 
+            a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; 
+            a.click();
+        }
 
+        // --- SISTEMA DE INVENTARIO CATEGORIZADO Y DESCARGA MASIVA ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
             Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small>${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
+            
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
-            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
+            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small>[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
+            
             const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
             config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
-            const lQ = document.getElementById('listaEquipos'); if(lQ) { lQ.innerHTML = ''; Object.keys(config.equipos).forEach(id => { const eq = config.equipos[id]; lQ.innerHTML += `<div class="list-item"><div><b>${id}</b> (${eq.tipo})<br><small>${eq.seccion} | ${eq.grupo}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${id}')">❌</button></div></div>`; }); }
+            
+            const lQ = document.getElementById('listaEquipos'); 
+            if(lQ) { 
+                lQ.innerHTML = ''; 
+                const eqPorGrupo = {};
+                Object.keys(config.equipos).forEach(id => {
+                    const eq = config.equipos[id];
+                    if(!eqPorGrupo[eq.grupo]) eqPorGrupo[eq.grupo] = [];
+                    eqPorGrupo[eq.grupo].push({ id: id, ...eq });
+                });
+                
+                Object.keys(eqPorGrupo).forEach(g => {
+                    lQ.innerHTML += `<div class="grupo-header"><span>${g} (${eqPorGrupo[g].length})</span><button class="btn-small btn-warning" onclick="descargarLoteQRs('${g}')">🖨️ Imprimir Lote</button></div>`;
+                    eqPorGrupo[g].forEach(eq => {
+                        lQ.innerHTML += `<div class="list-item"><div><b>${eq.id}</b> (${eq.tipo})<br><small>${eq.seccion}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                    });
+                });
+            }
         }
 
+        window.descargarLoteQRs = function(grupo) {
+            const equipos = Object.keys(config.equipos).filter(id => config.equipos[id].grupo === grupo).map(id => ({ id: id, ...config.equipos[id] }));
+            if(equipos.length === 0) return alert("No hay equipos en este grupo.");
+            
+            let html = `<html><head><meta charset="utf-8"><title>Lote QRs - ${grupo}</title><style>body{font-family:sans-serif; text-align:center;} .qr-box{display:inline-block; border:2px dashed #ccc; margin:10px; padding:15px; width:220px; vertical-align:top;} img{width:100%;} h3{margin:5px 0;} p{margin:0; font-size:12px; color:#555;}</style></head><body><h2>Plancha de Etiquetas: ${grupo}</h2>`;
+            const generador = new QRious({ size: 250, level: 'H' });
+            equipos.forEach(eq => {
+                generador.value = eq.id;
+                html += `<div class="qr-box"><h3>${eq.id}</h3><img src="${generador.toDataURL('image/png')}"><p>${eq.tipo}<br>${eq.seccion}</p></div>`;
+            });
+            html += `</body></html>`;
+            
+            const blob = new Blob([html], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html`;
+            a.click();
+        }
+
+        // --- COMPRESIÓN FOTOS ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -476,7 +545,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- INSPECCIÓN Y ESCANEO ---
+        // --- INSPECCIÓN, RADAR Y CICLO CERRADO ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
@@ -486,7 +555,14 @@
             id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id]; 
-                if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
+                
+                // Validación Multicapa de Grupos
+                let accesoPermitido = false;
+                if(usuarioActual.rol === 'Admin') accesoPermitido = true;
+                if(usuarioActual.grupo.includes('Todos')) accesoPermitido = true;
+                if(usuarioActual.grupo.includes(eq.grupo)) accesoPermitido = true;
+                
+                if(!accesoPermitido) { alert(`Bloqueo de Perfil: No estás habilitado para inspeccionar la categoría ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
                 
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; 
                 document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
@@ -516,7 +592,7 @@
                 if(val === 'Falla') fallasDetectadas.push(p);
             });
             
-            // --- VALIDACIÓN DE FOTO OBLIGATORIA ---
+            // Validación de Evidencia Obligatoria
             if(fallasDetectadas.length > 0 && !fotoActualBase64) {
                 return alert("⛔ BLOQUEO DE SEGURIDAD:\nHa detectado una falla en los controles.\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar el registro.");
             }
@@ -534,8 +610,10 @@
                 const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB));
             }
 
-            let mensajeRadar = "✅ Control Guardado exitosamente.";
+            // Radar de Siguiente Ruta
             const match = id.match(/^(.*?)(\d+)$/);
+            let modalHTML = `<h2 style="color:var(--success); font-size:28px; margin-bottom:10px;">✅ ¡Guardado!</h2>`;
+            
             if(match) {
                 const prefijo = match[1]; const numeroActual = parseInt(match[2], 10); const padding = match[2].length;
                 let proximoId = null; let proximoEq = null;
@@ -544,19 +622,33 @@
                     if(config.equipos[testId]) { proximoId = testId; proximoEq = config.equipos[testId]; break; }
                 }
                 if(proximoEq) {
-                    let avisoFalla = (config.fallas && config.fallas[proximoId]) ? '\n🚨 ALERTA: Presenta falla pendiente del mes pasado.' : '';
-                    mensajeRadar += `\n\n📍 PRÓXIMO OBJETIVO:\n- Equipo: ${proximoId}\n- Ubicación: ${proximoEq.ubicacion || 'N/A'}\n- Sección: ${proximoEq.seccion}${avisoFalla}`;
+                    modalHTML += `<div style="background:#f4f6f9; padding:15px; border-radius:8px; border:2px solid var(--primary);">
+                                    <h3 style="color:var(--primary); margin-top:0;">📍 Siguiente en Ruta</h3>
+                                    <p style="font-size:32px; font-weight:bold; margin:10px 0;">${proximoId}</p>
+                                    <p style="font-size:18px; margin:5px 0;"><b>Ubicación:</b> ${proximoEq.ubicacion || 'No especificada'}</p>
+                                    <p style="font-size:16px; margin:5px 0; color:#555;"><b>Sección:</b> ${proximoEq.seccion}</p>`;
+                    if (config.fallas && config.fallas[proximoId]) {
+                        modalHTML += `<div style="background:#dc3545; color:white; padding:10px; border-radius:6px; margin-top:15px; font-size:14px;"><b>🚨 ALERTA DE FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`;
+                    }
+                    modalHTML += `</div>`;
+                } else {
+                    modalHTML += `<p style="font-size:18px; color:#555; margin-top:20px;">🏁 Fin de la ruta para el bloque <b>${prefijo}</b>.</p>`;
                 }
-                else mensajeRadar += `\n\n🏁 Fin de la ruta para el bloque ${prefijo}.`;
+            } else {
+                modalHTML += `<p>Control registrado en base de datos.</p>`;
             }
             
+            // Limpieza
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; 
             document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null;
             
-            alert(mensajeRadar);
+            mostrarRadar(modalHTML);
         }
 
-        // --- SISTEMA DE CIERRE Y FIRMA (MODAL) ---
+        // --- SISTEMA DE RADAR Y CIERRE ---
+        function mostrarRadar(htmlBody) { document.getElementById('radarBody').innerHTML = htmlBody; document.getElementById('modalRadar').classList.remove('hidden'); }
+        function cerrarRadar() { document.getElementById('modalRadar').classList.add('hidden'); }
+
         function abrirModalCierre() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones."); document.getElementById('modalCierre').classList.remove('hidden');
             setTimeout(() => {
@@ -582,37 +674,18 @@
             let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#f4f6f9;} .card{background:#fff; border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; background:#fff; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><hr>`;
             
             db.forEach(r => { 
-                let detallesControles = "";
-                Object.keys(r.Controles).forEach(k => { 
-                    let valor = r.Controles[k];
-                    let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor;
-                    detallesControles += `${k}: ${spanValor} | `; 
-                });
-                
-                const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha];
-                const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : '';
-
-                html += `<div class="card">
-                            <h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3>
-                            <p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p>
-                            <p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p>
-                            <p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p>
-                            <p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>
-                            ${imgTag}
-                         </div>`; 
+                let detallesControles = ""; Object.keys(r.Controles).forEach(k => { let valor = r.Controles[k]; let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor; detallesControles += `${k}: ${spanValor} | `; });
+                const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : '';
+                html += `<div class="card"><h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p><p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p><p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>${imgTag}</div>`; 
             }); 
             html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
             const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' }); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
-            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Reporte SySO', text: 'Adjunto registros y evidencias fotográficas.' }); } catch (err) {} }
+            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Reporte SySO', text: 'Adjunto registros y evidencias.' }); } catch (err) {} }
             else { const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click(); setTimeout(()=>{const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();}, 500); }
         }
         function purgarHistorial() { 
-            if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { 
-                localStorage.removeItem(DB_KEY); 
-                localStorage.removeItem(PHOTO_KEY); 
-                alert("Historial purgado con éxito."); 
-            } 
+            if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { localStorage.removeItem(DB_KEY); localStorage.removeItem(PHOTO_KEY); alert("Historial purgado con éxito."); } 
         }
     </script>
 </body>
