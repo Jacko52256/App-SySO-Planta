@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.9 - Industrial</title>
+    <title>Gestión SySO V5.10 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -78,11 +78,16 @@
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN -->
+    <!-- VISTA 1: LOGIN (Con Datalist Integrado) -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
-            <div class="form-group" style="margin-top:15px;"><label>Usuario:</label><select id="loginSelectUsuario"></select></div>
+            <p style="font-size:12px; color:#555; margin-bottom:15px;">Escribí tu nombre para buscar en la lista.</p>
+            <div class="form-group">
+                <label>Usuario:</label>
+                <input type="text" id="loginInputUsuario" list="listaUsuariosData" placeholder="Tipeá tu nombre aquí...">
+                <datalist id="listaUsuariosData"></datalist>
+            </div>
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
@@ -115,12 +120,12 @@
             <hr style="margin:15px 0;">
             <div id="moduloDinamico" class="hidden"></div>
             
-            <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..."></textarea></div>
+            <div class="form-group" style="margin-top:15px;"><label>Observaciones:</label><textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..."></textarea></div>
             
             <div class="form-group" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:15px;">
-                <label style="color:#6c757d;">¿Se detectó una falla grave?</label>
+                <label style="color:#dc3545;">🚨 ¿Se detectó alguna falla? (Foto Obligatoria)</label>
                 <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
-                <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia (Opcional)</button>
+                <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
                 <img id="previewBox" src="" alt="Previsualización">
             </div>
 
@@ -272,7 +277,7 @@
             else { 
                 config = JSON.parse(rawConfig); 
                 if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
-                if(!config.fallas) config.fallas = {}; // Inyección segura de la matriz de fallas en sistemas viejos
+                if(!config.fallas) config.fallas = {}; 
                 prepararLogin(); 
             }
         });
@@ -305,19 +310,26 @@
         }
 
         function prepararLogin() {
-            const sel = document.getElementById('loginSelectUsuario'); sel.innerHTML = '<option value="">Seleccione...</option>';
-            config.usuarios.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
+            const dl = document.getElementById('listaUsuariosData'); dl.innerHTML = '';
+            config.usuarios.forEach(u => dl.innerHTML += `<option value="${u.nombre}"></option>`);
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active');
         }
 
         function validarAcceso() {
-            const id = document.getElementById('loginSelectUsuario').value; const pin = document.getElementById('loginPin').value;
-            usuarioActual = config.usuarios.find(u => u.id == id && u.pin == pin);
-            if(!usuarioActual) return alert("PIN Incorrecto.");
-            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('loginPin').value = '';
+            const nom = document.getElementById('loginInputUsuario').value.trim(); 
+            const pin = document.getElementById('loginPin').value.trim();
+            usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin);
+            
+            if(!usuarioActual) return alert("Usuario o PIN Incorrecto.");
+            
+            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; 
+            document.getElementById('loginInputUsuario').value = '';
+            document.getElementById('loginPin').value = '';
+            
             const adminBtns = document.querySelectorAll('.admin-only');
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
             else { adminBtns.forEach(b => b.classList.add('hidden')); }
+            
             document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
         }
         function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
@@ -428,7 +440,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- INSPECCIÓN Y ESCANEO CON ALERTA DE FALLA PREVIA ---
+        // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
@@ -446,7 +458,6 @@
                 const container = document.getElementById('moduloDinamico'); 
                 container.classList.remove('hidden'); 
                 
-                // INYECCIÓN DE ALERTA DE FALLA (CICLO CERRADO)
                 let warningHTML = '';
                 if(config.fallas && config.fallas[id]) {
                     warningHTML = `<div style="background:#ffeeba; color:#856404; padding:10px; border-left:4px solid #ffc107; margin-bottom:15px; border-radius:4px; font-size:13px;"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>El mes anterior se reportó falla en: <i>${config.fallas[id]}</i>. Verifique si fue solucionado.</div>`;
@@ -469,26 +480,24 @@
                 if(val === 'Falla') fallasDetectadas.push(p);
             });
             
-            // --- MOTOR DE AUTO-RESOLUCIÓN DE FALLAS ---
-            if(!config.fallas) config.fallas = {};
-            if(fallasDetectadas.length > 0) {
-                config.fallas[id] = fallasDetectadas.join(", "); // Guardar en bóveda maestra
-            } else {
-                delete config.fallas[id]; // Si está todo OK, se limpia la falla antigua
+            // --- VALIDACIÓN DE FOTO OBLIGATORIA (CONTINGENCIA) ---
+            if(fallasDetectadas.length > 0 && !fotoActualBase64) {
+                return alert("⛔ BLOQUEO DE SEGURIDAD:\nHa detectado una falla en los controles.\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar el registro.");
             }
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); // Persistir la matriz
             
-            // Guardar Inspección Mensual
+            if(!config.fallas) config.fallas = {};
+            if(fallasDetectadas.length > 0) { config.fallas[id] = fallasDetectadas.join(", "); } 
+            else { delete config.fallas[id]; }
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            
             const timestampLocal = new Date().toLocaleString('es-PY');
             const registro = { Fecha: timestampLocal, Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
-            // Guardar Evidencia
             if (fotoActualBase64) {
                 const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB));
             }
 
-            // Radar de Siguiente Ruta con Alerta Preventiva
             let mensajeRadar = "✅ Control Guardado exitosamente.";
             const match = id.match(/^(.*?)(\d+)$/);
             if(match) {
@@ -505,7 +514,6 @@
                 else mensajeRadar += `\n\n🏁 Fin de la ruta para el bloque ${prefijo}.`;
             }
             
-            // Limpieza
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; 
             document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null;
             
