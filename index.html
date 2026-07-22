@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.1 - Industrial</title>
+    <title>Gestión SySO V5.2 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -50,28 +50,27 @@
         <p id="headerInfo">Sistema de Gestión Industrial</p>
     </div>
 
-    <!-- VISTA 0: BOOTSTRAP -->
+    <!-- VISTA 0: BOOTSTRAP (Seguridad Reforzada) -->
     <div id="view-init" class="view">
         <div class="card">
-            <h3 style="color:var(--danger); margin-bottom: 15px;">Sistema No Inicializado</h3>
-            <button class="btn btn-primary" onclick="mostrarCrearAdmin()">1. Crear Base (Jefe/Admin)</button>
-            <button class="btn btn-outline" onclick="mostrarImportarToken()">2. Importar Token (Brigada)</button>
+            <h3 style="color:var(--danger); margin-bottom: 15px;">Dispositivo No Vinculado</h3>
+            <p style="font-size: 14px; margin-bottom: 20px;">Este equipo requiere configuración de Jefatura para operar.</p>
             
-            <div id="divCrearAdmin" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
+            <label>Pegue el Token Manual (Si el enlace mágico falla):</label>
+            <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="eyJ..."></textarea>
+            <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
+            
+            <!-- BACKDOOR OCULTO PARA JEFATURA -->
+            <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #dc3545;">
+                <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro</h4>
                 <label>Super-Admin:</label><input type="text" id="initAdminName" placeholder="Ej. Jack">
                 <label>PIN de Acceso:</label><input type="password" id="initAdminPin" placeholder="Ej. 1234" pattern="[0-9]*" inputmode="numeric">
-                <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar</button>
-            </div>
-            
-            <div id="divImportarToken" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <label>Pegue el Token Maestro:</label>
-                <textarea id="initToken" style="height: 100px; font-family: monospace;"></textarea>
-                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar</button>
+                <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar Base Maestra</button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN (CON BOTÓN DE RESCATE) -->
+    <!-- VISTA 1: LOGIN (Con Sincronización Abierta) -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
@@ -80,12 +79,9 @@
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
         
-        <!-- BOTÓN DE RESCATE PARA ACTUALIZAR APP SIN LOGIN -->
         <div class="card" style="background-color: #e9ecef;">
-            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Hubo actualizaciones en la base?</h4>
-            <p style="font-size: 12px; margin-bottom: 10px;">Si RRHH agregó tu usuario o equipos nuevos, pega el token aquí.</p>
-            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Actualizar App (Pegar Token)</button>
-            
+            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Actualización Disponible?</h4>
+            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Pegar Token Manualmente</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <textarea id="tokenLogin" placeholder="Pegue el token aquí..." style="height: 70px; font-family: monospace;"></textarea>
                 <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('tokenLogin').value)">Procesar Token</button>
@@ -127,7 +123,7 @@
             <div class="form-group"><label>ID (Ej. EXT-080):</label><input type="text" id="qrId"></div>
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
-            <div class="form-group"><label>Ubicación Exacta (Micro-Localización):</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina gerencia"></div>
+            <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina gerencia"></div>
             <div class="form-group"><label>Grupo (Formulario):</label><select id="qrGrupo"></select></div>
             
             <button class="btn btn-warning" onclick="generarYGuardarQR()">Guardar y Etiquetar</button>
@@ -142,9 +138,11 @@
     <!-- VISTA 4: ADMIN -->
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
-            <h3>Sincronización de Dispositivos</h3>
-            <button class="btn btn-primary" onclick="generarToken()">1. Generar Token (Brigada)</button>
-            <button class="btn btn-warning" onclick="generarEstructuraExcel()">2. Estructura para Excel (Macro)</button>
+            <h3>Sincronización Mágica</h3>
+            <p style="font-size: 12px; margin-bottom: 10px;">Comparta el link mágico. Al abrirlo, el celular se configurará solo.</p>
+            <button class="btn btn-primary" onclick="generarEnlaceMagico()">1. 🔗 Copiar Enlace Mágico</button>
+            <button class="btn btn-outline" onclick="generarToken()">Copiar Solo Token (Respaldo)</button>
+            <button class="btn btn-warning" style="margin-top:10px;" onclick="generarEstructuraExcel()">2. Estructura para Excel (Macro)</button>
             <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
         </div>
 
@@ -202,30 +200,56 @@
         let config = { usuarios: [], secciones: [], equipos: {}, grupos: { "Combate": ["Presión", "Precinto", "Estado Físico"], "PA": ["Insumos", "Caducidad", "Higiene"], "Todos": [] } };
         let usuarioActual = null; let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
 
+        // --- ARRANQUE Y LÓGICA DE ENLACE MÁGICO ---
         document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // 1. Interceptar Enlace Mágico
+            const magicToken = urlParams.get('t');
+            if (magicToken) {
+                try {
+                    const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim())));
+                    if (newCfg.usuarios) {
+                        localStorage.setItem(CFG_KEY, JSON.stringify(newCfg));
+                        window.location.href = window.location.href.split('?')[0]; // Limpiar URL
+                        return;
+                    }
+                } catch(e) { alert("El enlace mágico está corrupto. Pegue el Token manualmente."); }
+            }
+
+            // 2. Interceptar Backdoor de Setup
+            if (urlParams.get('setup') === '1') {
+                document.getElementById('divCrearAdmin').classList.remove('hidden');
+            }
+
             const rawConfig = localStorage.getItem(CFG_KEY);
             if (!rawConfig) document.getElementById('view-init').classList.add('active');
             else { config = JSON.parse(rawConfig); prepararLogin(); }
         });
 
-        function mostrarCrearAdmin() { document.getElementById('divCrearAdmin').classList.remove('hidden'); document.getElementById('divImportarToken').classList.add('hidden'); }
-        function mostrarImportarToken() { document.getElementById('divImportarToken').classList.remove('hidden'); document.getElementById('divCrearAdmin').classList.add('hidden'); }
-
         function inicializarSistema() {
-            const nom = document.getElementById('initAdminName').value.trim();
-            const pin = document.getElementById('initAdminPin').value.trim();
+            const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim();
             if(!nom || !pin) return alert("Complete datos.");
-            
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert("Inicializado."); location.reload();
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            window.location.href = window.location.href.split('?')[0]; // Limpiar setup
+        }
+
+        function generarEnlaceMagico() {
+            const str = btoa(encodeURIComponent(JSON.stringify(config)));
+            const baseUrl = window.location.href.split('?')[0];
+            const magicLink = baseUrl + '?t=' + str;
+            const txt = document.getElementById('txtAdminExport');
+            txt.value = magicLink; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
+            alert("🔗 Enlace Mágico copiado.\n\nPéguelo en WhatsApp. Cuando el brigadista toque el enlace, su aplicación se configurará sola sin necesidad de pegar tokens manuales.");
         }
 
         function generarToken() {
             const str = btoa(encodeURIComponent(JSON.stringify(config)));
             const txt = document.getElementById('txtAdminExport');
             txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Token copiado. Envíelo por WhatsApp para actualizar aplicaciones.");
+            alert("Token Respaldo copiado.");
         }
 
         function generarEstructuraExcel() {
@@ -240,7 +264,7 @@
             if(!str) return alert("Pegue el token.");
             try {
                 const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
-                if(newCfg.usuarios && newCfg.grupos) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); }
+                if(newCfg.usuarios && newCfg.grupos) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Sincronizada Correctamente."); location.reload(); }
                 else throw new Error();
             } catch(e) { alert("Token Inválido o incompleto."); }
         }
