@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.12 - Industrial</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Gestión SySO V5.13 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -61,7 +64,6 @@
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:#333; font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
-        /* Cajas de Inventario */
         .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
@@ -102,11 +104,13 @@
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
         <div class="card" style="background-color: #e9ecef;">
-            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Actualización Disponible?</h4>
-            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Pegar Token Manualmente</button>
+            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
+            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
+                <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
+                <hr style="margin:15px 0;">
                 <textarea id="tokenLogin" placeholder="Pegue el token aquí..." style="height: 70px; font-family: monospace;"></textarea>
-                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('tokenLogin').value)">Procesar Token</button>
+                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('tokenLogin').value)">Procesar Token Manual</button>
             </div>
         </div>
     </div>
@@ -146,8 +150,10 @@
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
-            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo. Tipeá solo el N° correlativo.</p>
+            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo según el grupo. Tipeá solo el N° correlativo.</p>
+            
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
+
             <div class="form-group">
                 <label>ID Único (Prefijo + Correlativo):</label>
                 <div style="display: flex; gap: 5px;">
@@ -155,6 +161,7 @@
                     <input type="number" id="qrNumero" placeholder="Ej. 080" style="flex:2;">
                 </div>
             </div>
+            
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo" placeholder="Ej. PQS 5kg"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
             <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
@@ -240,6 +247,9 @@
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
         <div class="card">
+            <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Actualizar Versión de App</button>
+        </div>
+        <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion()">🔒 Cerrar Sesión Segura</button>
         </div>
     </div>
@@ -303,11 +313,15 @@
                 config = JSON.parse(rawConfig); 
                 if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
                 if(!config.fallas) config.fallas = {}; 
-                // Adaptación retroactiva de usuarios viejos a array
                 config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
                 prepararLogin(); 
             }
         });
+
+        // --- MOTOR DE REFRESCO ACTIVO ---
+        function forzarActualizacion() {
+            window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now();
+        }
 
         // --- MOTOR DE AUTOCOMPLETADO UNIVERSAL ---
         function filtrarUsuarios() {
@@ -381,7 +395,6 @@
             const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
             const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
             
-            // Llenar Casillas de Verificación de Grupos para Usuarios
             let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo"> Acceso Total (Todos)</label>`;
             grpKeys.forEach(g => { if(g!=='Todos') chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; });
             document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml;
@@ -410,7 +423,6 @@
         }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD USUARIOS (Adaptado a Array) ---
         function cargarEdicionUsu(id) { 
             const u = config.usuarios.find(x => x.id === id); if(!u) return; 
             document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; 
@@ -434,7 +446,6 @@
         }
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         
-        // --- CRUD SECCIONES ---
         function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarSeccion() {
@@ -448,7 +459,6 @@
         }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- CRUD EQUIPOS ---
         function cargarEdicionQR(id) {
             const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || '';
             const match = id.match(/^(.*?)(\d+)$/);
@@ -556,7 +566,6 @@
             if(config.equipos[id]) {
                 const eq = config.equipos[id]; 
                 
-                // Validación Multicapa de Grupos
                 let accesoPermitido = false;
                 if(usuarioActual.rol === 'Admin') accesoPermitido = true;
                 if(usuarioActual.grupo.includes('Todos')) accesoPermitido = true;
