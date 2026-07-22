@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.3 - Industrial</title>
+    <title>Gestión SySO V5.4 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; --success: #28a745; --text: #333; }
+        :root { --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; --success: #28a745; --text: #333; --edit: #17a2b8; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
         
@@ -25,7 +25,13 @@
         .btn-success { background: var(--success); }
         .btn-warning { background: var(--accent); color: #000; }
         .btn-danger { background: var(--danger); }
+        .btn-info { background: var(--edit); }
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        
+        .action-btns { display: flex; gap: 5px; }
+        .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; color: white; }
+        .btn-s-edit { background: var(--edit); }
+        .btn-s-del { background: var(--danger); }
         
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -39,7 +45,6 @@
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
 
-        /* Estilos del Modal de Firma Global */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: flex-end; justify-content: center; }
         .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
         #canvasFirma { border: 2px dashed #ccc; border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
@@ -89,7 +94,7 @@
         </div>
     </div>
 
-    <!-- VISTA 2: INSPECCIÓN (SIN FIRMA) -->
+    <!-- VISTA 2: INSPECCIÓN -->
     <div id="view-inspeccion" class="view">
         <div class="card">
             <div class="form-group">
@@ -108,31 +113,39 @@
             <div id="moduloDinamico" class="hidden"></div>
             
             <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones"></textarea></div>
-
             <button class="btn btn-success" style="margin-top:15px;" onclick="guardarRegistro()">Guardar Control</button>
         </div>
     </div>
 
-    <!-- VISTA 3: ALTA QR (Admin) -->
+    <!-- VISTA 3: ALTA QR (Admin) CON INVENTARIO EDITABLE -->
     <div id="view-qr" class="view">
         <div class="card">
-            <h3 style="color: var(--primary); margin-bottom: 10px;">Alta de Nuevo Equipo</h3>
-            <div class="form-group"><label>ID (Ej. EXT-080):</label><input type="text" id="qrId"></div>
+            <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
+            <div class="form-group"><label>ID Único (Ej. EXT-080):</label><input type="text" id="qrId"></div>
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
-            <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina gerencia"></div>
+            <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
             <div class="form-group"><label>Grupo (Formulario):</label><select id="qrGrupo"></select></div>
             
-            <button class="btn btn-warning" onclick="generarYGuardarQR()">Guardar y Etiquetar</button>
-            <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px;">
+            <div style="display:flex; gap:10px;">
+                <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
+                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionQR()">Cancelar</button>
+            </div>
+
+            <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid #eee;">
                 <canvas id="qrGenerado"></canvas>
                 <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
                 <button class="btn btn-outline" onclick="descargar(document.getElementById('qrGenerado').toDataURL('image/png'), 'image/png', 'QR_'+document.getElementById('qrId').value+'.png')">Descargar Etiqueta</button>
             </div>
         </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 10px;">Inventario de Equipos Activos</h3>
+            <div id="listaEquipos" style="font-size:12px;"></div>
+        </div>
     </div>
 
-    <!-- VISTA 4: ADMIN -->
+    <!-- VISTA 4: ADMIN / CIERRE -->
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
             <h3>Sincronización Mágica</h3>
@@ -145,8 +158,11 @@
         <div class="card">
             <h3>Grupos y Formularios</h3>
             <input type="text" id="nuevoGrupoNom" placeholder="Nombre (Ej. Vehículos)" class="form-group">
-            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite)" class="form-group">
-            <button class="btn btn-success" onclick="agregarGrupo()">+ Guardar Grupo</button>
+            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (separado por comas)" class="form-group">
+            <div style="display:flex; gap:10px;">
+                <button id="btnGuardarGrupo" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarGrupo()">+ Guardar Grupo</button>
+                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionGrupo()">Cancelar</button>
+            </div>
             <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
@@ -160,35 +176,36 @@
                 <select id="nuevoUsuRol" style="flex:1;"><option value="Inspector">Inspector</option><option value="Admin">Administrador</option></select>
                 <select id="nuevoUsuGrupo" style="flex:1;"></select>
             </div>
-            <button class="btn btn-success" style="margin-top:5px;" onclick="agregarUsuario()">+ Agregar Usuario</button>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button id="btnGuardarUsu" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarUsuario()">+ Guardar Usuario</button>
+                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionUsu()">Cancelar</button>
+            </div>
             <div id="listaUsuarios" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
         <div class="card">
             <h3>Secciones de Planta</h3>
             <div style="display:flex; gap:5px;">
-                <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur">
-                <button class="btn btn-success" style="width:60px;" onclick="agregarSeccion()">+</button>
+                <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur" style="flex:2;">
+                <button id="btnGuardarSec" class="btn btn-success" style="flex:1;" onclick="guardarSeccion()">+ Añadir</button>
+                <button class="btn btn-outline" style="width:40px; padding:0;" onclick="cancelarEdicionSec()">✖</button>
             </div>
             <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
         <div class="card" style="background:#fff3cd; border: 2px solid var(--accent);">
             <h3 style="margin-bottom: 10px; color:#856404;">Cierre de Turno / Mes</h3>
-            <p style="font-size:12px; margin-bottom:15px;">Firma y envía todos los controles acumulados en un solo paquete directo a RRHH.</p>
             <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
-            <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial del Dispositivo</button>
+            <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial de Inspecciones</button>
         </div>
     </div>
 
-    <!-- MODAL EMERGENTE DE FIRMA GLOBAL -->
+    <!-- MODAL DE FIRMA -->
     <div id="modalCierre" class="modal-overlay hidden">
         <div class="modal-content">
             <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
-            <p style="font-size:12px; margin-bottom:15px; color:#555;">Dibuja tu firma para validar legalmente todos los controles realizados y empaquetar los archivos.</p>
-            
+            <p style="font-size:12px; margin-bottom:15px; color:#555;">Dibuja tu firma para validar legalmente todos los controles y empaquetar los archivos.</p>
             <canvas id="canvasFirma"></canvas>
-            
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
                 <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Trazo</button>
@@ -201,7 +218,7 @@
     <div class="tab-bar hidden" id="menuNavegacion">
         <button class="tab-btn active" onclick="nav('inspeccion', this)">📋<br>Inspección</button>
         <button class="tab-btn admin-only" onclick="nav('qr', this)">🖨️<br>Alta QR</button>
-        <button class="tab-btn" onclick="nav('admin', this)">📦<br>Cierre</button>
+        <button class="tab-btn admin-only" onclick="nav('admin', this)">📦<br>Cierre</button>
         <button class="tab-btn" onclick="cerrarSesion()">🔒<br>Salir</button>
     </div>
 
@@ -213,7 +230,9 @@
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj;
         let canvas, ctx, firmaVacia = true;
 
-        // --- INICIALIZACIÓN ---
+        // Variables de Estado de Edición
+        let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null;
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const magicToken = urlParams.get('t');
@@ -221,7 +240,7 @@
                 try {
                     const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim())));
                     if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; }
-                } catch(e) { alert("Enlace corrupto."); }
+                } catch(e) {}
             }
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
@@ -238,11 +257,10 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
-        // --- TOKENS Y ENLACES ---
+        // TOKENS
         function generarEnlaceMagico() {
             const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
-            const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("🔗 Enlace Mágico copiado.");
+            const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado.");
         }
         function generarToken() {
             const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport');
@@ -250,17 +268,13 @@
         }
         function generarEstructuraExcel() {
             const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
-            const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Código Planilla Excel copiado.");
+            const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado.");
         }
         function sincronizarConToken(str) {
-            try {
-                const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
-                if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); }
-            } catch(e) { alert("Token Inválido."); }
+            try { const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); } } catch(e) { alert("Token Inválido."); }
         }
 
-        // --- LOGIN Y NAVEGACIÓN ---
+        // LOGIN
         function prepararLogin() {
             const sel = document.getElementById('loginSelectUsuario'); sel.innerHTML = '<option value="">Seleccione...</option>';
             config.usuarios.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
@@ -272,11 +286,9 @@
             usuarioActual = config.usuarios.find(u => u.id == id && u.pin == pin);
             if(!usuarioActual) return alert("PIN Incorrecto.");
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('loginPin').value = '';
-            
             const adminBtns = document.querySelectorAll('.admin-only');
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
             else { adminBtns.forEach(b => b.classList.add('hidden')); }
-            
             document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
         }
         function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
@@ -287,7 +299,6 @@
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
         }
 
-        // --- ADMIN CRUD ---
         function poblarAdmin() {
             const grpKeys = Object.keys(config.grupos);
             const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
@@ -296,160 +307,196 @@
             renderListas();
         }
 
-        function agregarGrupo() {
-            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
-            if(!nom || !paramsStr) return;
-            config.grupos[nom] = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = ''; poblarAdmin();
+        // --- CRUD GRUPOS ---
+        function cargarEdicionGrupo(nom) {
+            document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', ');
+            editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info');
         }
-        function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        function agregarUsuario() {
+        function cancelarEdicionGrupo() {
+            editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = '';
+            const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success');
+        }
+        function guardarGrupo() {
+            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
+            if(!nom || !paramsStr) return alert("Faltan datos.");
+            const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
+
+            if(editGrupoNom) {
+                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nuevo nombre.");
+                // Actualizar Cascada en Equipos
+                for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; }
+                // Actualizar Cascada en Usuarios
+                config.usuarios.forEach(u => { if(u.grupo === editGrupoNom) u.grupo = nom; });
+                if(nom !== editGrupoNom) delete config.grupos[editGrupoNom];
+            } else { if(config.grupos[nom]) return alert("El grupo ya existe."); }
+            
+            config.grupos[nom] = nuevosParams; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
+        }
+        function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp} y dejar equipos sin grupo?`)) { delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+
+        // --- CRUD USUARIOS ---
+        function cargarEdicionUsu(id) {
+            const u = config.usuarios.find(x => x.id === id); if(!u) return;
+            document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin;
+            document.getElementById('nuevoUsuRol').value = u.rol; document.getElementById('nuevoUsuGrupo').value = u.grupo;
+            editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info');
+        }
+        function cancelarEdicionUsu() {
+            editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = '';
+            const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success');
+        }
+        function guardarUsuario() {
             const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim();
             if(!nom || !pin) return;
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value });
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; poblarAdmin();
+            if(editUsuId) {
+                const u = config.usuarios.find(x => x.id === editUsuId);
+                u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = document.getElementById('nuevoUsuGrupo').value;
+            } else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value }); }
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin();
         }
-        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        function agregarSeccion() { const sec = document.getElementById('nuevaSeccion').value.trim(); if(sec && !config.secciones.includes(sec)) { config.secciones.push(sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); document.getElementById('nuevaSeccion').value = ''; } }
-        function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar usuario?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+
+        // --- CRUD SECCIONES ---
+        function cargarEdicionSec(sec) {
+            document.getElementById('nuevaSeccion').value = sec; editSecNom = sec;
+            const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info');
+        }
+        function cancelarEdicionSec() {
+            editSecNom = null; document.getElementById('nuevaSeccion').value = '';
+            const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success');
+        }
+        function guardarSeccion() {
+            const sec = document.getElementById('nuevaSeccion').value.trim(); if(!sec) return;
+            if(editSecNom) {
+                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Esa sección ya existe.");
+                for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; }
+                config.secciones = config.secciones.map(s => s === editSecNom ? sec : s);
+            } else { if(config.secciones.includes(sec)) return; config.secciones.push(sec); }
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionSec(); poblarAdmin();
+        }
+        function borrarSeccion(sec) { if(confirm("¿Borrar sección?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+
+        // --- CRUD EQUIPOS (QR) ---
+        function cargarEdicionQR(id) {
+            const eq = config.equipos[id]; if(!eq) return;
+            document.getElementById('qrId').value = id; document.getElementById('qrTipo').value = eq.tipo;
+            document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
+            document.getElementById('qrGrupo').value = eq.grupo;
+            editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info');
+            document.getElementById('zonaQR').classList.add('hidden'); // Ocultar QR viejo hasta q guarde
+        }
+        function cancelarEdicionQR() {
+            editQRId = null; document.getElementById('qrId').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = '';
+            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning');
+        }
+        function guardarQR() {
+            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
+            if(!id || !tipo) return alert("ID y Tipo son obligatorios");
+            
+            if(editQRId && id !== editQRId) {
+                if(config.equipos[id]) return alert("El nuevo ID ya está en uso por otro equipo.");
+                delete config.equipos[editQRId]; // Borrar la llave vieja
+            }
+            
+            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
+            
+            if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
+            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
+            cancelarEdicionQR(); poblarAdmin(); // Refresca la lista
+        }
+        function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
-            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`; });
+            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
-            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><button class="btn-danger btn-small" onclick="borrarUsuario(${u.id})">X</button></div>`);
+            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
             const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
-            config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><button class="btn-danger btn-small" onclick="borrarSeccion('${s}')">X</button></div>`);
+            config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
+            
+            const lQ = document.getElementById('listaEquipos'); if(lQ) {
+                lQ.innerHTML = '';
+                Object.keys(config.equipos).forEach(id => {
+                    const eq = config.equipos[id];
+                    lQ.innerHTML += `<div class="list-item"><div><b>${id}</b> (${eq.tipo})<br><small>${eq.seccion} | ${eq.grupo}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${id}')">❌</button></div></div>`;
+                });
+            }
         }
 
-        // --- INSPECCIÓN Y QR (AHORA SIN FIRMA) ---
+        // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
                 (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }
             ).catch(err => alert("Permití cámara."));
         }
-
         function procesarEscaneo(id) {
             id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id];
-                if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) {
-                    alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return;
-                }
-                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada"; construirFormulario(eq.grupo);
-            } else { alert("Equipo no existe. Solicitar Alta."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
+                if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) { alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
+                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+                const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = ''; const params = config.grupos[eq.grupo];
+                if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
+                container.innerHTML = html;
+            } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
-
-        function construirFormulario(grupoNom) {
-            const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = ''; const params = config.grupos[grupoNom];
-            if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
-            else { html = `<p style="color:var(--danger); font-size:14px;">Sin parámetros.</p>`; }
-            container.innerHTML = html;
-        }
-
         function guardarRegistro() {
             const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR.");
             const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
             params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
-
-            const registro = {
-                Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion,
-                Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp,
-                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ")
-                // Ya no guardamos la firma acá
-            };
-
+            const registro = { Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
-            
-            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = '';
-            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; alert(`✅ Guardado Rápido.`);
+            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; alert(`✅ Guardado.`);
         }
 
-        function generarYGuardarQR() {
-            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
-            if(!id || !tipo) return alert("Faltan datos");
-            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
-            localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
-            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden'); document.getElementById('qrUbicacion').value = '';
-        }
-
-        // --- SISTEMA DE CIERRE Y FIRMA GLOBAL (MODAL) ---
+        // --- SISTEMA DE CIERRE Y FIRMA (MODAL) ---
         function abrirModalCierre() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            if(!db.length) return alert("No tienes inspecciones pendientes para enviar.");
-            
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones.");
             document.getElementById('modalCierre').classList.remove('hidden');
-            
-            // Inicializar el Canvas SOLAMENTE después de que el modal es visible (Timeout para que tome las dimensiones)
             setTimeout(() => {
                 canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
                 const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200;
                 ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-                
                 let dibujando = false; firmaVacia = true;
                 const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
                 const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
                 const detener = () => { dibujando = false; };
                 const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
                 const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
-                
-                // Limpiar listeners viejos si se abre varias veces
                 const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone;
                 ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-                
                 canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
                 canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
             }, 50);
         }
-
         function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); }
         function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
-
+        
         async function confirmarFirmaYEnviar() {
-            if(firmaVacia) return alert("Debes firmar para validar el envío.");
-            const firmaGlobalBase64 = canvas.toDataURL('image/png');
-            cerrarModalCierre();
-            
+            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre();
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             
-            // 1. GENERAR EL CSV
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"];
             for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
             let csv = head.join(";") + "\r\n";
             db.forEach(r => {
                 let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo];
-                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || "");
-                row.push(r.Observaciones); csv += row.join(";") + "\r\n";
+                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones); csv += row.join(";") + "\r\n";
             });
 
-            // 2. GENERAR EL HTML DE EVIDENCIAS (MANIFIESTO)
             let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px;} table{width:100%; border-collapse:collapse; margin-bottom:30px; font-size:12px;} th,td{border:1px solid #ccc; padding:8px; text-align:left;} th{background:#2F5597; color:white;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center;} img{max-width:100%; height:auto;}</style></head><body>`;
-            html += `<h2>Manifiesto de Inspección SySO</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
+            html += `<h2>Manifiesto de Inspección SySO</h2><p><b>Inspector:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
             db.forEach(r => { html += `<tr><td>${r.Fecha}</td><td>${r.ID_Equipo}</td><td>${r.Seccion}</td><td>${r.Ubicacion}</td></tr>`; });
-            html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
+            html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
-            // 3. EMPAQUETAR Y COMPARTIR
-            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
-            const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
-
-            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) {
-                try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Cierre SySO', text: 'Adjunto Data (Excel) y Manifiesto Legal.' }); } catch (err) {}
-            } else {
-                // Modo PC: Si no hay WhatsApp, descarga ambos
-                descargar(csv, 'text/csv', fileCSV.name);
-                setTimeout(() => descargar(html, 'text/html', fileHTML.name), 500);
-            }
+            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' }); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
+            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML] }); } catch (err) {} }
+            else { const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click(); setTimeout(()=>{const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();}, 500); }
         }
-
-        function descargar(contenido, tipo, nombre) {
-            const blob = typeof contenido === 'string' && tipo.includes('text') ? new Blob([contenido], {type: tipo}) : fetch(contenido).then(res => res.blob());
-            if(blob instanceof Promise) blob.then(b => { const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = nombre; l.click(); });
-            else { const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = nombre; l.click(); }
-        }
-        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Los controles enviados se borrarán del celular.")) { localStorage.removeItem(DB_KEY); alert("Historial purgado."); } }
+        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES?")) { localStorage.removeItem(DB_KEY); alert("Purgado."); } }
     </script>
 </body>
 </html>
