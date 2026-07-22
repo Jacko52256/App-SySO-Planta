@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5 - Industrial</title>
+    <title>Gestión SySO V5.1 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -41,7 +41,6 @@
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
         
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .badge-admin { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -56,7 +55,7 @@
         <div class="card">
             <h3 style="color:var(--danger); margin-bottom: 15px;">Sistema No Inicializado</h3>
             <button class="btn btn-primary" onclick="mostrarCrearAdmin()">1. Crear Base (Jefe/Admin)</button>
-            <button class="btn btn-outline" onclick="mostrarImportarToken()">2. Importar Token</button>
+            <button class="btn btn-outline" onclick="mostrarImportarToken()">2. Importar Token (Brigada)</button>
             
             <div id="divCrearAdmin" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
                 <label>Super-Admin:</label><input type="text" id="initAdminName" placeholder="Ej. Jack">
@@ -66,19 +65,31 @@
             
             <div id="divImportarToken" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ccc;">
                 <label>Pegue el Token Maestro:</label>
-                <textarea id="initToken" style="height: 100px;"></textarea>
+                <textarea id="initToken" style="height: 100px; font-family: monospace;"></textarea>
                 <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar</button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN -->
+    <!-- VISTA 1: LOGIN (CON BOTÓN DE RESCATE) -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
             <div class="form-group" style="margin-top:15px;"><label>Usuario:</label><select id="loginSelectUsuario"></select></div>
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
+        </div>
+        
+        <!-- BOTÓN DE RESCATE PARA ACTUALIZAR APP SIN LOGIN -->
+        <div class="card" style="background-color: #e9ecef;">
+            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Hubo actualizaciones en la base?</h4>
+            <p style="font-size: 12px; margin-bottom: 10px;">Si RRHH agregó tu usuario o equipos nuevos, pega el token aquí.</p>
+            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Actualizar App (Pegar Token)</button>
+            
+            <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
+                <textarea id="tokenLogin" placeholder="Pegue el token aquí..." style="height: 70px; font-family: monospace;"></textarea>
+                <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('tokenLogin').value)">Procesar Token</button>
+            </div>
         </div>
     </div>
 
@@ -94,10 +105,10 @@
             </div>
             <div id="qr-reader"></div>
             
-            <div class="form-group"><label>Sección / Ubicación:</label><input type="text" id="seccionEquipo" disabled></div>
+            <div class="form-group"><label>Sección General:</label><input type="text" id="seccionEquipo" disabled></div>
+            <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="ubicacionEquipo" disabled style="color:var(--primary);"></div>
 
             <hr style="margin:15px 0;">
-            <!-- Contenedor del Formulario Dinámico -->
             <div id="moduloDinamico" class="hidden"></div>
             
             <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones"></textarea></div>
@@ -116,6 +127,7 @@
             <div class="form-group"><label>ID (Ej. EXT-080):</label><input type="text" id="qrId"></div>
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
+            <div class="form-group"><label>Ubicación Exacta (Micro-Localización):</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina gerencia"></div>
             <div class="form-group"><label>Grupo (Formulario):</label><select id="qrGrupo"></select></div>
             
             <button class="btn btn-warning" onclick="generarYGuardarQR()">Guardar y Etiquetar</button>
@@ -138,10 +150,9 @@
 
         <div class="card">
             <h3>Grupos y Formularios Dinámicos</h3>
-            <p style="font-size:12px; margin-bottom:10px;">Crea el grupo y define qué se evaluará (separa por comas).</p>
             <input type="text" id="nuevoGrupoNom" placeholder="Nombre (Ej. Vehículos)" class="form-group">
-            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite, Luces)" class="form-group">
-            <button class="btn btn-success" onclick="agregarGrupo()">+ Guardar Grupo y Formulario</button>
+            <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite)" class="form-group">
+            <button class="btn btn-success" onclick="agregarGrupo()">+ Guardar Grupo</button>
             <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
@@ -160,7 +171,7 @@
         </div>
 
         <div class="card">
-            <h3>Secciones (Planta)</h3>
+            <h3>Secciones Generales</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur">
                 <button class="btn btn-success" style="width:60px;" onclick="agregarSeccion()">+</button>
@@ -188,18 +199,8 @@
         const CFG_KEY = 'SySO_V5_Config';
         const DB_KEY = 'SySO_V5_Data';
         
-        // Estructura Dinámica V5
-        let config = { 
-            usuarios: [], secciones: [], equipos: {},
-            grupos: {
-                "Combate": ["Presión", "Precinto", "Estado Físico"],
-                "PA": ["Insumos", "Caducidad", "Higiene"],
-                "Todos": [] // Rol Master
-            }
-        };
-        
-        let usuarioActual = null;
-        let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
+        let config = { usuarios: [], secciones: [], equipos: {}, grupos: { "Combate": ["Presión", "Precinto", "Estado Físico"], "PA": ["Insumos", "Caducidad", "Higiene"], "Todos": [] } };
+        let usuarioActual = null; let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
 
         document.addEventListener('DOMContentLoaded', () => {
             const rawConfig = localStorage.getItem(CFG_KEY);
@@ -217,34 +218,31 @@
             
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
-            localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            alert("Sistema Inicializado."); location.reload();
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert("Inicializado."); location.reload();
         }
 
         function generarToken() {
             const str = btoa(encodeURIComponent(JSON.stringify(config)));
             const txt = document.getElementById('txtAdminExport');
             txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Token Brigada copiado. Pegalo en WhatsApp.");
+            alert("Token copiado. Envíelo por WhatsApp para actualizar aplicaciones.");
         }
 
         function generarEstructuraExcel() {
-            // Este es el payload que la macro de Excel leerá para auto-construirse
             const schema = { grupos: config.grupos };
             const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
             const txt = document.getElementById('txtAdminExport');
             txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Código de Planilla copiado. Pegalo en la Macro de tu Excel Maestro.");
+            alert("Código de Planilla copiado. Úselo en la Macro de Excel.");
         }
 
         function sincronizarConToken(str) {
             if(!str) return alert("Pegue el token.");
             try {
                 const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
-                if(newCfg.usuarios && newCfg.grupos) {
-                    localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("Éxito."); location.reload();
-                } else throw new Error();
-            } catch(e) { alert("Token Inválido."); }
+                if(newCfg.usuarios && newCfg.grupos) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); }
+                else throw new Error();
+            } catch(e) { alert("Token Inválido o incompleto."); }
         }
 
         function prepararLogin() {
@@ -260,7 +258,6 @@
             const pin = document.getElementById('loginPin').value;
             usuarioActual = config.usuarios.find(u => u.id == id && u.pin == pin);
             if(!usuarioActual) return alert("PIN Incorrecto.");
-
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`;
             document.getElementById('loginPin').value = '';
             
@@ -268,8 +265,7 @@
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
             else { adminBtns.forEach(b => b.classList.add('hidden')); }
             
-            document.getElementById('menuNavegacion').classList.remove('hidden');
-            nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
+            document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
         }
 
         function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
@@ -282,43 +278,26 @@
             renderListas();
         }
 
-        // --- CRUD V5 ---
         function agregarGrupo() {
-            const nom = document.getElementById('nuevoGrupoNom').value.trim();
-            const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
-            if(!nom || !paramsStr) return alert("Especifique Nombre y Checklists.");
-            
-            const arr = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
-            config.grupos[nom] = arr;
-            localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = '';
-            poblarAdmin();
+            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
+            if(!nom || !paramsStr) return;
+            config.grupos[nom] = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoParams').value = ''; poblarAdmin();
         }
-
-        function borrarGrupo(grp) {
-            if(grp === 'Todos') return alert("Protegido por Sistema.");
-            if(confirm(`¿Borrar el grupo ${grp}?`)) {
-                delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin();
-            }
-        }
-
+        function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         function agregarUsuario() {
-            const nom = document.getElementById('nuevoUsuNombre').value.trim();
-            const pin = document.getElementById('nuevoUsuPin').value.trim();
+            const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim();
             if(!nom || !pin) return;
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: document.getElementById('nuevoUsuGrupo').value });
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; poblarAdmin();
         }
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        
         function agregarSeccion() { const sec = document.getElementById('nuevaSeccion').value.trim(); if(sec && !config.secciones.includes(sec)) { config.secciones.push(sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); document.getElementById('nuevaSeccion').value = ''; } }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
-            Object.keys(config.grupos).forEach(g => {
-                if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`;
-            });
+            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b><br><small>${config.grupos[g].join(', ')}</small></div><button class="btn-danger btn-small" onclick="borrarGrupo('${g}')">X</button></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
             config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><span>${u.nombre} [${u.grupo}] ${u.rol==='Admin'?'(A)':''}</span><button class="btn-danger btn-small" onclick="borrarUsuario(${u.id})">X</button></div>`);
             const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
@@ -344,16 +323,14 @@
         function nav(vista, btn) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${vista}`).classList.add('active');
-            btn.classList.add('active');
+            document.getElementById(`view-${vista}`).classList.add('active'); btn.classList.add('active');
             if(vista === 'inspeccion' && !canvas) initFirma();
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
         }
 
-        // --- INSPECCIÓN Y MOTOR DINÁMICO V5 ---
+        // --- INSPECCIÓN Y QR ---
         function activarQR() {
-            document.getElementById('qr-reader').style.display = 'block';
-            html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
                 (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }
             ).catch(err => alert("Permití cámara."));
@@ -364,10 +341,10 @@
             if(config.equipos[id]) {
                 const eq = config.equipos[id];
                 if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) {
-                    alert(`Bloqueo: Sos del perfil ${usuarioActual.grupo}. Este equipo es de ${eq.grupo}.`);
-                    document.getElementById('idEquipo').value = ''; return;
+                    alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return;
                 }
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`;
+                document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
                 construirFormulario(eq.grupo);
             } else {
                 alert("Equipo no existe. Solicitar Alta.");
@@ -376,119 +353,78 @@
         }
 
         function construirFormulario(grupoNom) {
-            const container = document.getElementById('moduloDinamico');
-            container.classList.remove('hidden'); let html = '';
-            
+            const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = '';
             const params = config.grupos[grupoNom];
-            if(params && params.length > 0) {
-                params.forEach((p, index) => {
-                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`;
-                });
-            } else {
-                html = `<p style="color:var(--danger); font-size:14px;">Error: Este grupo no tiene parámetros asignados. Edítelo en Admin.</p>`;
-            }
+            if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
+            else { html = `<p style="color:var(--danger); font-size:14px;">Sin parámetros.</p>`; }
             container.innerHTML = html;
         }
 
         function guardarRegistro() {
-            const id = document.getElementById('idEquipo').value;
-            if(!id) return alert("Escanee QR.");
-            if(firmaVacia) return alert("Firma obligatoria.");
-            
-            const eq = config.equipos[id];
-            const params = config.grupos[eq.grupo];
-            let resp = {};
-            
-            // Recolectar dinámicamente según la cantidad de parámetros del grupo
-            params.forEach((p, index) => {
-                resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value;
-            });
+            const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); if(firmaVacia) return alert("Firma obligatoria.");
+            const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
+            params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
 
             const registro = {
-                Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo,
-                Seccion: eq.seccion, ID_Equipo: id, Controles: resp,
-                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " "),
-                Firma: canvas.toDataURL('image/png')
+                Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion,
+                Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp,
+                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " "), Firma: canvas.toDataURL('image/png')
             };
 
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
-            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = '';
-            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; limpiarFirma();
-            alert(`✅ Guardado.`);
+            document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = '';
+            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; limpiarFirma(); alert(`✅ Guardado.`);
         }
 
         function generarYGuardarQR() {
-            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim();
-            if(!id || !tipo) return;
-            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, grupo: document.getElementById('qrGrupo').value };
+            const id = document.getElementById('qrId').value.trim().toUpperCase(); const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
+            if(!id || !tipo) return alert("Faltan datos");
+            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
-            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
+            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden'); document.getElementById('qrUbicacion').value = '';
         }
 
-        // --- SISTEMA DE COMPARTICIÓN NATIVO (WEB SHARE API) ---
+        // --- COMPARTICIÓN / CSV HÍBRIDO ---
         async function compartirCSV() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            if(!db.length) return alert("No hay datos.");
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("Sin datos.");
+            let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
             
-            // Buscar cuál es el grupo que más parámetros tiene (Max Cols)
-            let maxCols = 0;
-            db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
-            
-            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "ID_Equipo"];
+            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"];
             for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`);
             head.push("Observaciones");
             
             let csv = head.join(";") + "\r\n";
             db.forEach(r => {
-                let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.ID_Equipo];
-                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); // Si no tiene, deja vacío
-                row.push(r.Observaciones);
-                csv += row.join(";") + "\r\n";
+                let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo];
+                for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || "");
+                row.push(r.Observaciones); csv += row.join(";") + "\r\n";
             });
 
             const file = new File([csv], `Sábana_SySO_${Date.now()}.csv`, { type: 'text/csv' });
-            enviarArchivo(file, csv, 'text/csv');
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file], title: 'Reporte SySO', text: 'Adjunto registros.' }); } catch (err) {}
+            } else descargar(csv, 'text/csv', file.name);
         }
 
         async function compartirEvidencias() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("Sin datos.");
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return;
             let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial;} .card{border:1px solid #ccc; padding:10px; margin:10px; border-radius:5px;} img{max-height:100px; border:1px solid #000;}</style></head><body><h2>Firmas Industriales</h2>`;
-            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo}</b></p><p>Inspector: ${r.Inspector}</p><img src="${r.Firma}"></div>`; });
+            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo} (${r.Ubicacion})</b></p><p>Inspector: ${r.Inspector}</p><img src="${r.Firma}"></div>`; });
             html += `</body></html>`;
-            
             const file = new File([html], `Firmas_SySO_${Date.now()}.html`, { type: 'text/html' });
-            enviarArchivo(file, html, 'text/html');
-        }
-
-        async function enviarArchivo(fileObj, contentStr, mimeType) {
-            // Verificar si el celular soporta compartir archivos por WhatsApp/Mail
-            if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
-                try {
-                    await navigator.share({
-                        files: [fileObj],
-                        title: 'Reporte de Inspección SySO',
-                        text: 'Adjunto registros del recorrido de planta.'
-                    });
-                } catch (err) { console.log('Cancelado por el usuario.'); }
-            } else {
-                // Modo PC: Si está en computadora y no hay WhatsApp, fuerza la descarga normal
-                descargar(contentStr, mimeType, fileObj.name);
-            }
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file] }); } catch (err) {}
+            } else descargar(html, 'text/html', file.name);
         }
 
         function descargar(contenido, tipo, nombre) {
             const blob = typeof contenido === 'string' && tipo.includes('text') ? new Blob([contenido], {type: tipo}) : fetch(contenido).then(res => res.blob());
-            if(blob instanceof Promise) {
-                blob.then(b => { const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = nombre; l.click(); });
-            } else {
-                const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = nombre; l.click();
-            }
+            if(blob instanceof Promise) blob.then(b => { const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = nombre; l.click(); });
+            else { const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = nombre; l.click(); }
         }
-        
-        function purgarHistorial() { if(confirm("Se borrarán los registros del mes. Las configuraciones NO se borrarán. ¿Continuar?")) { localStorage.removeItem(DB_KEY); alert("Historial de inspecciones purgado."); } }
+        function purgarHistorial() { if(confirm("Se borrarán las inspecciones. ¿Continuar?")) { localStorage.removeItem(DB_KEY); alert("Historial purgado."); } }
     </script>
 </body>
 </html>
