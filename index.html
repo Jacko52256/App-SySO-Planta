@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión SySO V5.2 - Industrial</title>
+    <title>Gestión SySO V5.3 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
-        input:disabled { background: #e9ecef; font-weight: bold;}
+        input:disabled { background: #e9ecef; font-weight: bold; color:#555;}
         
         .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: var(--primary); }
@@ -26,9 +26,7 @@
         .btn-warning { background: var(--accent); color: #000; }
         .btn-danger { background: var(--danger); }
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-small { padding: 8px; font-size: 14px; display: inline-block; width: auto; margin-right: 5px;}
         
-        #canvasFirma { border: 2px dashed #ccc; border-radius: 6px; width: 100%; height: 150px; background: #fff; touch-action: none; }
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         
@@ -39,8 +37,13 @@
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
         .tab-btn { background: none; border: none; color: white; font-weight: bold; opacity: 0.7; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 12px;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
-        
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+
+        /* Estilos del Modal de Firma Global */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: flex-end; justify-content: center; }
+        .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
+        #canvasFirma { border: 2px dashed #ccc; border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -50,27 +53,24 @@
         <p id="headerInfo">Sistema de Gestión Industrial</p>
     </div>
 
-    <!-- VISTA 0: BOOTSTRAP (Seguridad Reforzada) -->
+    <!-- VISTA 0: BOOTSTRAP -->
     <div id="view-init" class="view">
         <div class="card">
             <h3 style="color:var(--danger); margin-bottom: 15px;">Dispositivo No Vinculado</h3>
-            <p style="font-size: 14px; margin-bottom: 20px;">Este equipo requiere configuración de Jefatura para operar.</p>
-            
-            <label>Pegue el Token Manual (Si el enlace mágico falla):</label>
+            <label>Pegue el Token Manual:</label>
             <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="eyJ..."></textarea>
             <button class="btn btn-warning" onclick="sincronizarConToken(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
             
-            <!-- BACKDOOR OCULTO PARA JEFATURA -->
             <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #dc3545;">
                 <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro</h4>
-                <label>Super-Admin:</label><input type="text" id="initAdminName" placeholder="Ej. Jack">
-                <label>PIN de Acceso:</label><input type="password" id="initAdminPin" placeholder="Ej. 1234" pattern="[0-9]*" inputmode="numeric">
+                <label>Super-Admin:</label><input type="text" id="initAdminName">
+                <label>PIN de Acceso:</label><input type="password" id="initAdminPin" pattern="[0-9]*" inputmode="numeric">
                 <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar Base Maestra</button>
             </div>
         </div>
     </div>
 
-    <!-- VISTA 1: LOGIN (Con Sincronización Abierta) -->
+    <!-- VISTA 1: LOGIN -->
     <div id="view-login" class="view">
         <div class="card">
             <h3>Control de Acceso</h3>
@@ -89,7 +89,7 @@
         </div>
     </div>
 
-    <!-- VISTA 2: INSPECCIÓN -->
+    <!-- VISTA 2: INSPECCIÓN (SIN FIRMA) -->
     <div id="view-inspeccion" class="view">
         <div class="card">
             <div class="form-group">
@@ -109,10 +109,7 @@
             
             <div class="form-group" style="margin-top:15px;"><label>Observaciones (Opcional):</label><textarea id="observaciones"></textarea></div>
 
-            <label style="color:var(--danger);">Firma del Inspector:</label>
-            <canvas id="canvasFirma"></canvas>
-            <button class="btn btn-outline" style="margin-bottom:15px;" onclick="limpiarFirma()">Borrar Firma</button>
-            <button class="btn btn-success" onclick="guardarRegistro()">Guardar Control</button>
+            <button class="btn btn-success" style="margin-top:15px;" onclick="guardarRegistro()">Guardar Control</button>
         </div>
     </div>
 
@@ -139,15 +136,14 @@
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--danger);">
             <h3>Sincronización Mágica</h3>
-            <p style="font-size: 12px; margin-bottom: 10px;">Comparta el link mágico. Al abrirlo, el celular se configurará solo.</p>
             <button class="btn btn-primary" onclick="generarEnlaceMagico()">1. 🔗 Copiar Enlace Mágico</button>
-            <button class="btn btn-outline" onclick="generarToken()">Copiar Solo Token (Respaldo)</button>
+            <button class="btn btn-outline" onclick="generarToken()">Copiar Solo Token</button>
             <button class="btn btn-warning" style="margin-top:10px;" onclick="generarEstructuraExcel()">2. Estructura para Excel (Macro)</button>
             <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
         </div>
 
         <div class="card">
-            <h3>Grupos y Formularios Dinámicos</h3>
+            <h3>Grupos y Formularios</h3>
             <input type="text" id="nuevoGrupoNom" placeholder="Nombre (Ej. Vehículos)" class="form-group">
             <input type="text" id="nuevoGrupoParams" placeholder="Checklist (Ej. Ruedas, Aceite)" class="form-group">
             <button class="btn btn-success" onclick="agregarGrupo()">+ Guardar Grupo</button>
@@ -169,7 +165,7 @@
         </div>
 
         <div class="card">
-            <h3>Secciones Generales</h3>
+            <h3>Secciones de Planta</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur">
                 <button class="btn btn-success" style="width:60px;" onclick="agregarSeccion()">+</button>
@@ -177,11 +173,27 @@
             <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
         </div>
 
-        <div class="card" style="background:#e9ecef;">
-            <h3 style="margin-bottom: 10px;">Cierre Operativo (Enviar Info)</h3>
-            <button class="btn btn-primary" onclick="compartirCSV()">1. Enviar CSV (WhatsApp/Mail)</button>
-            <button class="btn btn-success" onclick="compartirEvidencias()">2. Enviar Firmas HTML</button>
-            <button class="btn btn-danger" style="margin-top:20px;" onclick="purgarHistorial()">Vaciar Historial del Mes</button>
+        <div class="card" style="background:#fff3cd; border: 2px solid var(--accent);">
+            <h3 style="margin-bottom: 10px; color:#856404;">Cierre de Turno / Mes</h3>
+            <p style="font-size:12px; margin-bottom:15px;">Firma y envía todos los controles acumulados en un solo paquete directo a RRHH.</p>
+            <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
+            <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial del Dispositivo</button>
+        </div>
+    </div>
+
+    <!-- MODAL EMERGENTE DE FIRMA GLOBAL -->
+    <div id="modalCierre" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
+            <p style="font-size:12px; margin-bottom:15px; color:#555;">Dibuja tu firma para validar legalmente todos los controles realizados y empaquetar los archivos.</p>
+            
+            <canvas id="canvasFirma"></canvas>
+            
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
+                <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Trazo</button>
+            </div>
+            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" onclick="confirmarFirmaYEnviar()">Confirmar y Enviar a WhatsApp</button>
         </div>
     </div>
 
@@ -189,7 +201,7 @@
     <div class="tab-bar hidden" id="menuNavegacion">
         <button class="tab-btn active" onclick="nav('inspeccion', this)">📋<br>Inspección</button>
         <button class="tab-btn admin-only" onclick="nav('qr', this)">🖨️<br>Alta QR</button>
-        <button class="tab-btn admin-only" onclick="nav('admin', this)">⚙️<br>Admin</button>
+        <button class="tab-btn" onclick="nav('admin', this)">📦<br>Cierre</button>
         <button class="tab-btn" onclick="cerrarSesion()">🔒<br>Salir</button>
     </div>
 
@@ -198,29 +210,20 @@
         const DB_KEY = 'SySO_V5_Data';
         
         let config = { usuarios: [], secciones: [], equipos: {}, grupos: { "Combate": ["Presión", "Precinto", "Estado Físico"], "PA": ["Insumos", "Caducidad", "Higiene"], "Todos": [] } };
-        let usuarioActual = null; let canvas, ctx; let firmaVacia = true; let html5QrcodeScanner; let qriousObj;
+        let usuarioActual = null; let html5QrcodeScanner; let qriousObj;
+        let canvas, ctx, firmaVacia = true;
 
-        // --- ARRANQUE Y LÓGICA DE ENLACE MÁGICO ---
+        // --- INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            
-            // 1. Interceptar Enlace Mágico
             const magicToken = urlParams.get('t');
             if (magicToken) {
                 try {
                     const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim())));
-                    if (newCfg.usuarios) {
-                        localStorage.setItem(CFG_KEY, JSON.stringify(newCfg));
-                        window.location.href = window.location.href.split('?')[0]; // Limpiar URL
-                        return;
-                    }
-                } catch(e) { alert("El enlace mágico está corrupto. Pegue el Token manualmente."); }
+                    if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; }
+                } catch(e) { alert("Enlace corrupto."); }
             }
-
-            // 2. Interceptar Backdoor de Setup
-            if (urlParams.get('setup') === '1') {
-                document.getElementById('divCrearAdmin').classList.remove('hidden');
-            }
+            if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
             if (!rawConfig) document.getElementById('view-init').classList.add('active');
@@ -229,61 +232,46 @@
 
         function inicializarSistema() {
             const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim();
-            if(!nom || !pin) return alert("Complete datos.");
+            if(!nom || !pin) return alert("Faltan datos.");
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: 'Todos' });
             config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
-            window.location.href = window.location.href.split('?')[0]; // Limpiar setup
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
 
+        // --- TOKENS Y ENLACES ---
         function generarEnlaceMagico() {
-            const str = btoa(encodeURIComponent(JSON.stringify(config)));
-            const baseUrl = window.location.href.split('?')[0];
-            const magicLink = baseUrl + '?t=' + str;
-            const txt = document.getElementById('txtAdminExport');
-            txt.value = magicLink; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("🔗 Enlace Mágico copiado.\n\nPéguelo en WhatsApp. Cuando el brigadista toque el enlace, su aplicación se configurará sola sin necesidad de pegar tokens manuales.");
+            const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str;
+            const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
+            alert("🔗 Enlace Mágico copiado.");
         }
-
         function generarToken() {
-            const str = btoa(encodeURIComponent(JSON.stringify(config)));
-            const txt = document.getElementById('txtAdminExport');
-            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Token Respaldo copiado.");
+            const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport');
+            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado.");
         }
-
         function generarEstructuraExcel() {
-            const schema = { grupos: config.grupos };
-            const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
-            const txt = document.getElementById('txtAdminExport');
-            txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
-            alert("Código de Planilla copiado. Úselo en la Macro de Excel.");
+            const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema)));
+            const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy');
+            alert("Código Planilla Excel copiado.");
         }
-
         function sincronizarConToken(str) {
-            if(!str) return alert("Pegue el token.");
             try {
                 const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
-                if(newCfg.usuarios && newCfg.grupos) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Sincronizada Correctamente."); location.reload(); }
-                else throw new Error();
-            } catch(e) { alert("Token Inválido o incompleto."); }
+                if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); }
+            } catch(e) { alert("Token Inválido."); }
         }
 
+        // --- LOGIN Y NAVEGACIÓN ---
         function prepararLogin() {
-            const sel = document.getElementById('loginSelectUsuario');
-            sel.innerHTML = '<option value="">Seleccione...</option>';
+            const sel = document.getElementById('loginSelectUsuario'); sel.innerHTML = '<option value="">Seleccione...</option>';
             config.usuarios.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById('view-login').classList.add('active');
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active');
         }
 
         function validarAcceso() {
-            const id = document.getElementById('loginSelectUsuario').value;
-            const pin = document.getElementById('loginPin').value;
+            const id = document.getElementById('loginSelectUsuario').value; const pin = document.getElementById('loginPin').value;
             usuarioActual = config.usuarios.find(u => u.id == id && u.pin == pin);
             if(!usuarioActual) return alert("PIN Incorrecto.");
-            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`;
-            document.getElementById('loginPin').value = '';
+            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('loginPin').value = '';
             
             const adminBtns = document.querySelectorAll('.admin-only');
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
@@ -291,9 +279,15 @@
             
             document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
         }
-
         function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
 
+        function nav(vista, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`view-${vista}`).classList.add('active'); btn.classList.add('active');
+            if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
+        }
+
+        // --- ADMIN CRUD ---
         function poblarAdmin() {
             const grpKeys = Object.keys(config.grupos);
             const selU = document.getElementById('nuevoUsuGrupo'); selU.innerHTML = ''; grpKeys.forEach(g => selU.innerHTML += `<option value="${g}">${g}</option>`);
@@ -328,31 +322,7 @@
             config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><button class="btn-danger btn-small" onclick="borrarSeccion('${s}')">X</button></div>`);
         }
 
-        // --- FIRMA ---
-        function initFirma() {
-            canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
-            const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 150;
-            ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-            let dibujando = false;
-            const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
-            const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
-            const detener = () => { dibujando = false; };
-            const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
-            const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
-            canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
-            canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
-        }
-        function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
-
-        function nav(vista, btn) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${vista}`).classList.add('active'); btn.classList.add('active');
-            if(vista === 'inspeccion' && !canvas) initFirma();
-            if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
-        }
-
-        // --- INSPECCIÓN Y QR ---
+        // --- INSPECCIÓN Y QR (AHORA SIN FIRMA) ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -367,38 +337,33 @@
                 if(usuarioActual.rol !== 'Admin' && usuarioActual.grupo !== 'Todos' && eq.grupo !== usuarioActual.grupo) {
                     alert(`Bloqueo de Perfil: Este equipo es de ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return;
                 }
-                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`;
-                document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
-                construirFormulario(eq.grupo);
-            } else {
-                alert("Equipo no existe. Solicitar Alta.");
-                document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden');
-            }
+                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada"; construirFormulario(eq.grupo);
+            } else { alert("Equipo no existe. Solicitar Alta."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
 
         function construirFormulario(grupoNom) {
-            const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = '';
-            const params = config.grupos[grupoNom];
+            const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); let html = ''; const params = config.grupos[grupoNom];
             if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
             else { html = `<p style="color:var(--danger); font-size:14px;">Sin parámetros.</p>`; }
             container.innerHTML = html;
         }
 
         function guardarRegistro() {
-            const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); if(firmaVacia) return alert("Firma obligatoria.");
+            const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR.");
             const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
             params.forEach((p, index) => { resp[`Control_${index+1}`] = document.getElementById(`dynChk_${index}`).value; });
 
             const registro = {
                 Fecha: new Date().toLocaleString('es-PY'), Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion,
                 Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp,
-                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " "), Firma: canvas.toDataURL('image/png')
+                Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ")
+                // Ya no guardamos la firma acá
             };
 
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = '';
-            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; limpiarFirma(); alert(`✅ Guardado.`);
+            document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; alert(`✅ Guardado Rápido.`);
         }
 
         function generarYGuardarQR() {
@@ -410,15 +375,49 @@
             qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden'); document.getElementById('qrUbicacion').value = '';
         }
 
-        // --- COMPARTICIÓN / CSV HÍBRIDO ---
-        async function compartirCSV() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("Sin datos.");
+        // --- SISTEMA DE CIERRE Y FIRMA GLOBAL (MODAL) ---
+        function abrirModalCierre() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            if(!db.length) return alert("No tienes inspecciones pendientes para enviar.");
+            
+            document.getElementById('modalCierre').classList.remove('hidden');
+            
+            // Inicializar el Canvas SOLAMENTE después de que el modal es visible (Timeout para que tome las dimensiones)
+            setTimeout(() => {
+                canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200;
+                ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+                
+                let dibujando = false; firmaVacia = true;
+                const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); };
+                const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); };
+                const detener = () => { dibujando = false; };
+                const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX;
+                const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
+                
+                // Limpiar listeners viejos si se abre varias veces
+                const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone;
+                ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
+                
+                canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener);
+                canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
+            }, 50);
+        }
+
+        function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); }
+        function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
+
+        async function confirmarFirmaYEnviar() {
+            if(firmaVacia) return alert("Debes firmar para validar el envío.");
+            const firmaGlobalBase64 = canvas.toDataURL('image/png');
+            cerrarModalCierre();
+            
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            
+            // 1. GENERAR EL CSV
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
-            
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"];
-            for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`);
-            head.push("Observaciones");
-            
+            for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
             let csv = head.join(";") + "\r\n";
             db.forEach(r => {
                 let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo];
@@ -426,21 +425,23 @@
                 row.push(r.Observaciones); csv += row.join(";") + "\r\n";
             });
 
-            const file = new File([csv], `Sábana_SySO_${Date.now()}.csv`, { type: 'text/csv' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try { await navigator.share({ files: [file], title: 'Reporte SySO', text: 'Adjunto registros.' }); } catch (err) {}
-            } else descargar(csv, 'text/csv', file.name);
-        }
+            // 2. GENERAR EL HTML DE EVIDENCIAS (MANIFIESTO)
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px;} table{width:100%; border-collapse:collapse; margin-bottom:30px; font-size:12px;} th,td{border:1px solid #ccc; padding:8px; text-align:left;} th{background:#2F5597; color:white;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center;} img{max-width:100%; height:auto;}</style></head><body>`;
+            html += `<h2>Manifiesto de Inspección SySO</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><table><tr><th>Fecha</th><th>ID Equipo</th><th>Sección</th><th>Ubicación</th></tr>`;
+            db.forEach(r => { html += `<tr><td>${r.Fecha}</td><td>${r.ID_Equipo}</td><td>${r.Seccion}</td><td>${r.Ubicacion}</td></tr>`; });
+            html += `</table><div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
-        async function compartirEvidencias() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return;
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial;} .card{border:1px solid #ccc; padding:10px; margin:10px; border-radius:5px;} img{max-height:100px; border:1px solid #000;}</style></head><body><h2>Firmas Industriales</h2>`;
-            db.forEach(r => { html += `<div class="card"><p><b>${r.Fecha} | Equipo: ${r.ID_Equipo} (${r.Ubicacion})</b></p><p>Inspector: ${r.Inspector}</p><img src="${r.Firma}"></div>`; });
-            html += `</body></html>`;
-            const file = new File([html], `Firmas_SySO_${Date.now()}.html`, { type: 'text/html' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try { await navigator.share({ files: [file] }); } catch (err) {}
-            } else descargar(html, 'text/html', file.name);
+            // 3. EMPAQUETAR Y COMPARTIR
+            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
+            const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
+
+            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) {
+                try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Cierre SySO', text: 'Adjunto Data (Excel) y Manifiesto Legal.' }); } catch (err) {}
+            } else {
+                // Modo PC: Si no hay WhatsApp, descarga ambos
+                descargar(csv, 'text/csv', fileCSV.name);
+                setTimeout(() => descargar(html, 'text/html', fileHTML.name), 500);
+            }
         }
 
         function descargar(contenido, tipo, nombre) {
@@ -448,7 +449,7 @@
             if(blob instanceof Promise) blob.then(b => { const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = nombre; l.click(); });
             else { const l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = nombre; l.click(); }
         }
-        function purgarHistorial() { if(confirm("Se borrarán las inspecciones. ¿Continuar?")) { localStorage.removeItem(DB_KEY); alert("Historial purgado."); } }
+        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Los controles enviados se borrarán del celular.")) { localStorage.removeItem(DB_KEY); alert("Historial purgado."); } }
     </script>
 </body>
 </html>
