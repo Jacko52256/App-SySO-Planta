@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.0 - Industrial</title>
+    <title>Gestión SySO V6.1 - Industrial</title>
     <!-- Librerías Core -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -99,12 +99,14 @@
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
         body.dark-mode .grupo-header { color: #000; }
+        
+        .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO</h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.1</span></h2>
         <p id="headerInfo">Sistema de Gestión Industrial</p>
     </div>
 
@@ -139,6 +141,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.1</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -181,7 +184,6 @@
                 <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria en caso de Falla o Carga Manual de QR.</p>
                 <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
                 <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
-                <!-- Canvas Oculto para Marca de Agua -->
                 <canvas id="canvasWatermark" style="display:none;"></canvas>
                 <img id="previewBox" src="" alt="Previsualización">
             </div>
@@ -193,7 +195,6 @@
     <!-- VISTA 3: ALTA QR (Admin) -->
     <div id="view-qr" class="view">
         
-        <!-- IMPORTACIÓN MASIVA -->
         <div class="card" style="border: 2px dashed var(--primary);">
             <h3 style="color: var(--primary); margin-bottom: 5px;">⚡ Importación Rápida</h3>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel (ID | Tipo | Sección). El grupo se asignará del menú inferior.</p>
@@ -302,7 +303,6 @@
             <h3 style="margin-bottom: 5px;">Gestión de Turno</h3>
             <p class="text-muted" style="font-size:13px; margin-bottom:15px;">Inspector Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
             
-            <!-- Dashboard de Rendimiento Local -->
             <div id="dashboardTurno" style="background:var(--input-bg); padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px;">
                 <b>📊 Resumen del Recorrido:</b><br>
                 <span style="color:var(--success)">✅ OK: <b id="dashOk">0</b></span> | 
@@ -315,7 +315,8 @@
         </div>
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
-            <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Actualizar Versión de App</button>
+            <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.1</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -388,7 +389,6 @@
             }
         });
 
-        // --- Candado de Turno (Auto Cierre 12h) ---
         function iniciarCandadoTurno() {
             localStorage.setItem(ACTIVITY_KEY, Date.now());
             document.addEventListener('touchstart', () => localStorage.setItem(ACTIVITY_KEY, Date.now()));
@@ -441,7 +441,6 @@
             if(vista === 'turno') actualizarDashboard();
         }
 
-        // --- DASHBOARD RENDIMIENTO LOCAL ---
         function actualizarDashboard() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             let ok = 0, fallas = 0, vencidos = 0;
@@ -466,7 +465,6 @@
         }
         function actualizarPrefijoUI() { const grpSelect = document.getElementById('qrGrupo'); const prefijoInput = document.getElementById('qrPrefijo'); if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; } }
 
-        // --- CRUD GRUPOS / USUARIOS / SECCIONES ---
         function cargarEdicionGrupo(nom) { document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', '); editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
         function guardarGrupo() { const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim(); if(!nom || !paramsStr || !pref) return alert("Faltan datos."); const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== ""); if(editGrupoNom) { if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe."); for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; } config.usuarios.forEach(u => { u.grupo = u.grupo.map(gx => gx === editGrupoNom ? nom : gx); }); if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; } } else { if(config.grupos[nom]) return alert("El grupo ya existe."); } config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin(); }
@@ -482,12 +480,11 @@
         function guardarSeccion() { const sec = document.getElementById('nuevaSeccion').value.trim(); if(!sec) return; if(editSecNom) { if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe."); for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; } config.secciones = config.secciones.map(s => s === editSecNom ? sec : s); } else { if(config.secciones.includes(sec)) return; config.secciones.push(sec); } localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionSec(); poblarAdmin(); }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        // --- ALTA INDIVIDUAL Y MASIVA ---
         function procesarImportacionMasiva() {
             const txt = document.getElementById('txtBulkData').value.trim(); if(!txt) return alert("Pegue datos para importar.");
             const lines = txt.split('\n'); let agregados = 0; const grp = document.getElementById('qrGrupo').value;
             lines.forEach(l => {
-                const parts = l.split('\t'); // Tab-separated (Excel)
+                const parts = l.split('\t'); 
                 if(parts.length >= 3) {
                     let id = parts[0].trim().toUpperCase(); let tipo = parts[1].trim(); let sec = parts[2].trim();
                     if(id && tipo && sec && config.secciones.includes(sec) && !config.equipos[id]) { config.equipos[id] = { tipo: tipo, seccion: sec, grupo: grp, ubicacion: 'N/A', vencimiento: '' }; agregados++; }
@@ -503,7 +500,6 @@
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
-        // --- BUSCADOR E INVENTARIO ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
@@ -533,12 +529,7 @@
 
         window.descargarLoteQRs = function(grupo) {
             const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
-            const equipos = Object.keys(config.equipos).filter(id => {
-                const eq = config.equipos[id];
-                const matchFiltro = filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro);
-                return eq.grupo === grupo && matchFiltro;
-            }).map(id => ({ id: id, ...config.equipos[id] }));
-            
+            const equipos = Object.keys(config.equipos).filter(id => { const eq = config.equipos[id]; const matchFiltro = filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro); return eq.grupo === grupo && matchFiltro; }).map(id => ({ id: id, ...config.equipos[id] }));
             if(equipos.length === 0) return alert("No hay equipos visibles para imprimir en este grupo.");
             
             let html = `<html><head><meta charset="utf-8"><title>Lote QRs - ${grupo}</title><style>body{font-family:sans-serif; text-align:center;} .qr-box{display:inline-block; border:2px dashed #ccc; margin:10px; padding:15px; width:220px; vertical-align:top;} img{width:100%;} h3{margin:5px 0;} p{margin:0; font-size:12px; color:#555;}</style></head><body><h2>Plancha de Etiquetas: ${grupo}</h2>`;
@@ -548,7 +539,6 @@
             const blob = new Blob([html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html`; a.click();
         }
 
-        // --- MARCA DE AGUA FORENSE EN FOTO ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -559,9 +549,8 @@
                     canvasW.width = MAX_WIDTH; canvasW.height = img.height * scaleSize;
                     const ctxW = canvasW.getContext('2d'); ctxW.drawImage(img, 0, 0, canvasW.width, canvasW.height);
                     
-                    // Inyectar Sello Forense
                     ctxW.fillStyle = "rgba(0, 0, 0, 0.6)"; ctxW.fillRect(0, canvasW.height - 60, canvasW.width, 60);
-                    ctxW.font = "18px 'Segoe UI', sans-serif"; ctxW.fillStyle = "#ffc107"; // Amarillo alto contraste
+                    ctxW.font = "18px 'Segoe UI', sans-serif"; ctxW.fillStyle = "#ffc107"; 
                     const idEq = document.getElementById('idEquipo').value || "M/N";
                     const sello = `ID: ${idEq} | Inspector: ${usuarioActual ? usuarioActual.nombre : 'N/A'} | Timestamp: ${new Date().toLocaleString('es-PY')}`;
                     ctxW.fillText(sello, 10, canvasW.height - 25);
@@ -574,20 +563,10 @@
             reader.readAsDataURL(file);
         }
 
-        // --- AUTO-BORRADOR ---
-        function guardarBorrador() {
-            let obs = document.getElementById('observaciones').value;
-            localStorage.setItem(DRAFT_KEY, obs);
-            document.getElementById('lblBorrador').innerText = "📝 Borrador guardado localmente.";
-        }
+        function guardarBorrador() { let obs = document.getElementById('observaciones').value; localStorage.setItem(DRAFT_KEY, obs); document.getElementById('lblBorrador').innerText = "📝 Borrador guardado localmente."; }
 
-        // --- CARGA MANUAL CONTINGENCIA ---
-        function cargaManualQR() {
-            let val = prompt("⛔ CONTINGENCIA:\nIngrese el ID del equipo manualmente (Ej: EXT-045):");
-            if(val) { esCargaManual = true; procesarEscaneo(val); }
-        }
+        function cargaManualQR() { let val = prompt("⛔ CONTINGENCIA:\nIngrese el ID del equipo manualmente (Ej: EXT-045):"); if(val) { esCargaManual = true; procesarEscaneo(val); } }
 
-        // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
             esCargaManual = false;
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
@@ -604,16 +583,13 @@
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
                 const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); 
                 
-                // Recuperar Borrador si existe
                 let draft = localStorage.getItem(DRAFT_KEY);
                 if(draft) { document.getElementById('observaciones').value = draft; document.getElementById('lblBorrador').innerText = "📝 Borrador recuperado."; }
 
                 let warningHTML = '';
                 if(eq.vencimiento) {
                     const today = new Date(); const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`;
-                    if(eq.vencimiento <= currMonth) {
-                        warningHTML += `<div class="alert-danger"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla.</div>`;
-                    }
+                    if(eq.vencimiento <= currMonth) { warningHTML += `<div class="alert-danger"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla.</div>`; }
                 }
                 if(config.fallas && config.fallas[id]) { warningHTML += `<div class="alert-warning"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>Falla reportada en mes anterior: <i>${config.fallas[id]}</i>.</div>`; }
                 
@@ -628,25 +604,20 @@
             let fallasDetectadas = [];
             params.forEach((p, index) => { let val = document.getElementById(`dynChk_${index}`).value; resp[`Control_${index+1}`] = val; if(val === 'Falla') fallasDetectadas.push(p); });
             
-            // VALIDACIÓN FOTO OBLIGATORIA (Falla o Carga Manual)
             if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) {
                 return alert(`⛔ BLOQUEO DE SEGURIDAD:\n${esCargaManual ? "Ha ingresado el código manualmente." : "Ha detectado una falla."}\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar.`);
             }
             
-            // SANITIZACIÓN CSV SILENCIOSA
             let obsText = document.getElementById('observaciones').value;
             if(eq.vencimiento && eq.vencimiento <= new Date().toISOString().slice(0,7)) obsText = "[ALERTA CRÍTICA (VENCIMIENTO)] " + obsText;
             let obsSanitized = obsText.replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
 
-            // MOTOR DE FALLAS (CICLO CERRADO)
             if(!config.fallas) config.fallas = {};
             if(fallasDetectadas.length > 0) { config.fallas[id] = fallasDetectadas.join(", "); } else { delete config.fallas[id]; }
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
             
-            // TELEMETRÍA ANTI-FRAUDE
             const timestampLocal = new Date().toLocaleString('es-PY');
-            const nowTime = Date.now();
-            const lastScan = parseInt(localStorage.getItem('SySO_LastScan') || 0);
+            const nowTime = Date.now(); const lastScan = parseInt(localStorage.getItem('SySO_LastScan') || 0);
             const isFraude = (lastScan > 0 && (nowTime - lastScan) < 15000) ? "SÍ (<15s)" : "NO";
             localStorage.setItem('SySO_LastScan', nowTime);
 
@@ -655,20 +626,15 @@
             
             if (fotoActualBase64) { const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB)); }
 
-            // RADAR, TERMÓMETRO Y CAMBIO DE SECTOR
             const match = id.match(/^(.*?)(\d+)$/);
             let modalHTML = `<h2 style="color:var(--success); font-size:28px; margin-bottom:10px;">✅ ¡Guardado!</h2>`;
             
-            // Termómetro
             const totalSec = Object.values(config.equipos).filter(e => e.seccion === eq.seccion).length;
             const hoy = timestampLocal.split(',')[0];
             const escaneadosSec = db.filter(r => r.Seccion === eq.seccion && r.Fecha.startsWith(hoy)).length;
             const progPercent = Math.min(100, Math.round((escaneadosSec / totalSec) * 100)) || 0;
 
-            modalHTML += `<div style="text-align:left; margin-bottom:15px;">
-                            <span style="font-size:13px; color:var(--text); font-weight:bold;">📍 Termómetro: ${eq.seccion} (${escaneadosSec}/${totalSec})</span>
-                            <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div>
-                          </div>`;
+            modalHTML += `<div style="text-align:left; margin-bottom:15px;"><span style="font-size:13px; color:var(--text); font-weight:bold;">📍 Termómetro: ${eq.seccion} (${escaneadosSec}/${totalSec})</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
 
             if(match) {
                 const prefijo = match[1]; const numeroActual = parseInt(match[2], 10); const padding = match[2].length;
@@ -679,17 +645,13 @@
                 }
                 
                 if(proximoEq) {
-                    modalHTML += `<div class="radar-box">
-                                    <h3 style="color:var(--primary); margin-top:0;">Próximo Objetivo</h3>
-                                    <p style="font-size:32px; font-weight:bold; margin:10px 0; color:var(--text);">${proximoId}</p>
-                                    <p style="font-size:18px; margin:5px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</p>`;
+                    modalHTML += `<div class="radar-box"><h3 style="color:var(--primary); margin-top:0;">Próximo Objetivo</h3><p style="font-size:32px; font-weight:bold; margin:10px 0; color:var(--text);">${proximoId}</p><p style="font-size:18px; margin:5px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</p>`;
                     if(proximoEq.seccion !== eq.seccion) { modalHTML += `<div class="alert-info"><b>🔄 CAMBIO DE SECTOR:</b><br>Diríjase hacia <b>${proximoEq.seccion}</b>.</div>`; } else { modalHTML += `<p class="text-muted" style="font-size:16px; margin:5px 0;"><b>Sección:</b> ${proximoEq.seccion}</p>`; }
                     if (config.fallas && config.fallas[proximoId]) { modalHTML += `<div class="alert-danger" style="margin-top:15px;"><b>🚨 FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`; }
                     modalHTML += `</div>`;
                 } else { modalHTML += `<p class="text-muted" style="font-size:18px; margin-top:20px;">🏁 Fin de ruta para bloque <b>${prefijo}</b>.</p>`; }
             } else { modalHTML += `<p style="color:var(--text)">Control registrado en base de datos.</p>`; }
             
-            // Limpieza y reseteo
             localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false;
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null;
             mostrarRadar(modalHTML);
@@ -698,19 +660,16 @@
         function mostrarRadar(htmlBody) { document.getElementById('radarBody').innerHTML = htmlBody; document.getElementById('modalRadar').classList.remove('hidden'); }
         function cerrarRadar() { document.getElementById('modalRadar').classList.add('hidden'); }
 
-        // --- SISTEMA DE PDF Y CIERRE ---
         function abrirModalCierre() { const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones."); document.getElementById('modalCierre').classList.remove('hidden'); setTimeout(() => { canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; let dibujando = false; firmaVacia = true; const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); }; const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); }; const detener = () => { dibujando = false; }; const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX; const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY; const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone; ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener); canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener); }, 50); }
         function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); } function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
         
         async function confirmarFirmaYEnviar() {
             if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); 
-            document.getElementById('btnConfirmarFirma').innerText = "Generando PDF... Aguarde";
-            document.getElementById('btnConfirmarFirma').disabled = true;
+            document.getElementById('btnConfirmarFirma').innerText = "Generando PDF... Aguarde"; document.getElementById('btnConfirmarFirma').disabled = true;
             
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
             
-            // CSV Seguro
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones", "Alerta_Fraude");
             let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones, r.Alerta_Fraude || "NO"); csv += row.join(";") + "\r\n"; });
             
@@ -723,25 +682,16 @@
             html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
             const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
-            
-            // Intento de PDF (Librería Externa)
             let pdfDiv = document.createElement('div'); pdfDiv.innerHTML = html;
             let opt = { margin: 10, filename: `Reporte_SySO_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
             
             try {
-                if(typeof html2pdf !== 'undefined') {
-                    await html2pdf().set(opt).from(pdfDiv).save();
-                    descargarCSV(fileCSV);
-                } else { throw new Error("html2pdf no cargó"); }
+                if(typeof html2pdf !== 'undefined') { await html2pdf().set(opt).from(pdfDiv).save(); descargarCSV(fileCSV); } else { throw new Error("html2pdf no cargó"); }
             } catch(e) {
                 alert("Red inestable para generar PDF. Descargando formato HTML como contingencia legal.");
-                const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
-                const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();
-                descargarCSV(fileCSV);
+                const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' }); const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click(); descargarCSV(fileCSV);
             }
-            cerrarModalCierre();
-            document.getElementById('btnConfirmarFirma').innerText = "Generar PDF y Enviar";
-            document.getElementById('btnConfirmarFirma').disabled = false;
+            cerrarModalCierre(); document.getElementById('btnConfirmarFirma').innerText = "Generar PDF y Enviar"; document.getElementById('btnConfirmarFirma').disabled = false;
         }
 
         function descargarCSV(fileCSV) { setTimeout(()=>{const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click();}, 500); }
