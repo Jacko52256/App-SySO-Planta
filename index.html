@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.1 - Industrial</title>
+    <title>Gestión SySO V6.2 - Industrial</title>
     <!-- Librerías Core -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -65,7 +65,6 @@
         .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 16px; }
         .radar-box { background: var(--input-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--primary); }
 
-        /* Termómetro de Progreso */
         .progress-bar-container { width: 100%; background: var(--border); border-radius: 8px; overflow: hidden; margin-top: 10px; height: 12px; }
         .progress-bar-fill { height: 100%; background: var(--success); transition: width 0.4s ease; }
 
@@ -106,7 +105,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.1</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.2</span></h2>
         <p id="headerInfo">Sistema de Gestión Industrial</p>
     </div>
 
@@ -141,7 +140,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.1</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.2</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -316,7 +315,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.1</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.2</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -354,10 +353,11 @@
     </div>
 
     <script>
-        const CFG_KEY = 'SySO_V6_Config';
-        const DB_KEY = 'SySO_V6_Data';
-        const PHOTO_KEY = 'SySO_V6_Photos';
-        const DRAFT_KEY = 'SySO_V6_Draft';
+        // Lógica de Persistencia Universal
+        const CFG_KEY = 'SySO_Config_Master';
+        const DB_KEY = 'SySO_Data_Master';
+        const PHOTO_KEY = 'SySO_Photos_Master';
+        const DRAFT_KEY = 'SySO_Draft_Master';
         const ACTIVITY_KEY = 'SySO_LastActivity';
         
         let config = { 
@@ -372,6 +372,9 @@
         let esCargaManual = false;
 
         document.addEventListener('DOMContentLoaded', () => {
+            // MOTOR DE AUTO-MIGRACIÓN V5/V6 -> MASTER
+            migrarDatosLegados();
+
             if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
             const urlParams = new URLSearchParams(window.location.search); const magicToken = urlParams.get('t');
             if (magicToken) { try { const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim()))); if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; } } catch(e) {} }
@@ -388,6 +391,19 @@
                 iniciarCandadoTurno();
             }
         });
+
+        // --- FUNCIÓN DE RESCATE DE DATOS ---
+        function migrarDatosLegados() {
+            if (!localStorage.getItem(CFG_KEY)) {
+                let oldCfg = localStorage.getItem('SySO_V5_Config') || localStorage.getItem('SySO_V6_Config');
+                let oldData = localStorage.getItem('SySO_V5_Data') || localStorage.getItem('SySO_V6_Data');
+                let oldPhotos = localStorage.getItem('SySO_V5_Photos') || localStorage.getItem('SySO_V6_Photos');
+                
+                if (oldCfg) localStorage.setItem(CFG_KEY, oldCfg);
+                if (oldData) localStorage.setItem(DB_KEY, oldData);
+                if (oldPhotos) localStorage.setItem(PHOTO_KEY, oldPhotos);
+            }
+        }
 
         function iniciarCandadoTurno() {
             localStorage.setItem(ACTIVITY_KEY, Date.now());
