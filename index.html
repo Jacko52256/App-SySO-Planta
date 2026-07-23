@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.5 - Industrial</title>
+    <title>Gestión SySO V6.7 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -42,7 +42,7 @@
         input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: var(--input-bg); color: var(--text); }
         input:disabled, input[readonly] { background: var(--input-bg); opacity:0.7; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
         
-        .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
+        .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; display: block; text-align: center;}
         .btn-primary { background: var(--primary); color: #fff;}
         body.dark-mode .btn-primary { color: #000; }
         .btn-success { background: var(--success); color: #fff;}
@@ -114,7 +114,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.5</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.7</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -149,7 +149,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.5 (Smart Merge)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.7</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -258,12 +258,21 @@
 
     <!-- VISTA 4: CONFIGURACIÓN (Admin) -->
     <div id="view-admin" class="view">
-        <div class="card" style="border-left: 4px solid var(--danger);">
-            <h3>Sincronización Mágica</h3>
-            <button class="btn btn-primary" onclick="generarEnlaceMagico()">1. 🔗 Copiar Enlace Mágico</button>
-            <button class="btn btn-outline" onclick="generarToken()">Copiar Solo Token</button>
-            <button class="btn btn-warning" style="margin-top:10px;" onclick="generarEstructuraExcel()">2. Estructura para Excel (Macro)</button>
-            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px;" readonly></textarea>
+        <div class="card" style="border-left: 4px solid var(--info-bg);">
+            <h3 style="margin-bottom: 10px;">Sincronización Mágica</h3>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Comparta el Enlace Maestro para actualizar la versión de la App y sincronizar la Base de Datos al mismo tiempo.</p>
+            
+            <!-- EL BOTÓN UNIFICADO MAESTRO -->
+            <button class="btn btn-info" onclick="generarEnlaceMaestro()">🔗 Copiar Enlace Maestro (App + Datos)</button>
+            
+            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarToken()">Copiar Solo Token (Contingencia)</button>
+            
+            <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
+            <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración</h4>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si modificó las preguntas del Checklist, para alinear las columnas en su PC.</p>
+            <button class="btn btn-warning" onclick="generarEstructuraExcel()">Estructura para Excel (Macro)</button>
+            
+            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
         </div>
 
         <div class="card">
@@ -326,13 +335,13 @@
                 <div id="listaBitacora" style="margin-top:5px;"></div>
             </div>
 
-            <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar PDF</button>
+            <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Archivos</button>
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.5</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.7</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -350,7 +359,7 @@
         </div>
     </div>
 
-    <!-- MODAL RADAR GIGANTE -->
+    <!-- MODALES VARIOS -->
     <div id="modalRadar" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <div id="radarBody"></div>
@@ -358,17 +367,16 @@
         </div>
     </div>
 
-    <!-- MODAL FIRMA Y PDF -->
     <div id="modalCierre" class="modal-overlay hidden" style="align-items: flex-end; padding:0;">
         <div class="modal-content modal-content-bottom">
             <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente todos los controles. Se generará un archivo PDF.</p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente todos los controles. Se generarán 3 archivos: PDF (Visual), CSV (Datos) y TXT (Estructura).</p>
             <canvas id="canvasFirma"></canvas>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
                 <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Trazo</button>
             </div>
-            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Generar PDF y Enviar</button>
+            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Generar Archivos y Enviar</button>
         </div>
     </div>
 
@@ -398,8 +406,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             migrarDatosLegados();
             if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
-            const urlParams = new URLSearchParams(window.location.search); const magicToken = urlParams.get('t');
-            if (magicToken) { window.history.replaceState(null, null, window.location.pathname); setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); }
+            
+            const urlParams = new URLSearchParams(window.location.search); 
+            const magicToken = urlParams.get('t');
+            
+            // Si entra con un token, limpia la URL y abre la Aduana
+            if (magicToken) { 
+                window.history.replaceState(null, null, window.location.pathname); 
+                setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); 
+            }
+            
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
@@ -411,7 +427,6 @@
             }
         });
 
-        // --- SISTEMA DE RELOJ OCULTO (TIMESTAMPS) Y TOMBSTONES ---
         function validarEstructuraTimestamps() {
             if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
             if(!config.fallas) config.fallas = {}; config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
@@ -420,67 +435,38 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- ADUANA VISUAL Y SMART MERGE ---
         function procesarTokenAduana(str) {
             if(!str) return alert("Pegue un token.");
             try {
-                const newCfg = JSON.parse(decodeURIComponent(atob(str.trim())));
-                if(!newCfg.usuarios) throw new Error();
-                tokenPendiente = newCfg;
-
-                let curEq = Object.keys(config.equipos||{}).length; let newEq = Object.keys(newCfg.equipos||{}).length;
-                let curUsr = (config.usuarios||[]).length; let newUsr = (newCfg.usuarios||[]).length;
-
-                let html = `<p><b>Datos en tu Celular:</b> ${curEq} Equipos | ${curUsr} Usuarios</p>
-                            <p><b>Datos en el Token:</b> ${newEq} Equipos | ${newUsr} Usuarios</p>
-                            <hr style="margin:10px 0; border:0; border-top:1px solid var(--border);">
-                            <p style="color:var(--text-muted); font-size:12px;">Al pulsar <b>Fusionar</b>, el sistema unificará ambas bases respetando la última fecha de modificación de cada ítem (Añadiendo lo nuevo sin borrar tu trabajo reciente).</p>`;
-                
-                document.getElementById('aduanaStats').innerHTML = html;
-                document.getElementById('modalAduana').classList.remove('hidden');
+                const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(!newCfg.usuarios) throw new Error(); tokenPendiente = newCfg;
+                let curEq = Object.keys(config.equipos||{}).length; let newEq = Object.keys(newCfg.equipos||{}).length; let curUsr = (config.usuarios||[]).length; let newUsr = (newCfg.usuarios||[]).length;
+                let html = `<p><b>Datos en tu Celular:</b> ${curEq} Equipos | ${curUsr} Usuarios</p><p><b>Datos en el Token:</b> ${newEq} Equipos | ${newUsr} Usuarios</p><hr style="margin:10px 0; border:0; border-top:1px solid var(--border);"><p style="color:var(--text-muted); font-size:12px;">Al pulsar <b>Fusionar</b>, el sistema unificará ambas bases respetando la última fecha de modificación de cada ítem.</p>`;
+                document.getElementById('aduanaStats').innerHTML = html; document.getElementById('modalAduana').classList.remove('hidden');
             } catch(e) { alert("Token Inválido o Corrupto."); }
         }
 
         function cerrarAduana() { document.getElementById('modalAduana').classList.add('hidden'); tokenPendiente = null; }
-
-        function ejecutarSobrescritura() {
-            if(!confirm("⚠️ ATENCIÓN: Esto borrará tu base actual y la reemplazará por la del Token. ¿Estás seguro?")) return;
-            localStorage.setItem(CFG_KEY, JSON.stringify(tokenPendiente)); alert("Sobrescritura completada."); location.reload();
-        }
+        function ejecutarSobrescritura() { if(!confirm("⚠️ ATENCIÓN: Esto borrará tu base actual y la reemplazará por la del Token. ¿Estás seguro?")) return; localStorage.setItem(CFG_KEY, JSON.stringify(tokenPendiente)); alert("Sobrescritura completada."); location.reload(); }
 
         function ejecutarFusion() {
-            if(!tokenPendiente) return;
-            let newCfg = tokenPendiente;
-            if(!config.timestamps) config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
-            if(!config.deleted) config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
-            if(!newCfg.timestamps) newCfg.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
-            if(!newCfg.deleted) newCfg.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
+            if(!tokenPendiente) return; let newCfg = tokenPendiente;
+            if(!config.timestamps) config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!config.deleted) config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
+            if(!newCfg.timestamps) newCfg.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!newCfg.deleted) newCfg.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
 
-            // Equipos Merge
             Object.keys(newCfg.equipos || {}).forEach(id => { let tsNew = newCfg.timestamps.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; let tsDel = config.deleted.equipos[id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.equipos[id] = newCfg.equipos[id]; config.timestamps.equipos[id] = tsNew; delete config.deleted.equipos[id]; } });
             Object.keys(newCfg.deleted.equipos || {}).forEach(id => { let tsDelNew = newCfg.deleted.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; if(tsDelNew > tsOld) { delete config.equipos[id]; config.deleted.equipos[id] = tsDelNew; } });
-
-            // Grupos Merge
             Object.keys(newCfg.grupos || {}).forEach(nom => { if(nom === 'Todos') return; let tsNew = newCfg.timestamps.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; let tsDel = config.deleted.grupos[nom] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.grupos[nom] = newCfg.grupos[nom]; config.prefijos[nom] = newCfg.prefijos[nom] || ""; config.timestamps.grupos[nom] = tsNew; delete config.deleted.grupos[nom]; } });
             Object.keys(newCfg.deleted.grupos || {}).forEach(nom => { let tsDelNew = newCfg.deleted.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; if(tsDelNew > tsOld) { delete config.grupos[nom]; delete config.prefijos[nom]; config.deleted.grupos[nom] = tsDelNew; } });
-
-            // Secciones Merge
             (newCfg.secciones || []).forEach(sec => { let tsNew = newCfg.timestamps.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; let tsDel = config.deleted.secciones[sec] || 0; if(tsNew > tsOld && tsNew > tsDel) { if(!config.secciones.includes(sec)) config.secciones.push(sec); config.timestamps.secciones[sec] = tsNew; delete config.deleted.secciones[sec]; } });
             Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { let tsDelNew = newCfg.deleted.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; if(tsDelNew > tsOld) { config.secciones = config.secciones.filter(s => s !== sec); config.deleted.secciones[sec] = tsDelNew; } });
-
-            // Usuarios Merge
             (newCfg.usuarios || []).forEach(uNew => { let tsNew = newCfg.timestamps.usuarios[uNew.id] || 0; let tsOld = config.timestamps.usuarios[uNew.id] || 0; let tsDel = config.deleted.usuarios[uNew.id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.usuarios = config.usuarios.filter(u => u.id !== uNew.id); config.usuarios.push(uNew); config.timestamps.usuarios[uNew.id] = tsNew; delete config.deleted.usuarios[uNew.id]; } });
             Object.keys(newCfg.deleted.usuarios || {}).forEach(id => { let tsDelNew = newCfg.deleted.usuarios[id] || 0; let tsOld = config.timestamps.usuarios[id] || 0; if(tsDelNew > tsOld) { config.usuarios = config.usuarios.filter(u => u.id !== parseInt(id)); config.deleted.usuarios[id] = tsDelNew; } });
 
-            localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            alert("✅ Fusión Inteligente completada. Datos unificados.");
-            location.reload();
+            localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert("✅ Fusión Inteligente completada. Datos unificados."); location.reload();
         }
 
         function migrarDatosLegados() { if (!localStorage.getItem(CFG_KEY)) { let oldCfg = localStorage.getItem('SySO_V5_Config') || localStorage.getItem('SySO_V6_Config'); let oldData = localStorage.getItem('SySO_V5_Data') || localStorage.getItem('SySO_V6_Data'); let oldPhotos = localStorage.getItem('SySO_V5_Photos') || localStorage.getItem('SySO_V6_Photos'); if (oldCfg) localStorage.setItem(CFG_KEY, oldCfg); if (oldData) localStorage.setItem(DB_KEY, oldData); if (oldPhotos) localStorage.setItem(PHOTO_KEY, oldPhotos); } }
-
         function iniciarCandadoTurno() { localStorage.setItem(ACTIVITY_KEY, Date.now()); document.addEventListener('touchstart', () => localStorage.setItem(ACTIVITY_KEY, Date.now())); document.addEventListener('click', () => localStorage.setItem(ACTIVITY_KEY, Date.now())); setInterval(() => { let lastAct = parseInt(localStorage.getItem(ACTIVITY_KEY) || 0); if(usuarioActual && (Date.now() - lastAct) > 12 * 60 * 60 * 1000) { alert("⛔ Sesión expirada por inactividad (>12hs). Por favor, ingrese su PIN nuevamente."); cerrarSesion(false); } }, 60000); }
-
         function toggleDarkMode() { const body = document.body; body.classList.toggle('dark-mode'); const isDark = body.classList.contains('dark-mode'); localStorage.setItem('SySO_DarkMode', isDark); document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche'; }
         function forzarActualizacion() { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }
 
@@ -488,7 +474,19 @@
         document.addEventListener('click', function(e) { if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; } });
 
         function inicializarSistema() { const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim(); if(!nom || !pin) return alert("Faltan datos."); config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"]; config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; config.fallas = {}; config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0]; }
-        function generarEnlaceMagico() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str; const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado."); }
+        
+        // EL NUEVO GENERADOR DE ENLACE MAESTRO (APP + DATOS)
+        function generarEnlaceMaestro() { 
+            const str = btoa(encodeURIComponent(JSON.stringify(config))); 
+            const link = window.location.href.split('?')[0] + '?v=' + Date.now() + '&t=' + str; 
+            const txt = document.getElementById('txtAdminExport'); 
+            txt.value = link; 
+            txt.classList.remove('hidden'); 
+            txt.select(); 
+            document.execCommand('copy'); 
+            alert("🔗 Enlace Maestro copiado al portapapeles.\n\nEnvíelo por WhatsApp. Al hacer clic, actualizará la App y sincronizará la base de datos automáticamente."); 
+        }
+        
         function generarToken() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado."); }
         function generarEstructuraExcel() { const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado."); }
 
@@ -512,7 +510,6 @@
             if(turnoActual.length === 0) { lista.innerHTML = '<span class="text-muted">No hay inspecciones en este turno.</span>'; return; }
             [...turnoActual].reverse().forEach(r => { let isFalla = Object.values(r.Controles).includes('Falla'); let color = isFalla ? 'var(--danger)' : 'var(--success)'; lista.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:8px 0; align-items:center;"> <span><b style="color:${color}">${r.ID_Equipo}</b> <small class="text-muted">(${r.Fecha.split(', ')[1]})</small></span> <button class="btn-small btn-s-del" onclick="borrarRegistroBitacora('${r.ID_Equipo}', '${r.Fecha}')">🗑️</button> </div>`; });
         }
-        
         window.borrarRegistroBitacora = function(id, fecha) { if(!confirm(`¿Eliminar la inspección del equipo ${id} de este turno?`)) return; let db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db = db.filter(r => !(r.ID_Equipo === id && r.Fecha === fecha)); localStorage.setItem(DB_KEY, JSON.stringify(db)); actualizarDashboard(); }
 
         function poblarAdmin() { const grpKeys = Object.keys(config.grupos); const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`); const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`); let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo"> Acceso Total (Todos)</label>`; grpKeys.forEach(g => { if(g!=='Todos') chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; }); document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml; actualizarPrefijoUI(); renderListas(); }
@@ -694,24 +691,41 @@
         function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); } function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
         
         async function confirmarFirmaYEnviar() {
-            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); document.getElementById('btnConfirmarFirma').innerText = "Generando PDF... Aguarde"; document.getElementById('btnConfirmarFirma').disabled = true;
+            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); document.getElementById('btnConfirmarFirma').innerText = "Generando Archivos... Aguarde"; document.getElementById('btnConfirmarFirma').disabled = true;
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
+            
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones", "Alerta_Fraude");
             let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones, r.Alerta_Fraude || "NO"); csv += row.join(";") + "\r\n"; });
+            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
+
+            const schemaStr = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify({ grupos: config.grupos })));
+            const fileSchema = new File([schemaStr], `Schema_Macro_${Date.now()}.txt`, { type: 'text/plain' });
             
             let shiftStart = localStorage.getItem('SySO_ShiftStart'); let duracionInfo = "No medido"; if(shiftStart) { let diff = Date.now() - parseInt(shiftStart); let h = Math.floor(diff / 3600000); let m = Math.floor((diff % 3600000) / 60000); duracionInfo = `${h}h ${m}m`; }
+            
             let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#fff; color:#000;} .card{border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px;} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><p><b>⏱️ Tiempo Efectivo de Turno:</b> ${duracionInfo}</p><hr>`;
-            db.forEach(r => { let detallesControles = ""; Object.keys(r.Controles).forEach(k => { let valor = r.Controles[k]; let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor; detallesControles += `${k}: ${spanValor} | `; }); const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : ''; html += `<div class="card"><h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p><p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p><p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>${imgTag}</div>`; }); 
+            db.forEach(r => { 
+                let detallesControles = ""; let idx = 0;
+                Object.keys(r.Controles).forEach(k => { let paramName = (config.grupos[r.Grupo] && config.grupos[r.Grupo][idx]) ? config.grupos[r.Grupo][idx] : k; let valor = r.Controles[k]; let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor; detallesControles += `<b>${paramName}</b>: ${spanValor} | `; idx++; }); 
+                const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : ''; 
+                html += `<div class="card"><h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p><p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p><p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>${imgTag}</div>`; 
+            }); 
             html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
-            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
             let pdfDiv = document.createElement('div'); pdfDiv.innerHTML = html; let opt = { margin: 10, filename: `Reporte_SySO_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-            try { if(typeof html2pdf !== 'undefined') { await html2pdf().set(opt).from(pdfDiv).save(); descargarCSV(fileCSV); } else { throw new Error("html2pdf no cargó"); } } catch(e) { alert("Red inestable. Descargando formato HTML de contingencia."); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' }); const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click(); descargarCSV(fileCSV); }
-            localStorage.removeItem('SySO_ShiftStart'); cerrarModalCierre(); document.getElementById('btnConfirmarFirma').innerText = "Generar PDF y Enviar"; document.getElementById('btnConfirmarFirma').disabled = false;
+            
+            try { 
+                if(typeof html2pdf !== 'undefined') { await html2pdf().set(opt).from(pdfDiv).save(); descargarArchivosMultiples(fileCSV, fileSchema); } else { throw new Error("html2pdf no cargó"); } 
+            } catch(e) { 
+                alert("Red inestable. Descargando formato HTML de contingencia."); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' }); const l2 = document.createElement("a"); l2.href = URL.createObjectURL(fileHTML); l2.download = fileHTML.name; l2.click(); descargarArchivosMultiples(fileCSV, fileSchema); 
+            }
+            
+            localStorage.removeItem('SySO_ShiftStart'); cerrarModalCierre(); document.getElementById('btnConfirmarFirma').innerText = "Generar Archivos y Enviar"; document.getElementById('btnConfirmarFirma').disabled = false;
         }
 
-        function descargarCSV(fileCSV) { setTimeout(()=>{const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click();}, 500); }
+        function descargarArchivosMultiples(csv, schema) { setTimeout(()=>{const l1=document.createElement("a"); l1.href=URL.createObjectURL(csv); l1.download=csv.name; l1.click();}, 500); setTimeout(()=>{const l3=document.createElement("a"); l3.href=URL.createObjectURL(schema); l3.download=schema.name; l3.click();}, 1000); }
+
         function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { localStorage.removeItem(DB_KEY); localStorage.removeItem(PHOTO_KEY); localStorage.removeItem('SySO_ShiftStart'); alert("Historial purgado con éxito."); actualizarDashboard(); } }
     </script>
 </body>
