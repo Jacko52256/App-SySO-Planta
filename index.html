@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.7 - Industrial</title>
+    <title>Gestión SySO V6.9 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -53,8 +53,11 @@
         body.dark-mode .btn-info { color: #000; }
         .btn-dark { background: #343a40; color: #fff;}
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-camera { background: #6c757d; display:flex; align-items:center; justify-content:center; gap:10px; color:#fff;}
+        .btn-camera { background: #6c757d; display:flex; align-items:center; justify-content:center; gap:10px; color:#fff; transition: background 0.3s;}
+        .btn-camera.urgent { background: var(--danger); animation: pulse 1s infinite; border: 2px solid #fff; }
         
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
         .action-btns { display: flex; gap: 5px; }
         .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; color: white; }
         .btn-s-edit { background: var(--edit); }
@@ -114,7 +117,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.7</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.9</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -149,7 +152,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.7</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.9</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -170,7 +173,7 @@
                     <button class="btn btn-warning" style="width:auto; padding:0 15px;" onclick="activarQR()">📷 QR</button>
                 </div>
                 <div style="text-align: right; margin-top: 5px;">
-                    <button class="btn-small btn-dark" onclick="cargaManualQR()">⌨️ Carga Manual (Contingencia)</button>
+                    <button class="btn-small btn-dark" onclick="abrirModalContingencia()">⌨️ Carga Manual (Contingencia)</button>
                 </div>
             </div>
             
@@ -196,7 +199,7 @@
                 <label style="color:var(--danger);">🚨 Evidencia Fotográfica</label>
                 <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria en caso de Falla o Carga Manual.</p>
                 <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
-                <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
+                <button id="btnAdjuntarFoto" class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
                 <canvas id="canvasWatermark" style="display:none;"></canvas>
                 <img id="previewBox" src="" alt="Previsualización">
             </div>
@@ -260,12 +263,10 @@
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--info-bg);">
             <h3 style="margin-bottom: 10px;">Sincronización Mágica</h3>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Comparta el Enlace Maestro para actualizar la versión de la App y sincronizar la Base de Datos al mismo tiempo.</p>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Comparta el Enlace Maestro por WhatsApp para que la brigada actualice la App y los datos con 1 solo clic.</p>
             
-            <!-- EL BOTÓN UNIFICADO MAESTRO -->
-            <button class="btn btn-info" onclick="generarEnlaceMaestro()">🔗 Copiar Enlace Maestro (App + Datos)</button>
-            
-            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarToken()">Copiar Solo Token (Contingencia)</button>
+            <button class="btn btn-info" onclick="generarYEnviarEnlaceMaestro()">📲 Enviar Enlace por WhatsApp</button>
+            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarEnlaceMaestro(false)">🔗 Copiar al Portapapeles</button>
             
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración</h4>
@@ -341,7 +342,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.7</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.9</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -359,6 +360,30 @@
         </div>
     </div>
 
+    <!-- MODAL BUSCADOR DE CONTINGENCIA -->
+    <div id="modalContingencia" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 style="color:var(--danger); margin-bottom:10px;">Carga Manual (Contingencia)</h3>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Seleccione la sección donde se encuentra para ver los equipos disponibles. <b>La evidencia fotográfica será obligatoria.</b></p>
+            
+            <div class="form-group">
+                <label>Filtro por Sección:</label>
+                <select id="contingenciaSec" onchange="poblarEquiposContingencia()">
+                    <option value="">Seleccione Sección...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Seleccionar Equipo Físico:</label>
+                <select id="contingenciaEq" disabled>
+                    <option value="">Primero seleccione una sección</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-success" onclick="procesarContingencia()">Validar Equipo</button>
+            <button class="btn btn-outline" onclick="cerrarModalContingencia()">Cancelar</button>
+        </div>
+    </div>
+
     <!-- MODALES VARIOS -->
     <div id="modalRadar" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
@@ -370,13 +395,13 @@
     <div id="modalCierre" class="modal-overlay hidden" style="align-items: flex-end; padding:0;">
         <div class="modal-content modal-content-bottom">
             <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente todos los controles. Se generarán 3 archivos: PDF (Visual), CSV (Datos) y TXT (Estructura).</p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente. Se generará un PDF de lectura y un CSV para el Excel. <b>Ambos se compartirán por WhatsApp.</b></p>
             <canvas id="canvasFirma"></canvas>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
                 <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Trazo</button>
             </div>
-            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Generar Archivos y Enviar</button>
+            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Generar Archivos y Compartir</button>
         </div>
     </div>
 
@@ -410,7 +435,6 @@
             const urlParams = new URLSearchParams(window.location.search); 
             const magicToken = urlParams.get('t');
             
-            // Si entra con un token, limpia la URL y abre la Aduana
             if (magicToken) { 
                 window.history.replaceState(null, null, window.location.pathname); 
                 setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); 
@@ -475,16 +499,21 @@
 
         function inicializarSistema() { const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim(); if(!nom || !pin) return alert("Faltan datos."); config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"]; config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; config.fallas = {}; config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0]; }
         
-        // EL NUEVO GENERADOR DE ENLACE MAESTRO (APP + DATOS)
-        function generarEnlaceMaestro() { 
+        function generarEnlaceMaestro(silent = true) { 
             const str = btoa(encodeURIComponent(JSON.stringify(config))); 
             const link = window.location.href.split('?')[0] + '?v=' + Date.now() + '&t=' + str; 
-            const txt = document.getElementById('txtAdminExport'); 
-            txt.value = link; 
-            txt.classList.remove('hidden'); 
-            txt.select(); 
-            document.execCommand('copy'); 
-            alert("🔗 Enlace Maestro copiado al portapapeles.\n\nEnvíelo por WhatsApp. Al hacer clic, actualizará la App y sincronizará la base de datos automáticamente."); 
+            if(!silent) {
+                const txt = document.getElementById('txtAdminExport'); 
+                txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); 
+                alert("🔗 Enlace Maestro copiado al portapapeles.");
+            }
+            return link;
+        }
+
+        function generarYEnviarEnlaceMaestro() {
+            const link = generarEnlaceMaestro(true);
+            const mensaje = encodeURIComponent(`*Actualización SySO Industrial*\n\nHaga clic en este enlace para actualizar su versión de la App y sincronizar los equipos de planta:\n\n${link}`);
+            window.location.href = `whatsapp://send?text=${mensaje}`;
         }
         
         function generarToken() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado."); }
@@ -609,6 +638,8 @@
                     ctxW.fillStyle = "rgba(0, 0, 0, 0.6)"; ctxW.fillRect(0, canvasW.height - 60, canvasW.width, 60); ctxW.font = "18px 'Segoe UI', sans-serif"; ctxW.fillStyle = "#ffc107"; 
                     const idEq = document.getElementById('idEquipo').value || "M/N"; const sello = `ID: ${idEq} | Inspector: ${usuarioActual ? usuarioActual.nombre : 'N/A'} | Timestamp: ${new Date().toLocaleString('es-PY')}`; ctxW.fillText(sello, 10, canvasW.height - 25);
                     fotoActualBase64 = canvasW.toDataURL('image/jpeg', 0.7); const preview = document.getElementById('previewBox'); preview.src = fotoActualBase64; preview.style.display = 'block';
+                    
+                    document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
                 }
                 img.src = e.target.result;
             }
@@ -618,11 +649,52 @@
         function guardarBorrador() { let obs = document.getElementById('observaciones').value; localStorage.setItem(DRAFT_KEY, obs); document.getElementById('lblBorrador').innerText = "📝 Borrador guardado localmente."; }
 
         function agregarTag(texto) { let obs = document.getElementById('observaciones'); if(obs.value.trim() === '') obs.value = texto; else obs.value += ", " + texto; guardarBorrador(); obs.focus(); }
-        function cargaManualQR() { let val = prompt("⛔ CONTINGENCIA:\nIngrese el ID del equipo manualmente (Ej: EXT-045):"); if(val) { esCargaManual = true; procesarEscaneo(val); } }
+        
+        function abrirModalContingencia() {
+            esCargaManual = true;
+            const selSec = document.getElementById('contingenciaSec');
+            selSec.innerHTML = '<option value="">Seleccione Sección...</option>';
+            config.secciones.forEach(s => selSec.innerHTML += `<option value="${s}">${s}</option>`);
+            document.getElementById('contingenciaEq').innerHTML = '<option value="">Primero seleccione una sección</option>';
+            document.getElementById('contingenciaEq').disabled = true;
+            document.getElementById('modalContingencia').classList.remove('hidden');
+        }
+
+        window.poblarEquiposContingencia = function() {
+            const sec = document.getElementById('contingenciaSec').value;
+            const selEq = document.getElementById('contingenciaEq');
+            if(!sec) { selEq.innerHTML = '<option value="">Primero seleccione una sección</option>'; selEq.disabled = true; return; }
+            
+            selEq.innerHTML = '<option value="">Seleccione el Equipo...</option>';
+            let count = 0;
+            Object.keys(config.equipos).forEach(id => {
+                if(config.equipos[id].seccion === sec) {
+                    selEq.innerHTML += `<option value="${id}">${id} - ${config.equipos[id].tipo}</option>`;
+                    count++;
+                }
+            });
+            selEq.disabled = count === 0;
+            if(count === 0) selEq.innerHTML = '<option value="">No hay equipos en esta sección</option>';
+        }
+
+        window.procesarContingencia = function() {
+            const id = document.getElementById('contingenciaEq').value;
+            if(!id) return alert("Seleccione un equipo válido.");
+            cerrarModalContingencia();
+            procesarEscaneo(id);
+            document.getElementById('btnAdjuntarFoto').classList.add('urgent');
+            document.getElementById('zonaObservaciones').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            alert("⚠️ Carga Manual Iniciada.\nEs OBLIGATORIO adjuntar una foto del QR o equipo antes de guardar.");
+        }
+
+        window.cerrarModalContingencia = function() { document.getElementById('modalContingencia').classList.add('hidden'); }
+
         function toggleLinterna() { if (html5QrcodeScanner && html5QrcodeScanner.html5Qrcode) { try { const track = html5QrcodeScanner.html5Qrcode.getRunningTrack(); if (track) { const isTorchOn = track.getSettings().torch || false; track.applyConstraints({ advanced: [{ torch: !isTorchOn }] }).catch(err => alert("La linterna no es compatible con este celular.")); } else { alert("Encienda la cámara primero para usar la linterna."); } } catch(e) { alert("La linterna no es compatible con el navegador actual."); } } }
 
         function activarQR() {
-            esCargaManual = false; document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            esCargaManual = false; 
+            document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+            document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
         }
         
@@ -645,17 +717,21 @@
                 let warningHTML = ''; if(eq.vencimiento) { const today = new Date(); const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`; if(eq.vencimiento <= currMonth) { warningHTML += `<div class="alert-danger"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla.</div>`; } }
                 if(config.fallas && config.fallas[id]) { warningHTML += `<div class="alert-warning"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>Falla reportada en mes anterior: <i>${config.fallas[id]}</i>.</div>`; }
                 
-                let html = ''; const params = config.grupos[eq.grupo]; if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); } container.innerHTML = warningHTML + html;
+                let html = ''; const params = config.grupos[eq.grupo]; if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="revisarFallas(this.value)"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); } container.innerHTML = warningHTML + html;
 
                 setTimeout(() => { document.getElementById('zonaObservaciones').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
                 if(!localStorage.getItem('SySO_ShiftStart')) { localStorage.setItem('SySO_ShiftStart', Date.now()); }
             } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
+
+        window.revisarFallas = function(val) {
+            if(val === 'Falla') document.getElementById('btnAdjuntarFoto').classList.add('urgent');
+        }
         
         function guardarRegistro() {
             const id = document.getElementById('idEquipo').value; if(!id) return alert("Escanee QR."); const eq = config.equipos[id]; const params = config.grupos[eq.grupo]; let resp = {};
             let fallasDetectadas = []; params.forEach((p, index) => { let val = document.getElementById(`dynChk_${index}`).value; resp[`Control_${index+1}`] = val; if(val === 'Falla') fallasDetectadas.push(p); });
-            if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) { return alert(`⛔ BLOQUEO DE SEGURIDAD:\n${esCargaManual ? "Carga manual de código." : "Se detectó falla."}\n\nEs OBLIGATORIO adjuntar evidencia fotográfica.`); }
+            if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) { document.getElementById('btnAdjuntarFoto').classList.add('urgent'); return alert(`⛔ BLOQUEO DE SEGURIDAD:\n${esCargaManual ? "Carga manual de código." : "Se detectó falla."}\n\nEs OBLIGATORIO adjuntar evidencia fotográfica.`); }
             
             let obsText = document.getElementById('observaciones').value; if(eq.vencimiento && eq.vencimiento <= new Date().toISOString().slice(0,7)) obsText = "[VENCIDO] " + obsText; let obsSanitized = obsText.replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
             if(!config.fallas) config.fallas = {}; if(fallasDetectadas.length > 0) { config.fallas[id] = fallasDetectadas.join(", "); } else { delete config.fallas[id]; } localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
@@ -680,7 +756,7 @@
                 } else { modalHTML += `<p class="text-muted" style="font-size:18px; margin-top:20px;">🏁 Fin de ruta para bloque <b>${prefijo}</b>.</p>`; }
             } else { modalHTML += `<p style="color:var(--text)">Control registrado en base de datos.</p>`; }
             
-            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false";
+            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
             mostrarRadar(modalHTML);
         }
 
@@ -698,33 +774,62 @@
             let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones", "Alerta_Fraude");
             let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones, r.Alerta_Fraude || "NO"); csv += row.join(";") + "\r\n"; });
             const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
-
-            const schemaStr = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify({ grupos: config.grupos })));
-            const fileSchema = new File([schemaStr], `Schema_Macro_${Date.now()}.txt`, { type: 'text/plain' });
             
             let shiftStart = localStorage.getItem('SySO_ShiftStart'); let duracionInfo = "No medido"; if(shiftStart) { let diff = Date.now() - parseInt(shiftStart); let h = Math.floor(diff / 3600000); let m = Math.floor((diff % 3600000) / 60000); duracionInfo = `${h}h ${m}m`; }
             
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#fff; color:#000;} .card{border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px;} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><p><b>⏱️ Tiempo Efectivo de Turno:</b> ${duracionInfo}</p><hr>`;
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background-color:#ffffff !important; color:#000000 !important;} .report-card{border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px; background-color:#ffffff !important; color:#000000 !important;} h2{color:#2F5597 !important;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; margin-top:30px; background-color:#ffffff !important; color:#000000 !important;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body style="background-color:#ffffff; color:#000000;"><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><p><b>⏱️ Tiempo Efectivo de Turno:</b> ${duracionInfo}</p><hr>`;
             db.forEach(r => { 
                 let detallesControles = ""; let idx = 0;
                 Object.keys(r.Controles).forEach(k => { let paramName = (config.grupos[r.Grupo] && config.grupos[r.Grupo][idx]) ? config.grupos[r.Grupo][idx] : k; let valor = r.Controles[k]; let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor; detallesControles += `<b>${paramName}</b>: ${spanValor} | `; idx++; }); 
                 const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : ''; 
-                html += `<div class="card"><h3 style="margin-top:0;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:5px 0; font-size:14px;"><b>Fecha:</b> ${r.Fecha}</p><p style="margin:5px 0; font-size:14px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px;"><b>Detalles:</b> ${detallesControles}</p><p style="margin:5px 0; font-size:14px;"><b>Observaciones:</b> ${r.Observaciones}</p>${imgTag}</div>`; 
+                html += `<div class="report-card"><h3 style="margin-top:0; color:#2F5597;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:5px 0; font-size:14px; color:#000;"><b>Fecha:</b> ${r.Fecha}</p><p style="margin:5px 0; font-size:14px; color:#000;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:5px 0; font-size:14px; background:#f8f9fa; padding:5px; border-radius:4px; color:#000;"><b>Detalles:</b> ${detallesControles}</p><p style="margin:5px 0; font-size:14px; color:#000;"><b>Observaciones:</b> ${r.Observaciones}</p>${imgTag}</div>`; 
             }); 
-            html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
+            html += `<div class="firma-box"><h3 style="color:#000;">Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p style="color:#000;"><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
             let pdfDiv = document.createElement('div'); pdfDiv.innerHTML = html; let opt = { margin: 10, filename: `Reporte_SySO_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
             
             try { 
-                if(typeof html2pdf !== 'undefined') { await html2pdf().set(opt).from(pdfDiv).save(); descargarArchivosMultiples(fileCSV, fileSchema); } else { throw new Error("html2pdf no cargó"); } 
+                if(typeof html2pdf !== 'undefined') { 
+                    const pdfOutput = await html2pdf().set(opt).from(pdfDiv).output('blob');
+                    const filePDF = new File([pdfOutput], `Reporte_SySO_${Date.now()}.pdf`, { type: 'application/pdf' });
+                    compartirNativoArchivos([filePDF, fileCSV]); 
+                } else { throw new Error("html2pdf no cargó"); } 
             } catch(e) { 
-                alert("Red inestable. Descargando formato HTML de contingencia."); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' }); const l2 = document.createElement("a"); l2.href = URL.createObjectURL(fileHTML); l2.download = fileHTML.name; l2.click(); descargarArchivosMultiples(fileCSV, fileSchema); 
+                alert("Generando formato HTML de contingencia por límite de red."); 
+                const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' }); 
+                compartirNativoArchivos([fileHTML, fileCSV]); 
             }
             
-            localStorage.removeItem('SySO_ShiftStart'); cerrarModalCierre(); document.getElementById('btnConfirmarFirma').innerText = "Generar Archivos y Enviar"; document.getElementById('btnConfirmarFirma').disabled = false;
+            localStorage.removeItem('SySO_ShiftStart'); cerrarModalCierre(); document.getElementById('btnConfirmarFirma').innerText = "Generar Archivos y Compartir"; document.getElementById('btnConfirmarFirma').disabled = false;
         }
 
-        function descargarArchivosMultiples(csv, schema) { setTimeout(()=>{const l1=document.createElement("a"); l1.href=URL.createObjectURL(csv); l1.download=csv.name; l1.click();}, 500); setTimeout(()=>{const l3=document.createElement("a"); l3.href=URL.createObjectURL(schema); l3.download=schema.name; l3.click();}, 1000); }
+        async function compartirNativoArchivos(archivosArray) {
+            if (navigator.canShare && navigator.canShare({ files: archivosArray })) {
+                try {
+                    await navigator.share({
+                        files: archivosArray,
+                        title: 'Reporte SySO Industrial',
+                        text: `Adjunto reporte de inspección de ${usuarioActual.nombre}.`
+                    });
+                } catch (error) {
+                    if(error.name !== "AbortError") {
+                        alert("Error al compartir nativamente. Se descargarán los archivos.");
+                        descargarArray(archivosArray);
+                    }
+                }
+            } else {
+                alert("Tu navegador no soporta envío directo a WhatsApp. Se descargarán los archivos en tu carpeta de Descargas.");
+                descargarArray(archivosArray);
+            }
+        }
+
+        function descargarArray(arr) {
+            arr.forEach((file, index) => {
+                setTimeout(() => {
+                    const l = document.createElement("a"); l.href = URL.createObjectURL(file); l.download = file.name; l.click();
+                }, index * 800);
+            });
+        }
 
         function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { localStorage.removeItem(DB_KEY); localStorage.removeItem(PHOTO_KEY); localStorage.removeItem('SySO_ShiftStart'); alert("Historial purgado con éxito."); actualizarDashboard(); } }
     </script>
