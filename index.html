@@ -6,22 +6,32 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V5.13 - Industrial</title>
+    <title>Gestión SySO V5.14 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; --success: #28a745; --text: #333; --edit: #17a2b8; }
+        /* Variables de Color (Soporte Modo Noche) */
+        :root { 
+            --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; 
+            --success: #28a745; --text: #333; --edit: #17a2b8; --card-bg: #fff; --input-bg: #fafafa; --border: #ccc;
+        }
+        
+        body.dark-mode { 
+            --bg: #121212; --text: #e0e0e0; --card-bg: #1e1e1e; --input-bg: #2d2d2d; 
+            --primary: #4a7abf; --border: #444;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
         
         .header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card { background: white; padding: 20px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background 0.3s; }
         
         .form-group { margin-bottom: 15px; position: relative; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
-        input[type="text"], input[type="number"], input[type="password"], select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: #fafafa; }
-        input:disabled, input[readonly] { background: #e9ecef; font-weight: bold; color: var(--primary); border: 1px solid #ced4da; }
+        input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: var(--input-bg); color: var(--text); }
+        input:disabled, input[readonly] { background: var(--input-bg); opacity:0.7; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
         
         .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: var(--primary); }
@@ -29,6 +39,7 @@
         .btn-warning { background: var(--accent); color: #000; }
         .btn-danger { background: var(--danger); }
         .btn-info { background: var(--edit); }
+        .btn-dark { background: #343a40; }
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
         .btn-camera { background: #6c757d; display:flex; align-items:center; justify-content:center; gap:10px;}
         
@@ -39,7 +50,7 @@
         
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed #ccc; display: none;}
+        #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed var(--border); display: none;}
         
         .view { display: none; }
         .view.active { display: block; }
@@ -48,20 +59,20 @@
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
         .tab-btn { background: none; border: none; color: white; font-weight: bold; opacity: 0.7; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 12px;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
-        .modal-content { background: white; width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
         .modal-content-bottom { align-self: flex-end; border-radius: 20px 20px 0 0; }
-        #canvasFirma { border: 2px dashed #ccc; border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
+        #canvasFirma { border: 2px dashed var(--border); border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
         
         @keyframes popIn { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
         
-        #dropdownUsuarios { display:none; position:absolute; width:100%; background:white; border:1px solid #ccc; border-radius:0 0 6px 6px; max-height:160px; overflow-y:auto; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); top: 100%; margin-top:-2px;}
-        .dropdown-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; color: var(--primary); font-weight: bold; }
+        #dropdownUsuarios { display:none; position:absolute; width:100%; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 6px 6px; max-height:160px; overflow-y:auto; z-index:9999; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); top: 100%; margin-top:-2px;}
+        .dropdown-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--primary); font-weight: bold; }
         
-        .chk-container { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 6px; padding: 10px; background: #fff; }
-        .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:#333; font-size:15px; }
+        .chk-container { max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--input-bg); }
+        .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
         .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -103,7 +114,7 @@
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
         </div>
-        <div class="card" style="background-color: #e9ecef;">
+        <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
@@ -135,8 +146,8 @@
             
             <div class="form-group" style="margin-top:15px;"><label>Observaciones:</label><textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..."></textarea></div>
             
-            <div class="form-group" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:15px;">
-                <label style="color:#dc3545;">🚨 ¿Se detectó alguna falla? (Foto Obligatoria)</label>
+            <div class="form-group" style="margin-top:15px; border-top:1px dashed var(--border); padding-top:15px;">
+                <label style="color:var(--danger);">🚨 ¿Se detectó alguna falla? (Foto Obligatoria)</label>
                 <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
                 <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
                 <img id="previewBox" src="" alt="Previsualización">
@@ -150,7 +161,7 @@
     <div id="view-qr" class="view">
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
-            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo según el grupo. Tipeá solo el N° correlativo.</p>
+            <p style="font-size: 12px; margin-bottom: 15px; color:#555;"><b>Automatización:</b> El prefijo se ajusta solo. Tipeá solo el N° correlativo.</p>
             
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
 
@@ -166,12 +177,15 @@
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
             <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
             
+            <!-- NUEVO: CAMPO DE VENCIMIENTO -->
+            <div class="form-group"><label>Mes/Año de Vencimiento (Opcional):</label><input type="month" id="qrVencimiento"></div>
+            
             <div style="display:flex; gap:10px;">
                 <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionQR()">Cancelar</button>
             </div>
 
-            <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid #eee;">
+            <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid var(--border);">
                 <canvas id="qrGenerado"></canvas>
                 <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
                 <button class="btn btn-outline" onclick="descargarUnicoQR()">Descargar Etiqueta</button>
@@ -207,7 +221,7 @@
         </div>
 
         <div class="card">
-            <h3>Gestión de Personal (Perfiles Múltiples)</h3>
+            <h3>Gestión de Personal</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevoUsuNombre" placeholder="Nombre" style="flex:2;">
                 <input type="text" id="nuevoUsuPin" placeholder="PIN" style="flex:1;" pattern="[0-9]*">
@@ -240,13 +254,14 @@
 
     <!-- VISTA 5: TURNO (Inspectores y Admins) -->
     <div id="view-turno" class="view">
-        <div class="card" style="background:#fff3cd; border: 2px solid var(--accent);">
-            <h3 style="margin-bottom: 5px; color:#856404;">Gestión de Turno</h3>
+        <div class="card" style="border: 2px solid var(--accent);">
+            <h3 style="margin-bottom: 5px;">Gestión de Turno</h3>
             <p style="font-size:13px; color:#555; margin-bottom:15px;">Inspector Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
             <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
         <div class="card">
+            <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Actualizar Versión de App</button>
         </div>
         <div class="card">
@@ -300,6 +315,13 @@
         let fotoActualBase64 = null;
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Inicializador Modo Noche
+            if(localStorage.getItem('SySO_DarkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+                const btn = document.getElementById('btnDarkMode');
+                if(btn) btn.innerHTML = '☀️ Activar Modo Día';
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const magicToken = urlParams.get('t');
             if (magicToken) {
@@ -317,6 +339,15 @@
                 prepararLogin(); 
             }
         });
+
+        // --- MODO NOCHE ---
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            localStorage.setItem('SySO_DarkMode', isDark);
+            document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche';
+        }
 
         // --- MOTOR DE REFRESCO ACTIVO ---
         function forzarActualizacion() {
@@ -465,19 +496,22 @@
             if (match) { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = match[2]; } 
             else { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = ''; }
             document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
+            document.getElementById('qrVencimiento').value = eq.vencimiento || '';
             editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden');
         }
-        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
+        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
         function guardarQR() {
             const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero;
             const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim();
+            const vencimiento = document.getElementById('qrVencimiento').value;
+            
             if(!id || !tipo || !numero) return alert("Faltan datos correlativos.");
             if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); delete config.equipos[editQRId]; }
-            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value };
+            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value, vencimiento: vencimiento };
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
             qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
-            editQRId = null; document.getElementById('qrNumero').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin();
+            editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin();
         }
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         
@@ -488,7 +522,6 @@
             a.click();
         }
 
-        // --- SISTEMA DE INVENTARIO CATEGORIZADO Y DESCARGA MASIVA ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
             Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small>${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
@@ -512,7 +545,8 @@
                 Object.keys(eqPorGrupo).forEach(g => {
                     lQ.innerHTML += `<div class="grupo-header"><span>${g} (${eqPorGrupo[g].length})</span><button class="btn-small btn-warning" onclick="descargarLoteQRs('${g}')">🖨️ Imprimir Lote</button></div>`;
                     eqPorGrupo[g].forEach(eq => {
-                        lQ.innerHTML += `<div class="list-item"><div><b>${eq.id}</b> (${eq.tipo})<br><small>${eq.seccion}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                        let expInfo = eq.vencimiento ? `<br><span style="color:var(--danger)">Vence: ${eq.vencimiento}</span>` : '';
+                        lQ.innerHTML += `<div class="list-item"><div><b>${eq.id}</b> (${eq.tipo})<br><small>${eq.seccion}</small>${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
                     });
                 });
             }
@@ -555,7 +589,7 @@
             reader.readAsDataURL(file);
         }
 
-        // --- INSPECCIÓN, RADAR Y CICLO CERRADO ---
+        // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
@@ -580,8 +614,18 @@
                 container.classList.remove('hidden'); 
                 
                 let warningHTML = '';
+                
+                // VALIDACIÓN DE VENCIMIENTO PREDICTIVO
+                if(eq.vencimiento) {
+                    const today = new Date();
+                    const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`;
+                    if(eq.vencimiento <= currMonth) {
+                        warningHTML += `<div style="background:#dc3545; color:white; padding:10px; border-left:4px solid #851923; margin-bottom:15px; border-radius:4px; font-size:14px;"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla en las observaciones.</div>`;
+                    }
+                }
+
                 if(config.fallas && config.fallas[id]) {
-                    warningHTML = `<div style="background:#ffeeba; color:#856404; padding:10px; border-left:4px solid #ffc107; margin-bottom:15px; border-radius:4px; font-size:13px;"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>El mes anterior se reportó falla en: <i>${config.fallas[id]}</i>. Verifique si fue solucionado.</div>`;
+                    warningHTML += `<div style="background:#ffeeba; color:#856404; padding:10px; border-left:4px solid #ffc107; margin-bottom:15px; border-radius:4px; font-size:13px;"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>El mes anterior se reportó falla en: <i>${config.fallas[id]}</i>. Verifique si fue solucionado.</div>`;
                 }
 
                 let html = ''; const params = config.grupos[eq.grupo];
@@ -601,7 +645,6 @@
                 if(val === 'Falla') fallasDetectadas.push(p);
             });
             
-            // Validación de Evidencia Obligatoria
             if(fallasDetectadas.length > 0 && !fotoActualBase64) {
                 return alert("⛔ BLOQUEO DE SEGURIDAD:\nHa detectado una falla en los controles.\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar el registro.");
             }
@@ -619,7 +662,7 @@
                 const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB));
             }
 
-            // Radar de Siguiente Ruta
+            // Radar de Siguiente Ruta y Cambio de Sector
             const match = id.match(/^(.*?)(\d+)$/);
             let modalHTML = `<h2 style="color:var(--success); font-size:28px; margin-bottom:10px;">✅ ¡Guardado!</h2>`;
             
@@ -630,21 +673,29 @@
                     const nextNumStr = String(numeroActual + i).padStart(padding, '0'); const testId = prefijo + nextNumStr;
                     if(config.equipos[testId]) { proximoId = testId; proximoEq = config.equipos[testId]; break; }
                 }
+                
                 if(proximoEq) {
-                    modalHTML += `<div style="background:#f4f6f9; padding:15px; border-radius:8px; border:2px solid var(--primary);">
+                    modalHTML += `<div style="background:var(--input-bg); padding:15px; border-radius:8px; border:2px solid var(--primary);">
                                     <h3 style="color:var(--primary); margin-top:0;">📍 Siguiente en Ruta</h3>
-                                    <p style="font-size:32px; font-weight:bold; margin:10px 0;">${proximoId}</p>
-                                    <p style="font-size:18px; margin:5px 0;"><b>Ubicación:</b> ${proximoEq.ubicacion || 'No especificada'}</p>
-                                    <p style="font-size:16px; margin:5px 0; color:#555;"><b>Sección:</b> ${proximoEq.seccion}</p>`;
+                                    <p style="font-size:32px; font-weight:bold; margin:10px 0; color:var(--text);">${proximoId}</p>
+                                    <p style="font-size:18px; margin:5px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'No especificada'}</p>`;
+                    
+                    // Alerta de Cambio de Sector
+                    if(proximoEq.seccion !== eq.seccion) {
+                        modalHTML += `<div style="background:var(--edit); color:white; padding:10px; border-radius:6px; margin-top:10px; font-size:16px;"><b>🔄 CAMBIO DE SECTOR:</b><br>Diríjase hacia <b>${proximoEq.seccion}</b>.</div>`;
+                    } else {
+                        modalHTML += `<p style="font-size:16px; margin:5px 0; color:#555;"><b>Sección:</b> ${proximoEq.seccion}</p>`;
+                    }
+
                     if (config.fallas && config.fallas[proximoId]) {
-                        modalHTML += `<div style="background:#dc3545; color:white; padding:10px; border-radius:6px; margin-top:15px; font-size:14px;"><b>🚨 ALERTA DE FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`;
+                        modalHTML += `<div style="background:var(--danger); color:white; padding:10px; border-radius:6px; margin-top:15px; font-size:14px;"><b>🚨 ALERTA DE FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`;
                     }
                     modalHTML += `</div>`;
                 } else {
                     modalHTML += `<p style="font-size:18px; color:#555; margin-top:20px;">🏁 Fin de la ruta para el bloque <b>${prefijo}</b>.</p>`;
                 }
             } else {
-                modalHTML += `<p>Control registrado en base de datos.</p>`;
+                modalHTML += `<p style="color:var(--text)">Control registrado en base de datos.</p>`;
             }
             
             // Limpieza
