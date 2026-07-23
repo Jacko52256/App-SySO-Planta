@@ -6,12 +6,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V5.15 - Industrial</title>
+    <title>Gestión SySO V6.0 - Industrial</title>
+    <!-- Librerías Core -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <!-- Librería PDF (Híbrida Offline) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* Variables de Color (Soporte Modo Noche Calibrado) */
         :root { 
             --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; 
             --success: #28a745; --text: #333; --text-muted: #555; --edit: #17a2b8; 
@@ -42,11 +44,9 @@
         
         .btn { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: var(--primary); color: #fff;}
-        body.dark-mode .btn-primary { color: #000; } /* Texto negro sobre botón celeste en modo noche */
-        
+        body.dark-mode .btn-primary { color: #000; }
         .btn-success { background: var(--success); color: #fff;}
         body.dark-mode .btn-success { color: #000; }
-        
         .btn-warning { background: var(--accent); color: #000; }
         .btn-danger { background: var(--danger); color: #fff;}
         .btn-info { background: var(--edit); }
@@ -65,6 +65,10 @@
         .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 16px; }
         .radar-box { background: var(--input-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--primary); }
 
+        /* Termómetro de Progreso */
+        .progress-bar-container { width: 100%; background: var(--border); border-radius: 8px; overflow: hidden; margin-top: 10px; height: 12px; }
+        .progress-bar-fill { height: 100%; background: var(--success); transition: width 0.4s ease; }
+
         #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px;}
         #qrGenerado { display: block; margin: 15px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed var(--border); display: none;}
@@ -76,14 +80,13 @@
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; transition: background 0.3s;}
         .tab-btn { background: none; border: none; color: white; font-weight: bold; opacity: 0.7; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 12px;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 7px;}
-        body.dark-mode .tab-bar { color: #000; }
-        body.dark-mode .tab-btn { color: #000; }
+        body.dark-mode .tab-bar, body.dark-mode .tab-btn { color: #000; }
         
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
         .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
-        .modal-content-bottom { align-self: flex-end; border-radius: 20px 20px 0 0; }
+        .modal-content-bottom { align-self: flex-end; border-radius: 20px 20px 0 0; max-height: 90vh; overflow-y: auto;}
         #canvasFirma { border: 2px dashed var(--border); border-radius: 8px; width: 100%; height: 200px; background: #fff; touch-action: none; margin-bottom: 15px;}
         
         @keyframes popIn { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
@@ -94,7 +97,6 @@
         .chk-container { max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--input-bg); }
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
-        
         .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
         body.dark-mode .grupo-header { color: #000; }
     </style>
@@ -156,6 +158,9 @@
                     <input type="text" id="idEquipo" placeholder="Escanear ->" disabled style="flex:1;">
                     <button class="btn btn-warning" style="width:auto; padding:0 15px;" onclick="activarQR()">📷 QR</button>
                 </div>
+                <div style="text-align: right; margin-top: 5px;">
+                    <button class="btn-small btn-dark" onclick="cargaManualQR()">⌨️ Carga Manual (Si QR está destruido)</button>
+                </div>
             </div>
             <div id="qr-reader"></div>
             
@@ -165,12 +170,19 @@
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
             <div id="moduloDinamico" class="hidden"></div>
             
-            <div class="form-group" style="margin-top:15px;"><label>Observaciones:</label><textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..."></textarea></div>
+            <div class="form-group" style="margin-top:15px;">
+                <label>Observaciones:</label>
+                <textarea id="observaciones" placeholder="Si hay falla, indíquela aquí..." oninput="guardarBorrador()"></textarea>
+                <small class="text-muted" style="font-size:10px;" id="lblBorrador"></small>
+            </div>
             
             <div class="form-group" style="margin-top:15px; border-top:1px dashed var(--border); padding-top:15px;">
-                <label style="color:var(--danger);">🚨 ¿Se detectó alguna falla? (Foto Obligatoria)</label>
+                <label style="color:var(--danger);">🚨 Evidencia Fotográfica</label>
+                <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria en caso de Falla o Carga Manual de QR.</p>
                 <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
                 <button class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📸 Adjuntar Evidencia</button>
+                <!-- Canvas Oculto para Marca de Agua -->
+                <canvas id="canvasWatermark" style="display:none;"></canvas>
                 <img id="previewBox" src="" alt="Previsualización">
             </div>
 
@@ -180,9 +192,21 @@
 
     <!-- VISTA 3: ALTA QR (Admin) -->
     <div id="view-qr" class="view">
+        
+        <!-- IMPORTACIÓN MASIVA -->
+        <div class="card" style="border: 2px dashed var(--primary);">
+            <h3 style="color: var(--primary); margin-bottom: 5px;">⚡ Importación Rápida</h3>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel (ID | Tipo | Sección). El grupo se asignará del menú inferior.</p>
+            <button class="btn-small btn-primary" style="margin-bottom:10px;" onclick="document.getElementById('divBulk').classList.toggle('hidden')">Mostrar/Ocultar Panel Excel</button>
+            <div id="divBulk" class="hidden">
+                <textarea id="txtBulkData" style="height: 100px; white-space: nowrap; overflow: auto;" placeholder="EXT-001  PQS 5kg  Báscula&#10;EXT-002  CO2 2kg  Laboratorio"></textarea>
+                <button class="btn btn-success" style="margin-top:10px;" onclick="procesarImportacionMasiva()">🚀 Importar Lote Completo</button>
+            </div>
+        </div>
+
         <div class="card">
-            <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (QR)</h3>
-            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Automatización:</b> El prefijo se ajusta solo. Tipeá solo el N° correlativo.</p>
+            <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (Individual)</h3>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Automatización:</b> El prefijo se ajusta solo. Tipeá el N° correlativo.</p>
             
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
 
@@ -197,7 +221,6 @@
             <div class="form-group"><label>Tipo / Capacidad:</label><input type="text" id="qrTipo" placeholder="Ej. PQS 5kg"></div>
             <div class="form-group"><label>Sección:</label><select id="qrSeccion"></select></div>
             <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina"></div>
-            
             <div class="form-group"><label>Mes/Año de Vencimiento (Opcional):</label><input type="month" id="qrVencimiento"></div>
             
             <div style="display:flex; gap:10px;">
@@ -213,7 +236,8 @@
         </div>
         
         <div class="card">
-            <h3 style="margin-bottom: 10px;">Inventario por Categorías</h3>
+            <h3 style="margin-bottom: 10px;">Inventario (Buscador Dinámico)</h3>
+            <input type="text" id="buscadorEquipos" placeholder="🔎 Filtrar por ID, Sección o Tipo..." onkeyup="renderListas()" style="margin-bottom: 15px; border:2px solid var(--primary);">
             <div id="listaEquipos" style="font-size:12px;"></div>
         </div>
     </div>
@@ -266,7 +290,7 @@
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur" style="flex:2;">
                 <button id="btnGuardarSec" class="btn btn-success" style="flex:1;" onclick="guardarSeccion()">+ Añadir</button>
-                <button class="btn btn-outline" style="width:40px; padding:0;" onclick="cancelarEdicionSec()">✖</button>
+                <button id="btnCancelSec" class="btn btn-outline hidden" style="width:auto; padding:0 15px;" onclick="cancelarEdicionSec()">Cancelar</button>
             </div>
             <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
         </div>
@@ -277,7 +301,16 @@
         <div class="card" style="border: 2px solid var(--accent);">
             <h3 style="margin-bottom: 5px;">Gestión de Turno</h3>
             <p class="text-muted" style="font-size:13px; margin-bottom:15px;">Inspector Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
-            <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar Reporte</button>
+            
+            <!-- Dashboard de Rendimiento Local -->
+            <div id="dashboardTurno" style="background:var(--input-bg); padding:10px; border-radius:6px; margin-bottom:15px; font-size:13px;">
+                <b>📊 Resumen del Recorrido:</b><br>
+                <span style="color:var(--success)">✅ OK: <b id="dashOk">0</b></span> | 
+                <span style="color:var(--danger)">🚨 Fallas: <b id="dashFallas">0</b></span> | 
+                <span style="color:var(--warn-text)">⏱️ Vencidos: <b id="dashVencidos">0</b></span>
+            </div>
+
+            <button class="btn btn-success" style="font-size: 18px;" onclick="abrirModalCierre()">🚀 Firmar y Enviar PDF</button>
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
         <div class="card">
@@ -285,11 +318,11 @@
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Actualizar Versión de App</button>
         </div>
         <div class="card">
-            <button class="btn btn-outline" onclick="cerrarSesion()">🔒 Cerrar Sesión Segura</button>
+            <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
         </div>
     </div>
 
-    <!-- MODAL DE RADAR GIGANTE -->
+    <!-- MODAL DE RADAR GIGANTE CON TERMÓMETRO -->
     <div id="modalRadar" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <div id="radarBody"></div>
@@ -301,13 +334,13 @@
     <div id="modalCierre" class="modal-overlay hidden" style="align-items: flex-end; padding:0;">
         <div class="modal-content modal-content-bottom">
             <h3 style="color:var(--primary); margin-bottom:5px;">Manifiesto de Cierre</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente todos los controles y empaquetar los archivos.</p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Dibuja tu firma para validar legalmente todos los controles. Se generará un archivo PDF.</p>
             <canvas id="canvasFirma"></canvas>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
                 <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Trazo</button>
             </div>
-            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" onclick="confirmarFirmaYEnviar()">Confirmar y Enviar a WhatsApp</button>
+            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Generar PDF y Enviar</button>
         </div>
     </div>
 
@@ -320,9 +353,11 @@
     </div>
 
     <script>
-        const CFG_KEY = 'SySO_V5_Config';
-        const DB_KEY = 'SySO_V5_Data';
-        const PHOTO_KEY = 'SySO_V5_Photos';
+        const CFG_KEY = 'SySO_V6_Config';
+        const DB_KEY = 'SySO_V6_Data';
+        const PHOTO_KEY = 'SySO_V6_Photos';
+        const DRAFT_KEY = 'SySO_V6_Draft';
+        const ACTIVITY_KEY = 'SySO_LastActivity';
         
         let config = { 
             usuarios: [], secciones: [], equipos: {}, prefijos: {}, fallas: {},
@@ -333,19 +368,12 @@
         let canvas, ctx, firmaVacia = true;
         let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null;
         let fotoActualBase64 = null;
+        let esCargaManual = false;
 
         document.addEventListener('DOMContentLoaded', () => {
-            if(localStorage.getItem('SySO_DarkMode') === 'true') {
-                document.body.classList.add('dark-mode');
-                const btn = document.getElementById('btnDarkMode');
-                if(btn) btn.innerHTML = '☀️ Activar Modo Día';
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const magicToken = urlParams.get('t');
-            if (magicToken) {
-                try { const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim()))); if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; } } catch(e) {}
-            }
+            if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
+            const urlParams = new URLSearchParams(window.location.search); const magicToken = urlParams.get('t');
+            if (magicToken) { try { const newCfg = JSON.parse(decodeURIComponent(atob(magicToken.trim()))); if (newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); window.location.href = window.location.href.split('?')[0]; return; } } catch(e) {} }
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
@@ -356,192 +384,145 @@
                 if(!config.fallas) config.fallas = {}; 
                 config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
                 prepararLogin(); 
+                iniciarCandadoTurno();
             }
         });
 
-        // --- MODO NOCHE ---
-        function toggleDarkMode() {
-            const body = document.body;
-            body.classList.toggle('dark-mode');
-            const isDark = body.classList.contains('dark-mode');
-            localStorage.setItem('SySO_DarkMode', isDark);
-            document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche';
+        // --- Candado de Turno (Auto Cierre 12h) ---
+        function iniciarCandadoTurno() {
+            localStorage.setItem(ACTIVITY_KEY, Date.now());
+            document.addEventListener('touchstart', () => localStorage.setItem(ACTIVITY_KEY, Date.now()));
+            document.addEventListener('click', () => localStorage.setItem(ACTIVITY_KEY, Date.now()));
+            setInterval(() => {
+                let lastAct = parseInt(localStorage.getItem(ACTIVITY_KEY) || 0);
+                if(usuarioActual && (Date.now() - lastAct) > 12 * 60 * 60 * 1000) {
+                    alert("⛔ Sesión expirada por inactividad (>12hs). Por seguridad, ingrese su PIN nuevamente.");
+                    cerrarSesion(false);
+                }
+            }, 60000);
         }
 
+        function toggleDarkMode() { const body = document.body; body.classList.toggle('dark-mode'); const isDark = body.classList.contains('dark-mode'); localStorage.setItem('SySO_DarkMode', isDark); document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche'; }
         function forzarActualizacion() { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }
 
-        // --- AUTOCOMPLETADO ---
         function filtrarUsuarios() {
-            const input = document.getElementById('loginInputUsuario').value.toLowerCase();
-            const dropdown = document.getElementById('dropdownUsuarios');
-            dropdown.innerHTML = '';
+            const input = document.getElementById('loginInputUsuario').value.toLowerCase(); const dropdown = document.getElementById('dropdownUsuarios'); dropdown.innerHTML = '';
             const filtrados = config.usuarios.filter(u => u.nombre.toLowerCase().includes(input));
             if (filtrados.length === 0) { dropdown.style.display = 'none'; return; }
-            filtrados.forEach(u => {
-                const div = document.createElement('div'); div.className = 'dropdown-item'; div.innerText = u.nombre;
-                div.onclick = function() { document.getElementById('loginInputUsuario').value = u.nombre; dropdown.style.display = 'none'; };
-                dropdown.appendChild(div);
-            });
-            dropdown.style.display = 'block';
+            filtrados.forEach(u => { const div = document.createElement('div'); div.className = 'dropdown-item'; div.innerText = u.nombre; div.onclick = function() { document.getElementById('loginInputUsuario').value = u.nombre; dropdown.style.display = 'none'; }; dropdown.appendChild(div); }); dropdown.style.display = 'block';
         }
-
-        document.addEventListener('click', function(e) {
-            if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; }
-        });
+        document.addEventListener('click', function(e) { if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; } });
 
         function inicializarSistema() {
-            const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim();
-            if(!nom || !pin) return alert("Faltan datos.");
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] });
-            config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"];
-            config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" };
-            config.fallas = {};
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
+            const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim(); if(!nom || !pin) return alert("Faltan datos.");
+            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"]; config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; config.fallas = {}; localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0];
         }
-
         function generarEnlaceMagico() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const link = window.location.href.split('?')[0] + '?t=' + str; const txt = document.getElementById('txtAdminExport'); txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("🔗 Enlace Mágico copiado."); }
         function generarToken() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado."); }
         function generarEstructuraExcel() { const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado."); }
         function sincronizarConToken(str) { try { const newCfg = JSON.parse(decodeURIComponent(atob(str.trim()))); if(newCfg.usuarios) { localStorage.setItem(CFG_KEY, JSON.stringify(newCfg)); alert("App Actualizada."); location.reload(); } } catch(e) { alert("Token Inválido."); } }
 
-        function prepararLogin() {
-            document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = '';
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active');
-        }
-
+        function prepararLogin() { document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = ''; document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active'); }
         function validarAcceso() {
-            const nom = document.getElementById('loginInputUsuario').value.trim(); const pin = document.getElementById('loginPin').value.trim();
-            usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin);
+            const nom = document.getElementById('loginInputUsuario').value.trim(); const pin = document.getElementById('loginPin').value.trim(); usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin);
             if(!usuarioActual) return alert("Usuario o PIN Incorrecto.");
-            
-            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; 
-            document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre;
+            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre;
             document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = '';
-            
-            const adminBtns = document.querySelectorAll('.admin-only');
-            if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); }
-            else { adminBtns.forEach(b => b.classList.add('hidden')); }
-            
+            const adminBtns = document.querySelectorAll('.admin-only'); if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); } else { adminBtns.forEach(b => b.classList.add('hidden')); }
             document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]);
+            actualizarDashboard();
         }
-        function cerrarSesion() { usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
+        function cerrarSesion(manual = false) { if(manual && !confirm("¿Cerrar sesión segura?")) return; usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
 
         function nav(vista, btn) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`view-${vista}`).classList.add('active'); btn.classList.add('active');
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{});
+            if(vista === 'turno') actualizarDashboard();
+        }
+
+        // --- DASHBOARD RENDIMIENTO LOCAL ---
+        function actualizarDashboard() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            let ok = 0, fallas = 0, vencidos = 0;
+            db.forEach(r => {
+                let isFalla = Object.values(r.Controles).includes('Falla');
+                if(isFalla) fallas++; else ok++;
+                if(r.Observaciones.includes('ALERTA CRÍTICA (VENCIMIENTO)')) vencidos++;
+            });
+            document.getElementById('dashOk').innerText = ok;
+            document.getElementById('dashFallas').innerText = fallas;
+            document.getElementById('dashVencidos').innerText = vencidos;
         }
 
         function poblarAdmin() {
             const grpKeys = Object.keys(config.grupos);
             const selS = document.getElementById('qrSeccion'); selS.innerHTML = ''; config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`);
             const selQ = document.getElementById('qrGrupo'); selQ.innerHTML = ''; grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
-            
             let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo"> Acceso Total (Todos)</label>`;
             grpKeys.forEach(g => { if(g!=='Todos') chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; });
             document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml;
             actualizarPrefijoUI(); renderListas();
         }
+        function actualizarPrefijoUI() { const grpSelect = document.getElementById('qrGrupo'); const prefijoInput = document.getElementById('qrPrefijo'); if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; } }
 
-        function actualizarPrefijoUI() {
-            const grpSelect = document.getElementById('qrGrupo'); const prefijoInput = document.getElementById('qrPrefijo');
-            if(grpSelect && grpSelect.value) { prefijoInput.value = config.prefijos[grpSelect.value] || ''; }
-        }
-
-        // --- CRUD GRUPOS ---
+        // --- CRUD GRUPOS / USUARIOS / SECCIONES ---
         function cargarEdicionGrupo(nom) { document.getElementById('nuevoGrupoNom').value = nom; document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', '); editGrupoNom = nom; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '💾 Actualizar Grupo'; btn.classList.replace('btn-success', 'btn-info'); }
         function cancelarEdicionGrupo() { editGrupoNom = null; document.getElementById('nuevoGrupoNom').value = ''; document.getElementById('nuevoGrupoPrefijo').value = ''; document.getElementById('nuevoGrupoParams').value = ''; const btn = document.getElementById('btnGuardarGrupo'); btn.innerText = '+ Guardar Grupo'; btn.classList.replace('btn-info', 'btn-success'); }
-        function guardarGrupo() {
-            const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim();
-            if(!nom || !paramsStr || !pref) return alert("Faltan datos."); const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== "");
-            if(editGrupoNom) {
-                if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe.");
-                for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; }
-                config.usuarios.forEach(u => { u.grupo = u.grupo.map(gx => gx === editGrupoNom ? nom : gx); });
-                if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; }
-            } else { if(config.grupos[nom]) return alert("El grupo ya existe."); }
-            config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin();
-        }
+        function guardarGrupo() { const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim(); if(!nom || !paramsStr || !pref) return alert("Faltan datos."); const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== ""); if(editGrupoNom) { if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe."); for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; } config.usuarios.forEach(u => { u.grupo = u.grupo.map(gx => gx === editGrupoNom ? nom : gx); }); if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; } } else { if(config.grupos[nom]) return alert("El grupo ya existe."); } config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin(); }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        function cargarEdicionUsu(id) { 
-            const u = config.usuarios.find(x => x.id === id); if(!u) return; 
-            document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; 
-            const chks = document.querySelectorAll('.chk-usu-grupo');
-            chks.forEach(chk => { chk.checked = u.grupo.includes(chk.value); });
-            editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); 
-        }
-        function cancelarEdicionUsu() { 
-            editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; 
-            document.querySelectorAll('.chk-usu-grupo').forEach(chk => chk.checked = false);
-            const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); 
-        }
-        function guardarUsuario() {
-            const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim(); if(!nom || !pin) return;
-            const gruposSeleccionados = Array.from(document.querySelectorAll('.chk-usu-grupo:checked')).map(cb => cb.value);
-            if(gruposSeleccionados.length === 0) return alert("Debe asignarle al menos un grupo de permiso.");
-            if(editUsuId) { const u = config.usuarios.find(x => x.id === editUsuId); u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = gruposSeleccionados; }
-            else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: gruposSeleccionados }); }
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin();
-        }
+        function cargarEdicionUsu(id) { const u = config.usuarios.find(x => x.id === id); if(!u) return; document.getElementById('nuevoUsuNombre').value = u.nombre; document.getElementById('nuevoUsuPin').value = u.pin; document.getElementById('nuevoUsuRol').value = u.rol; const chks = document.querySelectorAll('.chk-usu-grupo'); chks.forEach(chk => { chk.checked = u.grupo.includes(chk.value); }); editUsuId = id; const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '💾 Actualizar'; btn.classList.replace('btn-success', 'btn-info'); }
+        function cancelarEdicionUsu() { editUsuId = null; document.getElementById('nuevoUsuNombre').value = ''; document.getElementById('nuevoUsuPin').value = ''; document.querySelectorAll('.chk-usu-grupo').forEach(chk => chk.checked = false); const btn = document.getElementById('btnGuardarUsu'); btn.innerText = '+ Agregar Usuario'; btn.classList.replace('btn-info', 'btn-success'); }
+        function guardarUsuario() { const nom = document.getElementById('nuevoUsuNombre').value.trim(); const pin = document.getElementById('nuevoUsuPin').value.trim(); if(!nom || !pin) return; const gruposSeleccionados = Array.from(document.querySelectorAll('.chk-usu-grupo:checked')).map(cb => cb.value); if(gruposSeleccionados.length === 0) return alert("Debe asignarle al menos un grupo de permiso."); if(editUsuId) { const u = config.usuarios.find(x => x.id === editUsuId); u.nombre = nom; u.pin = pin; u.rol = document.getElementById('nuevoUsuRol').value; u.grupo = gruposSeleccionados; } else { config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: gruposSeleccionados }); } localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionUsu(); poblarAdmin(); }
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         
-        function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
-        function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
-        function guardarSeccion() {
-            const sec = document.getElementById('nuevaSeccion').value.trim(); if(!sec) return;
-            if(editSecNom) {
-                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe.");
-                for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; }
-                config.secciones = config.secciones.map(s => s === editSecNom ? sec : s);
-            } else { if(config.secciones.includes(sec)) return; config.secciones.push(sec); }
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionSec(); poblarAdmin();
-        }
+        function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; document.getElementById('btnCancelSec').classList.remove('hidden'); const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
+        function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; document.getElementById('btnCancelSec').classList.add('hidden'); const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
+        function guardarSeccion() { const sec = document.getElementById('nuevaSeccion').value.trim(); if(!sec) return; if(editSecNom) { if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe."); for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; } config.secciones = config.secciones.map(s => s === editSecNom ? sec : s); } else { if(config.secciones.includes(sec)) return; config.secciones.push(sec); } localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionSec(); poblarAdmin(); }
         function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
 
-        function cargarEdicionQR(id) {
-            const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || '';
-            const match = id.match(/^(.*?)(\d+)$/);
-            if (match) { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = match[2]; } 
-            else { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = ''; }
-            document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || '';
-            document.getElementById('qrVencimiento').value = eq.vencimiento || '';
-            editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden');
+        // --- ALTA INDIVIDUAL Y MASIVA ---
+        function procesarImportacionMasiva() {
+            const txt = document.getElementById('txtBulkData').value.trim(); if(!txt) return alert("Pegue datos para importar.");
+            const lines = txt.split('\n'); let agregados = 0; const grp = document.getElementById('qrGrupo').value;
+            lines.forEach(l => {
+                const parts = l.split('\t'); // Tab-separated (Excel)
+                if(parts.length >= 3) {
+                    let id = parts[0].trim().toUpperCase(); let tipo = parts[1].trim(); let sec = parts[2].trim();
+                    if(id && tipo && sec && config.secciones.includes(sec) && !config.equipos[id]) { config.equipos[id] = { tipo: tipo, seccion: sec, grupo: grp, ubicacion: 'N/A', vencimiento: '' }; agregados++; }
+                }
+            });
+            if(agregados > 0) { localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert(`✅ Lote importado: ${agregados} equipos creados en grupo ${grp}.`); document.getElementById('txtBulkData').value = ''; document.getElementById('divBulk').classList.add('hidden'); poblarAdmin(); }
+            else { alert("Formato inválido, secciones inexistentes o IDs duplicados."); }
         }
+
+        function cargarEdicionQR(id) { const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || ''; const match = id.match(/^(.*?)(\d+)$/); if (match) { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = match[2]; } else { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = ''; } document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || ''; document.getElementById('qrVencimiento').value = eq.vencimiento || ''; editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden'); }
         function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
-        function guardarQR() {
-            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero;
-            const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim(); const vencimiento = document.getElementById('qrVencimiento').value;
-            if(!id || !tipo || !numero) return alert("Faltan datos correlativos.");
-            if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); delete config.equipos[editQRId]; }
-            config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value, vencimiento: vencimiento };
-            localStorage.setItem(CFG_KEY, JSON.stringify(config));
-            if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' });
-            qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden');
-            editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin();
-        }
+        function guardarQR() { const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero; const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim(); const vencimiento = document.getElementById('qrVencimiento').value; if(!id || !tipo || !numero) return alert("Faltan datos correlativos."); if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); delete config.equipos[editQRId]; } config.equipos[id] = { tipo: tipo, seccion: document.getElementById('qrSeccion').value, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value, vencimiento: vencimiento }; localStorage.setItem(CFG_KEY, JSON.stringify(config)); if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' }); qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden'); editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin(); }
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
+        // --- BUSCADOR E INVENTARIO ---
         function renderListas() {
-            const lG = document.getElementById('listaGrupos'); lG.innerHTML = '';
-            Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
-            
-            const lU = document.getElementById('listaUsuarios'); lU.innerHTML = '';
-            config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
-            
-            const lS = document.getElementById('listaSecciones'); lS.innerHTML = '';
-            config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
+            const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
+            const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
+            const lS = document.getElementById('listaSecciones'); lS.innerHTML = ''; config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
             
             const lQ = document.getElementById('listaEquipos'); 
             if(lQ) { 
-                lQ.innerHTML = ''; 
-                const eqPorGrupo = {};
-                Object.keys(config.equipos).forEach(id => { const eq = config.equipos[id]; if(!eqPorGrupo[eq.grupo]) eqPorGrupo[eq.grupo] = []; eqPorGrupo[eq.grupo].push({ id: id, ...eq }); });
+                lQ.innerHTML = ''; const eqPorGrupo = {};
+                const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
+                
+                Object.keys(config.equipos).forEach(id => { 
+                    const eq = config.equipos[id]; 
+                    if(filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro)) {
+                        if(!eqPorGrupo[eq.grupo]) eqPorGrupo[eq.grupo] = []; eqPorGrupo[eq.grupo].push({ id: id, ...eq }); 
+                    }
+                });
                 
                 Object.keys(eqPorGrupo).forEach(g => {
-                    lQ.innerHTML += `<div class="grupo-header"><span>${g} (${eqPorGrupo[g].length})</span><button class="btn-small btn-warning" onclick="descargarLoteQRs('${g}')">🖨️ Imprimir Lote</button></div>`;
+                    lQ.innerHTML += `<div class="grupo-header"><span>${g} (Filtrados: ${eqPorGrupo[g].length})</span><button class="btn-small btn-warning" onclick="descargarLoteQRs('${g}')">🖨️ Imprimir Filtrados</button></div>`;
                     eqPorGrupo[g].forEach(eq => {
                         let expInfo = eq.vencimiento ? `<br><span style="color:var(--danger)">Vence: ${eq.vencimiento}</span>` : '';
                         lQ.innerHTML += `<div class="list-item"><div><b>${eq.id}</b> (${eq.tipo})<br><small class="text-muted">${eq.seccion}</small>${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
@@ -551,27 +532,41 @@
         }
 
         window.descargarLoteQRs = function(grupo) {
-            const equipos = Object.keys(config.equipos).filter(id => config.equipos[id].grupo === grupo).map(id => ({ id: id, ...config.equipos[id] }));
-            if(equipos.length === 0) return alert("No hay equipos en este grupo.");
+            const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
+            const equipos = Object.keys(config.equipos).filter(id => {
+                const eq = config.equipos[id];
+                const matchFiltro = filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro);
+                return eq.grupo === grupo && matchFiltro;
+            }).map(id => ({ id: id, ...config.equipos[id] }));
+            
+            if(equipos.length === 0) return alert("No hay equipos visibles para imprimir en este grupo.");
             
             let html = `<html><head><meta charset="utf-8"><title>Lote QRs - ${grupo}</title><style>body{font-family:sans-serif; text-align:center;} .qr-box{display:inline-block; border:2px dashed #ccc; margin:10px; padding:15px; width:220px; vertical-align:top;} img{width:100%;} h3{margin:5px 0;} p{margin:0; font-size:12px; color:#555;}</style></head><body><h2>Plancha de Etiquetas: ${grupo}</h2>`;
             const generador = new QRious({ size: 250, level: 'H' });
             equipos.forEach(eq => { generador.value = eq.id; html += `<div class="qr-box"><h3>${eq.id}</h3><img src="${generador.toDataURL('image/png')}"><p>${eq.tipo}<br>${eq.seccion}</p></div>`; });
             html += `</body></html>`;
-            
             const blob = new Blob([html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html`; a.click();
         }
 
+        // --- MARCA DE AGUA FORENSE EN FOTO ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    const canvasResize = document.createElement('canvas'); const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width;
-                    canvasResize.width = MAX_WIDTH; canvasResize.height = img.height * scaleSize;
-                    const ctxResize = canvasResize.getContext('2d'); ctxResize.drawImage(img, 0, 0, canvasResize.width, canvasResize.height);
-                    fotoActualBase64 = canvasResize.toDataURL('image/jpeg', 0.7);
+                    const canvasW = document.getElementById('canvasWatermark'); const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width;
+                    canvasW.width = MAX_WIDTH; canvasW.height = img.height * scaleSize;
+                    const ctxW = canvasW.getContext('2d'); ctxW.drawImage(img, 0, 0, canvasW.width, canvasW.height);
+                    
+                    // Inyectar Sello Forense
+                    ctxW.fillStyle = "rgba(0, 0, 0, 0.6)"; ctxW.fillRect(0, canvasW.height - 60, canvasW.width, 60);
+                    ctxW.font = "18px 'Segoe UI', sans-serif"; ctxW.fillStyle = "#ffc107"; // Amarillo alto contraste
+                    const idEq = document.getElementById('idEquipo').value || "M/N";
+                    const sello = `ID: ${idEq} | Inspector: ${usuarioActual ? usuarioActual.nombre : 'N/A'} | Timestamp: ${new Date().toLocaleString('es-PY')}`;
+                    ctxW.fillText(sello, 10, canvasW.height - 25);
+
+                    fotoActualBase64 = canvasW.toDataURL('image/jpeg', 0.7);
                     const preview = document.getElementById('previewBox'); preview.src = fotoActualBase64; preview.style.display = 'block';
                 }
                 img.src = e.target.result;
@@ -579,8 +574,22 @@
             reader.readAsDataURL(file);
         }
 
+        // --- AUTO-BORRADOR ---
+        function guardarBorrador() {
+            let obs = document.getElementById('observaciones').value;
+            localStorage.setItem(DRAFT_KEY, obs);
+            document.getElementById('lblBorrador').innerText = "📝 Borrador guardado localmente.";
+        }
+
+        // --- CARGA MANUAL CONTINGENCIA ---
+        function cargaManualQR() {
+            let val = prompt("⛔ CONTINGENCIA:\nIngrese el ID del equipo manualmente (Ej: EXT-045):");
+            if(val) { esCargaManual = true; procesarEscaneo(val); }
+        }
+
         // --- INSPECCIÓN Y ESCANEO ---
         function activarQR() {
+            esCargaManual = false;
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
         }
@@ -589,34 +598,27 @@
             id = id.toUpperCase(); document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id]; 
-                
-                let accesoPermitido = false;
-                if(usuarioActual.rol === 'Admin') accesoPermitido = true;
-                if(usuarioActual.grupo.includes('Todos')) accesoPermitido = true;
-                if(usuarioActual.grupo.includes(eq.grupo)) accesoPermitido = true;
-                
+                let accesoPermitido = false; if(usuarioActual.rol === 'Admin') accesoPermitido = true; if(usuarioActual.grupo.includes('Todos')) accesoPermitido = true; if(usuarioActual.grupo.includes(eq.grupo)) accesoPermitido = true;
                 if(!accesoPermitido) { alert(`Bloqueo de Perfil: No estás habilitado para inspeccionar la categoría ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
                 
-                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; 
-                document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+                document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+                const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); 
                 
-                const container = document.getElementById('moduloDinamico'); 
-                container.classList.remove('hidden'); 
-                
+                // Recuperar Borrador si existe
+                let draft = localStorage.getItem(DRAFT_KEY);
+                if(draft) { document.getElementById('observaciones').value = draft; document.getElementById('lblBorrador').innerText = "📝 Borrador recuperado."; }
+
                 let warningHTML = '';
                 if(eq.vencimiento) {
                     const today = new Date(); const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`;
                     if(eq.vencimiento <= currMonth) {
-                        warningHTML += `<div class="alert-danger"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla en las observaciones.</div>`;
+                        warningHTML += `<div class="alert-danger"><b>🚨 ALERTA CRÍTICA (VENCIMIENTO):</b><br>Este equipo caducó en <b>${eq.vencimiento}</b>. Repórtelo como Falla.</div>`;
                     }
                 }
-                if(config.fallas && config.fallas[id]) {
-                    warningHTML += `<div class="alert-warning"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>El mes anterior se reportó falla en: <i>${config.fallas[id]}</i>. Verifique si fue solucionado.</div>`;
-                }
-
+                if(config.fallas && config.fallas[id]) { warningHTML += `<div class="alert-warning"><b>⚠️ ATENCIÓN (Falla Pendiente):</b><br>Falla reportada en mes anterior: <i>${config.fallas[id]}</i>.</div>`; }
+                
                 let html = ''; const params = config.grupos[eq.grupo];
                 if(params && params.length > 0) { params.forEach((p, index) => { html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}"><option value="OK">OK</option><option value="Falla">Falla</option></select></div>`; }); }
-                
                 container.innerHTML = warningHTML + html;
             } else { alert("Equipo no existe."); document.getElementById('idEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); }
         }
@@ -626,21 +628,48 @@
             let fallasDetectadas = [];
             params.forEach((p, index) => { let val = document.getElementById(`dynChk_${index}`).value; resp[`Control_${index+1}`] = val; if(val === 'Falla') fallasDetectadas.push(p); });
             
-            if(fallasDetectadas.length > 0 && !fotoActualBase64) return alert("⛔ BLOQUEO DE SEGURIDAD:\nHa detectado una falla en los controles.\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar el registro.");
+            // VALIDACIÓN FOTO OBLIGATORIA (Falla o Carga Manual)
+            if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) {
+                return alert(`⛔ BLOQUEO DE SEGURIDAD:\n${esCargaManual ? "Ha ingresado el código manualmente." : "Ha detectado una falla."}\n\nEs OBLIGATORIO adjuntar una evidencia fotográfica antes de guardar.`);
+            }
             
+            // SANITIZACIÓN CSV SILENCIOSA
+            let obsText = document.getElementById('observaciones').value;
+            if(eq.vencimiento && eq.vencimiento <= new Date().toISOString().slice(0,7)) obsText = "[ALERTA CRÍTICA (VENCIMIENTO)] " + obsText;
+            let obsSanitized = obsText.replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
+
+            // MOTOR DE FALLAS (CICLO CERRADO)
             if(!config.fallas) config.fallas = {};
             if(fallasDetectadas.length > 0) { config.fallas[id] = fallasDetectadas.join(", "); } else { delete config.fallas[id]; }
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
             
+            // TELEMETRÍA ANTI-FRAUDE
             const timestampLocal = new Date().toLocaleString('es-PY');
-            const registro = { Fecha: timestampLocal, Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: document.getElementById('observaciones').value.replace(/(\r\n|\n|\r)/gm, " ") };
+            const nowTime = Date.now();
+            const lastScan = parseInt(localStorage.getItem('SySO_LastScan') || 0);
+            const isFraude = (lastScan > 0 && (nowTime - lastScan) < 15000) ? "SÍ (<15s)" : "NO";
+            localStorage.setItem('SySO_LastScan', nowTime);
+
+            const registro = { Fecha: timestampLocal, Inspector: usuarioActual.nombre, Grupo: eq.grupo, Seccion: eq.seccion, Ubicacion: eq.ubicacion || "N/A", ID_Equipo: id, Controles: resp, Observaciones: obsSanitized, Alerta_Fraude: isFraude };
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); db.push(registro); localStorage.setItem(DB_KEY, JSON.stringify(db));
             
             if (fotoActualBase64) { const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); photoDB[id + '_' + timestampLocal] = fotoActualBase64; localStorage.setItem(PHOTO_KEY, JSON.stringify(photoDB)); }
 
+            // RADAR, TERMÓMETRO Y CAMBIO DE SECTOR
             const match = id.match(/^(.*?)(\d+)$/);
             let modalHTML = `<h2 style="color:var(--success); font-size:28px; margin-bottom:10px;">✅ ¡Guardado!</h2>`;
             
+            // Termómetro
+            const totalSec = Object.values(config.equipos).filter(e => e.seccion === eq.seccion).length;
+            const hoy = timestampLocal.split(',')[0];
+            const escaneadosSec = db.filter(r => r.Seccion === eq.seccion && r.Fecha.startsWith(hoy)).length;
+            const progPercent = Math.min(100, Math.round((escaneadosSec / totalSec) * 100)) || 0;
+
+            modalHTML += `<div style="text-align:left; margin-bottom:15px;">
+                            <span style="font-size:13px; color:var(--text); font-weight:bold;">📍 Termómetro: ${eq.seccion} (${escaneadosSec}/${totalSec})</span>
+                            <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div>
+                          </div>`;
+
             if(match) {
                 const prefijo = match[1]; const numeroActual = parseInt(match[2], 10); const padding = match[2].length;
                 let proximoId = null; let proximoEq = null;
@@ -651,20 +680,17 @@
                 
                 if(proximoEq) {
                     modalHTML += `<div class="radar-box">
-                                    <h3 style="color:var(--primary); margin-top:0;">📍 Siguiente en Ruta</h3>
+                                    <h3 style="color:var(--primary); margin-top:0;">Próximo Objetivo</h3>
                                     <p style="font-size:32px; font-weight:bold; margin:10px 0; color:var(--text);">${proximoId}</p>
-                                    <p style="font-size:18px; margin:5px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'No especificada'}</p>`;
-                    
-                    if(proximoEq.seccion !== eq.seccion) { modalHTML += `<div class="alert-info"><b>🔄 CAMBIO DE SECTOR:</b><br>Diríjase hacia <b>${proximoEq.seccion}</b>.</div>`; } 
-                    else { modalHTML += `<p class="text-muted" style="font-size:16px; margin:5px 0;"><b>Sección:</b> ${proximoEq.seccion}</p>`; }
-
-                    if (config.fallas && config.fallas[proximoId]) { modalHTML += `<div class="alert-danger" style="margin-top:15px;"><b>🚨 ALERTA DE FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`; }
+                                    <p style="font-size:18px; margin:5px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</p>`;
+                    if(proximoEq.seccion !== eq.seccion) { modalHTML += `<div class="alert-info"><b>🔄 CAMBIO DE SECTOR:</b><br>Diríjase hacia <b>${proximoEq.seccion}</b>.</div>`; } else { modalHTML += `<p class="text-muted" style="font-size:16px; margin:5px 0;"><b>Sección:</b> ${proximoEq.seccion}</p>`; }
+                    if (config.fallas && config.fallas[proximoId]) { modalHTML += `<div class="alert-danger" style="margin-top:15px;"><b>🚨 FALLA PREVIA:</b><br>Verifique: ${config.fallas[proximoId]}</div>`; }
                     modalHTML += `</div>`;
-                } else {
-                    modalHTML += `<p class="text-muted" style="font-size:18px; margin-top:20px;">🏁 Fin de la ruta para el bloque <b>${prefijo}</b>.</p>`;
-                }
+                } else { modalHTML += `<p class="text-muted" style="font-size:18px; margin-top:20px;">🏁 Fin de ruta para bloque <b>${prefijo}</b>.</p>`; }
             } else { modalHTML += `<p style="color:var(--text)">Control registrado en base de datos.</p>`; }
             
+            // Limpieza y reseteo
+            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false;
             document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null;
             mostrarRadar(modalHTML);
         }
@@ -672,27 +698,23 @@
         function mostrarRadar(htmlBody) { document.getElementById('radarBody').innerHTML = htmlBody; document.getElementById('modalRadar').classList.remove('hidden'); }
         function cerrarRadar() { document.getElementById('modalRadar').classList.add('hidden'); }
 
-        function abrirModalCierre() {
-            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones."); document.getElementById('modalCierre').classList.remove('hidden');
-            setTimeout(() => {
-                canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200;
-                ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; let dibujando = false; firmaVacia = true;
-                const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); }; const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); }; const detener = () => { dibujando = false; };
-                const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX; const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY;
-                const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone; ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000';
-                canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener); canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener);
-            }, 50);
-        }
+        // --- SISTEMA DE PDF Y CIERRE ---
+        function abrirModalCierre() { const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); if(!db.length) return alert("No hay inspecciones."); document.getElementById('modalCierre').classList.remove('hidden'); setTimeout(() => { canvas = document.getElementById('canvasFirma'); ctx = canvas.getContext('2d'); const rect = canvas.getBoundingClientRect(); canvas.width = rect.width; canvas.height = 200; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; let dibujando = false; firmaVacia = true; const empezar = (e) => { dibujando = true; firmaVacia = false; ctx.beginPath(); ctx.moveTo(getX(e), getY(e)); e.preventDefault(); }; const trazar = (e) => { if(!dibujando) return; ctx.lineTo(getX(e), getY(e)); ctx.stroke(); e.preventDefault(); }; const detener = () => { dibujando = false; }; const getX = (e) => e.touches ? e.touches[0].clientX - canvas.getBoundingClientRect().left : e.offsetX; const getY = (e) => e.touches ? e.touches[0].clientY - canvas.getBoundingClientRect().top : e.offsetY; const canvasClone = canvas.cloneNode(true); canvas.parentNode.replaceChild(canvasClone, canvas); canvas = canvasClone; ctx = canvas.getContext('2d'); ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; canvas.addEventListener('mousedown', empezar); canvas.addEventListener('mousemove', trazar); canvas.addEventListener('mouseup', detener); canvas.addEventListener('touchstart', empezar); canvas.addEventListener('touchmove', trazar); canvas.addEventListener('touchend', detener); }, 50); }
         function cerrarModalCierre() { document.getElementById('modalCierre').classList.add('hidden'); } function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaVacia = true; }
         
         async function confirmarFirmaYEnviar() {
-            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); cerrarModalCierre(); 
+            if(firmaVacia) return alert("Firma obligatoria."); const firmaGlobalBase64 = canvas.toDataURL('image/png'); 
+            document.getElementById('btnConfirmarFirma').innerText = "Generando PDF... Aguarde";
+            document.getElementById('btnConfirmarFirma').disabled = true;
+            
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
             let maxCols = 0; db.forEach(r => { const colCount = Object.keys(r.Controles).length; if(colCount > maxCols) maxCols = colCount; });
-            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones");
-            let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones); csv += row.join(";") + "\r\n"; });
             
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#f4f6f9;} .card{background:#fff; border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; background:#fff; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><hr>`;
+            // CSV Seguro
+            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); head.push("Observaciones", "Alerta_Fraude");
+            let csv = head.join(";") + "\r\n"; db.forEach(r => { let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; for(let i=1; i<=maxCols; i++) row.push(r.Controles[`Control_${i}`] || ""); row.push(r.Observaciones, r.Alerta_Fraude || "NO"); csv += row.join(";") + "\r\n"; });
+            
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background:#fff; color:#000;} .card{border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:8px;} h2{color:#2F5597;} img.evidencia{max-width:300px; border-radius:4px; margin-top:10px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:400px; text-align:center; margin-top:30px;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Inspección SySO - Planta Industrial</h2><p><b>Inspector Responsable:</b> ${usuarioActual.nombre}</p><hr>`;
             db.forEach(r => { 
                 let detallesControles = ""; Object.keys(r.Controles).forEach(k => { let valor = r.Controles[k]; let spanValor = valor === 'Falla' ? `<span class="falla-texto">${valor}</span>` : valor; detallesControles += `${k}: ${spanValor} | `; });
                 const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia" alt="Evidencia de ${r.ID_Equipo}">` : '';
@@ -700,11 +722,30 @@
             }); 
             html += `<div class="firma-box"><h3>Firma de Validación Global</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>Declaración Jurada - Timestamp: ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
-            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' }); const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
-            if (navigator.canShare && navigator.canShare({ files: [fileCSV, fileHTML] })) { try { await navigator.share({ files: [fileCSV, fileHTML], title: 'Reporte SySO', text: 'Adjunto registros y evidencias.' }); } catch (err) {} }
-            else { const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click(); setTimeout(()=>{const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();}, 500); }
+            const fileCSV = new File([csv], `SySO_Data_${Date.now()}.csv`, { type: 'text/csv' });
+            
+            // Intento de PDF (Librería Externa)
+            let pdfDiv = document.createElement('div'); pdfDiv.innerHTML = html;
+            let opt = { margin: 10, filename: `Reporte_SySO_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+            
+            try {
+                if(typeof html2pdf !== 'undefined') {
+                    await html2pdf().set(opt).from(pdfDiv).save();
+                    descargarCSV(fileCSV);
+                } else { throw new Error("html2pdf no cargó"); }
+            } catch(e) {
+                alert("Red inestable para generar PDF. Descargando formato HTML como contingencia legal.");
+                const fileHTML = new File([html], `Manifiesto_SySO_${Date.now()}.html`, { type: 'text/html' });
+                const l2=document.createElement("a"); l2.href=URL.createObjectURL(fileHTML); l2.download=fileHTML.name; l2.click();
+                descargarCSV(fileCSV);
+            }
+            cerrarModalCierre();
+            document.getElementById('btnConfirmarFirma').innerText = "Generar PDF y Enviar";
+            document.getElementById('btnConfirmarFirma').disabled = false;
         }
-        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { localStorage.removeItem(DB_KEY); localStorage.removeItem(PHOTO_KEY); alert("Historial purgado con éxito."); } }
+
+        function descargarCSV(fileCSV) { setTimeout(()=>{const l1=document.createElement("a"); l1.href=URL.createObjectURL(fileCSV); l1.download=fileCSV.name; l1.click();}, 500); }
+        function purgarHistorial() { if(confirm("¿VACIAR HISTORIAL DEL MES? Las inspecciones y fotos se borrarán del celular.")) { localStorage.removeItem(DB_KEY); localStorage.removeItem(PHOTO_KEY); alert("Historial purgado con éxito."); actualizarDashboard(); } }
     </script>
 </body>
 </html>
