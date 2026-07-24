@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.9 - Industrial</title>
+    <title>Gestión SySO V6.10 - Industrial</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -117,7 +117,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.9</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.10</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -152,7 +152,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.9</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.10</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -271,7 +271,8 @@
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración</h4>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si modificó las preguntas del Checklist, para alinear las columnas en su PC.</p>
-            <button class="btn btn-warning" onclick="generarEstructuraExcel()">Estructura para Excel (Macro)</button>
+            <!-- BOTÓN SCHEMA ACTUALIZADO -->
+            <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
             
             <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
         </div>
@@ -342,7 +343,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.9</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.10</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -517,7 +518,30 @@
         }
         
         function generarToken() { const str = btoa(encodeURIComponent(JSON.stringify(config))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Token Respaldo copiado."); }
-        function generarEstructuraExcel() { const schema = { grupos: config.grupos }; const str = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify(schema))); const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); alert("Código Planilla Excel copiado."); }
+        
+        // --- MOTOR MEJORADO SCHEMA WHATSAPP ---
+        async function generarEstructuraExcel() { 
+            const schemaStr = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify({ grupos: config.grupos }))); 
+            const fileSchema = new File([schemaStr], `Schema_Macro_${Date.now()}.txt`, { type: 'text/plain' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [fileSchema] })) {
+                try {
+                    await navigator.share({
+                        files: [fileSchema],
+                        title: 'Estructura Macro SySO',
+                        text: 'Archivo de actualización de estructura para la Macro de Excel.'
+                    });
+                } catch (error) {
+                    if(error.name !== "AbortError") {
+                        alert("Error al compartir. El archivo se descargará.");
+                        const l = document.createElement("a"); l.href = URL.createObjectURL(fileSchema); l.download = fileSchema.name; l.click();
+                    }
+                }
+            } else {
+                alert("Navegador no soporta envío directo. El archivo se descargará.");
+                const l = document.createElement("a"); l.href = URL.createObjectURL(fileSchema); l.download = fileSchema.name; l.click();
+            }
+        }
 
         function prepararLogin() { document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = ''; document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active'); }
         function validarAcceso() { const nom = document.getElementById('loginInputUsuario').value.trim(); const pin = document.getElementById('loginPin').value.trim(); usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin); if(!usuarioActual) return alert("Usuario o PIN Incorrecto."); document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre; document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = ''; const adminBtns = document.querySelectorAll('.admin-only'); if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); } else { adminBtns.forEach(b => b.classList.add('hidden')); } document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]); actualizarDashboard(); }
