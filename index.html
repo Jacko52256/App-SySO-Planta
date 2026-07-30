@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.14 - Industrial</title>
+    <title>Gestión SySO V6.15 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -118,7 +118,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.14</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.15</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -153,7 +153,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.14 (Auto-Reparación de Enlaces)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.15 (UX Minimalista)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -267,14 +267,10 @@
             <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Debido a los límites de WhatsApp, si el enlace azul se rompe, pida al inspector que copie todo el mensaje y lo pegue manualmente.</p>
             
             <button class="btn btn-info" onclick="generarYEnviarEnlaceMaestro()">📲 Enviar Enlace Maestro (WhatsApp)</button>
-            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarEnlaceMaestro(false)">🔗 Copiar Link al Portapapeles</button>
             
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
-            <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Contingencia Estricta</h4>
-            <button class="btn btn-dark" style="margin-bottom:15px;" onclick="generarToken()">Copiar SOLO Base de Datos (Texto)</button>
-            
-            <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración</h4>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si modificó las preguntas del Checklist, para alinear las columnas en su Excel.</p>
+            <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración (Excel)</h4>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si creó nuevos grupos o modificó las preguntas del Checklist, para generar el código !SCHEMA!.</p>
             <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
             
             <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
@@ -346,7 +342,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.14</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.15</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -440,7 +436,6 @@
             let magicToken = urlParams.get('t');
             
             if (magicToken) { 
-                // V6.14 FIX: Restaurar signos "+" eliminados por Google Chrome al leer la URL
                 magicToken = magicToken.replace(/ /g, '+');
                 window.history.replaceState(null, null, window.location.pathname); 
                 setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); 
@@ -465,7 +460,6 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- EXTRACTOR INTELIGENTE V6.14 (REPARACIÓN DE ESPACIOS) ---
         function procesarTokenAduana(str) {
             if(!str) return alert("Pegue un código o enlace.");
             
@@ -473,8 +467,6 @@
             let token = rawStr;
             const match = rawStr.match(/t=([^ \n\r]+)/);
             if(match) { token = match[1]; }
-            
-            // V6.14 FIX: Limpieza pura. Borra saltos de línea y convierte espacios falsos en +
             token = token.replace(/[\r\n]/g, '');
             token = token.replace(/ /g, '+');
 
@@ -535,11 +527,6 @@
         function generarEnlaceMaestro(silent = true) { 
             const str = LZString.compressToEncodedURIComponent(JSON.stringify(config)); 
             const link = window.location.href.split('?')[0] + '?v=' + Date.now() + '&t=' + str; 
-            if(!silent) {
-                const txt = document.getElementById('txtAdminExport'); 
-                txt.value = link; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); 
-                alert("🔗 Enlace Maestro copiado al portapapeles.");
-            }
             return link;
         }
 
@@ -547,12 +534,6 @@
             const link = generarEnlaceMaestro(true);
             const mensaje = encodeURIComponent(`*Actualización SySO Industrial*\n\n⚠️ Si el enlace está ROTO (no es todo azul), cópielo completo de forma manual y péguelo en la caja blanca de la App.\n\nHaga clic aquí:\n${link}`);
             window.location.href = `whatsapp://send?text=${mensaje}`;
-        }
-        
-        function generarToken() { 
-            const str = LZString.compressToEncodedURIComponent(JSON.stringify(config)); 
-            const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); 
-            alert("Base de Datos (Comprimida) copiada al portapapeles."); 
         }
         
         async function generarEstructuraExcel() { 
