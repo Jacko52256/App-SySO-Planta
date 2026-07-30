@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.13 - Industrial</title>
+    <title>Gestión SySO V6.14 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -118,7 +118,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.13</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.14</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -153,7 +153,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.13 (Privacy Lock)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.14 (Auto-Reparación de Enlaces)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -296,7 +296,6 @@
             <h3>Gestión de Personal</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="nuevoUsuNombre" placeholder="Nombre" style="flex:2;">
-                <!-- SE CAMBIA EL INPUT A TYPE="PASSWORD" PARA BLOQUEAR VISIBILIDAD AL TIPEAR -->
                 <input type="password" id="nuevoUsuPin" placeholder="PIN" style="flex:1;" pattern="[0-9]*" inputmode="numeric">
             </div>
             <div style="margin-top:10px;">
@@ -347,7 +346,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.13</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.14</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -438,9 +437,11 @@
             if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
             
             const urlParams = new URLSearchParams(window.location.search); 
-            const magicToken = urlParams.get('t');
+            let magicToken = urlParams.get('t');
             
             if (magicToken) { 
+                // V6.14 FIX: Restaurar signos "+" eliminados por Google Chrome al leer la URL
+                magicToken = magicToken.replace(/ /g, '+');
                 window.history.replaceState(null, null, window.location.pathname); 
                 setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); 
             }
@@ -464,6 +465,7 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
+        // --- EXTRACTOR INTELIGENTE V6.14 (REPARACIÓN DE ESPACIOS) ---
         function procesarTokenAduana(str) {
             if(!str) return alert("Pegue un código o enlace.");
             
@@ -471,7 +473,10 @@
             let token = rawStr;
             const match = rawStr.match(/t=([^ \n\r]+)/);
             if(match) { token = match[1]; }
-            token = token.replace(/[\r\n\s]/g, '');
+            
+            // V6.14 FIX: Limpieza pura. Borra saltos de línea y convierte espacios falsos en +
+            token = token.replace(/[\r\n]/g, '');
+            token = token.replace(/ /g, '+');
 
             try {
                 let newCfg;
@@ -540,7 +545,7 @@
 
         function generarYEnviarEnlaceMaestro() {
             const link = generarEnlaceMaestro(true);
-            const mensaje = encodeURIComponent(`*Actualización SySO Industrial*\n\nHaga clic en este enlace para actualizar su versión de la App y sincronizar los equipos de planta:\n\n${link}`);
+            const mensaje = encodeURIComponent(`*Actualización SySO Industrial*\n\n⚠️ Si el enlace está ROTO (no es todo azul), cópielo completo de forma manual y péguelo en la caja blanca de la App.\n\nHaga clic aquí:\n${link}`);
             window.location.href = `whatsapp://send?text=${mensaje}`;
         }
         
@@ -603,17 +608,13 @@
         function guardarGrupo() { const nom = document.getElementById('nuevoGrupoNom').value.trim(); const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); const paramsStr = document.getElementById('nuevoGrupoParams').value.trim(); if(!nom || !paramsStr || !pref) return alert("Faltan datos."); const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== ""); if(editGrupoNom) { if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe."); for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; } config.usuarios.forEach(u => { u.grupo = u.grupo.map(gx => gx === editGrupoNom ? nom : gx); }); if(nom !== editGrupoNom) { delete config.grupos[editGrupoNom]; delete config.prefijos[editGrupoNom]; config.deleted.grupos[editGrupoNom] = Date.now(); } } else { if(config.grupos[nom]) return alert("El grupo ya existe."); } config.grupos[nom] = nuevosParams; config.prefijos[nom] = pref; config.timestamps.grupos[nom] = Date.now(); localStorage.setItem(CFG_KEY, JSON.stringify(config)); cancelarEdicionGrupo(); poblarAdmin(); }
         function borrarGrupo(grp) { if(grp === 'Todos') return; if(confirm(`¿Borrar ${grp}?`)) { delete config.grupos[grp]; delete config.prefijos[grp]; config.deleted.grupos[grp] = Date.now(); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         
-        // --- PRIVACY LOCK: OCULTAMIENTO DE PIN EN EDICIÓN ---
         function cargarEdicionUsu(id) { 
             const u = config.usuarios.find(x => x.id === id); 
             if(!u) return; 
             document.getElementById('nuevoUsuNombre').value = u.nombre; 
-            
-            // Vaciar el campo para no mostrar la contraseña y cambiar el placeholder
             const pinField = document.getElementById('nuevoUsuPin');
             pinField.value = ''; 
             pinField.placeholder = '*** (Oculto - Dejar vacío para no cambiar)';
-            
             document.getElementById('nuevoUsuRol').value = u.rol; 
             const chks = document.querySelectorAll('.chk-usu-grupo'); 
             chks.forEach(chk => { chk.checked = u.grupo.includes(chk.value); }); 
@@ -626,11 +627,9 @@
         function cancelarEdicionUsu() { 
             editUsuId = null; 
             document.getElementById('nuevoUsuNombre').value = ''; 
-            
             const pinField = document.getElementById('nuevoUsuPin');
             pinField.value = ''; 
-            pinField.placeholder = 'PIN'; // Restaurar placeholder
-            
+            pinField.placeholder = 'PIN'; 
             document.querySelectorAll('.chk-usu-grupo').forEach(chk => chk.checked = false); 
             const btn = document.getElementById('btnGuardarUsu'); 
             btn.innerText = '+ Agregar Usuario'; 
@@ -650,7 +649,6 @@
             if(editUsuId) { 
                 const u = config.usuarios.find(x => x.id === editUsuId); 
                 u.nombre = nom; 
-                // Sobrescribe el PIN solo si el administrador ingresó uno nuevo
                 if(pin !== '') u.pin = pin; 
                 u.rol = document.getElementById('nuevoUsuRol').value; 
                 u.grupo = gruposSeleccionados; 
