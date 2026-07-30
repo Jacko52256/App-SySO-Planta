@@ -6,8 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.11 - Industrial</title>
-    <!-- Motor de Compresión LZ-String -->
+    <title>Gestión SySO V6.12 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -119,7 +118,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.11</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.12</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -127,8 +126,8 @@
     <div id="view-init" class="view">
         <div class="card">
             <h3 style="color:var(--danger); margin-bottom: 15px;">Dispositivo No Vinculado</h3>
-            <label>Pegue el Token Manual:</label>
-            <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="Pegue aquí el código..."></textarea>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;"><b>Extractor Inteligente:</b> Si el enlace de WhatsApp se rompió, copie el mensaje de WhatsApp COMPLETO y péguelo aquí abajo.</p>
+            <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="Pegue el Token o el Enlace roto completo aquí..."></textarea>
             <button class="btn btn-warning" onclick="procesarTokenAduana(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
             <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--danger);">
                 <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro</h4>
@@ -154,13 +153,13 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.11 (LZ-String)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.12 (Smart Extractor)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
                 <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
-                <textarea id="tokenLogin" placeholder="Pegue el token aquí..." style="height: 70px; font-family: monospace;"></textarea>
-                <button class="btn btn-warning" onclick="procesarTokenAduana(document.getElementById('tokenLogin').value)">Procesar Token Manual</button>
+                <textarea id="tokenLogin" placeholder="Pegue el Token o Enlace Roto aquí..." style="height: 70px; font-family: monospace;"></textarea>
+                <button class="btn btn-warning" onclick="procesarTokenAduana(document.getElementById('tokenLogin').value)">Procesar Manualmente</button>
             </div>
         </div>
     </div>
@@ -265,12 +264,15 @@
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--info-bg);">
             <h3 style="margin-bottom: 10px;">Sincronización Mágica</h3>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">El Enlace Maestro actualiza la App y la Base de Datos con 1 solo clic. Ahora incluye <b>Compresión LZ-String</b> para evadir los límites de WhatsApp.</p>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Debido a los límites de WhatsApp, si el enlace azul se rompe, pida al inspector que copie todo el mensaje y lo pegue manualmente.</p>
             
             <button class="btn btn-info" onclick="generarYEnviarEnlaceMaestro()">📲 Enviar Enlace Maestro (WhatsApp)</button>
-            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarEnlaceMaestro(false)">🔗 Copiar al Portapapeles</button>
+            <button class="btn btn-outline" style="margin-top:10px;" onclick="generarEnlaceMaestro(false)">🔗 Copiar Link al Portapapeles</button>
             
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
+            <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Contingencia Estricta</h4>
+            <button class="btn btn-dark" style="margin-bottom:15px;" onclick="generarToken()">Copiar SOLO Base de Datos (Texto)</button>
+            
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración</h4>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si modificó las preguntas del Checklist, para alinear las columnas en su Excel.</p>
             <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
@@ -344,7 +346,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.11</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.12</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -461,19 +463,33 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- DECODIFICADOR INTELIGENTE (Soporta Viejo Base64 y Nuevo LZ-String) ---
+        // --- EXTRACTOR INTELIGENTE V6.12 (REGEX FORENSE) ---
         function procesarTokenAduana(str) {
-            if(!str) return alert("Pegue un token.");
+            if(!str) return alert("Pegue un código o enlace.");
+            
+            // 1. Limpieza inicial y Extracción Regex
+            let rawStr = str.trim();
+            let token = rawStr;
+            
+            // Si el usuario pegó TODO el mensaje de WhatsApp con el link roto, buscamos matemáticamente la variable "t="
+            const match = rawStr.match(/t=([^ \n\r]+)/);
+            if(match) {
+                token = match[1]; // Extrae solo los datos puros, ignorando la basura antes o después
+            }
+            
+            // Eliminar espacios vacíos ocultos o saltos de línea inyectados por WhatsApp
+            token = token.replace(/[\r\n\s]/g, '');
+
             try {
                 let newCfg;
                 try {
-                    // Intento 1: Decodificar con el nuevo motor de compresión LZ-String (V6.11+)
-                    let decoded = LZString.decompressFromEncodedURIComponent(str.trim());
+                    // Intento 1: Decodificar con LZ-String
+                    let decoded = LZString.decompressFromEncodedURIComponent(token);
                     if(!decoded) throw new Error("Not LZ-String");
                     newCfg = JSON.parse(decoded);
                 } catch(e1) {
-                    // Intento 2 (Fallback): Decodificar como Base64 heredado (V6.10 o inferior)
-                    let decodedLegacy = decodeURIComponent(atob(str.trim()));
+                    // Intento 2: Decodificar como Base64 heredado
+                    let decodedLegacy = decodeURIComponent(atob(token));
                     newCfg = JSON.parse(decodedLegacy);
                 }
                 
@@ -483,8 +499,10 @@
                 let curEq = Object.keys(config.equipos||{}).length; let newEq = Object.keys(newCfg.equipos||{}).length; let curUsr = (config.usuarios||[]).length; let newUsr = (newCfg.usuarios||[]).length;
                 let html = `<p><b>Datos en tu Celular:</b> ${curEq} Equipos | ${curUsr} Usuarios</p><p><b>Datos en el Token:</b> ${newEq} Equipos | ${newUsr} Usuarios</p><hr style="margin:10px 0; border:0; border-top:1px solid var(--border);"><p style="color:var(--text-muted); font-size:12px;">Al pulsar <b>Fusionar</b>, el sistema unificará ambas bases respetando la última fecha de modificación de cada ítem.</p>`;
                 document.getElementById('aduanaStats').innerHTML = html; document.getElementById('modalAduana').classList.remove('hidden');
+                document.getElementById('initToken').value = ''; // Limpia la caja tras lectura exitosa
+                if(document.getElementById('tokenLogin')) document.getElementById('tokenLogin').value = '';
             } catch(e) { 
-                alert("Token Inválido o Corrupto."); 
+                alert("Formato Inválido. Asegúrese de copiar el mensaje o el token correctamente."); 
             }
         }
 
@@ -518,7 +536,6 @@
 
         function inicializarSistema() { const nom = document.getElementById('initAdminName').value.trim(); const pin = document.getElementById('initAdminPin').value.trim(); if(!nom || !pin) return alert("Faltan datos."); config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"]; config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; config.fallas = {}; config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; localStorage.setItem(CFG_KEY, JSON.stringify(config)); window.location.href = window.location.href.split('?')[0]; }
         
-        // --- MOTOR COMPRESOR LZ-STRING PARA EVADIR LIMITE DE WHATSAPP ---
         function generarEnlaceMaestro(silent = true) { 
             const str = LZString.compressToEncodedURIComponent(JSON.stringify(config)); 
             const link = window.location.href.split('?')[0] + '?v=' + Date.now() + '&t=' + str; 
@@ -539,12 +556,10 @@
         function generarToken() { 
             const str = LZString.compressToEncodedURIComponent(JSON.stringify(config)); 
             const txt = document.getElementById('txtAdminExport'); txt.value = str; txt.classList.remove('hidden'); txt.select(); document.execCommand('copy'); 
-            alert("Token Respaldo (Comprimido) copiado."); 
+            alert("Base de Datos (Comprimida) copiada al portapapeles."); 
         }
         
-        // --- MOTOR MEJORADO SCHEMA WHATSAPP ---
         async function generarEstructuraExcel() { 
-            // El Schema NO se comprime para mantener compatibilidad absoluta con el Excel actual
             const schemaStr = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify({ grupos: config.grupos }))); 
             const fileSchema = new File([schemaStr], `Schema_Macro_${Date.now()}.txt`, { type: 'text/plain' });
             
