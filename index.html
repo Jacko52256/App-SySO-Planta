@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.15 - Industrial</title>
+    <title>Gestión SySO V6.16 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -96,6 +96,10 @@
         .accordion-content { display: none; padding: 5px; background: var(--card-bg); }
         .accordion.active .accordion-content { display: block; }
 
+        /* NUEVO: Sub-Encabezados para Secciones dentro del Acordeón */
+        .sub-grupo-header { background: var(--edit); color: white; padding: 8px 12px; border-radius: 4px; margin: 10px 5px 5px 5px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        body.dark-mode .sub-grupo-header { color: #000; }
+
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
         .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
         .modal-content-bottom { align-self: flex-end; border-radius: 20px 20px 0 0; max-height: 90vh; overflow-y: auto;}
@@ -118,7 +122,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.15</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.16</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -153,7 +157,7 @@
         </div>
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.15 (UX Minimalista)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.16 (Árbol Dimensional)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -342,7 +346,7 @@
         <div class="card">
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.15</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.16</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -684,6 +688,7 @@
             const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Inventario_Maestro_SySO_${Date.now()}.csv`; a.click();
         }
 
+        // --- V6.16: RENDERIZADO DE LISTA ANIDADA ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
@@ -691,32 +696,108 @@
             
             const lQ = document.getElementById('listaEquipos'); 
             if(lQ) { 
-                lQ.innerHTML = ''; const eqPorGrupo = {}; const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
-                Object.keys(config.equipos).forEach(id => { const eq = config.equipos[id]; if(filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro)) { if(!eqPorGrupo[eq.grupo]) eqPorGrupo[eq.grupo] = []; eqPorGrupo[eq.grupo].push({ id: id, ...eq }); } });
+                lQ.innerHTML = ''; 
+                const eqPorGrupo = {}; 
+                const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
+                
+                Object.keys(config.equipos).forEach(id => { 
+                    const eq = config.equipos[id]; 
+                    if(filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro)) { 
+                        if(!eqPorGrupo[eq.grupo]) eqPorGrupo[eq.grupo] = []; 
+                        eqPorGrupo[eq.grupo].push({ id: id, ...eq }); 
+                    } 
+                });
                 
                 Object.keys(eqPorGrupo).forEach(g => {
-                    let vencidosCount = 0; let itemsHTML = '';
-                    eqPorGrupo[g].forEach(eq => {
-                        let isVencido = false; if(eq.vencimiento) { const today = new Date(); const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`; if(eq.vencimiento <= currMonth) { isVencido = true; vencidosCount++; } }
-                        let expInfo = eq.vencimiento ? `<br><span style="color:var(--danger)">Vence: ${eq.vencimiento}</span>` : '';
-                        itemsHTML += `<div class="list-item"><div><b>${eq.id}</b> (${eq.tipo})<br><small class="text-muted">${eq.seccion}</small>${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                    let totalVencidos = 0; 
+                    let equiposDelGrupo = eqPorGrupo[g];
+                    let eqPorSeccion = {};
+
+                    // Sub-agrupar por sección
+                    equiposDelGrupo.forEach(eq => {
+                        if(!eqPorSeccion[eq.seccion]) eqPorSeccion[eq.seccion] = [];
+                        eqPorSeccion[eq.seccion].push(eq);
+                    });
+
+                    let accordionContentHTML = '';
+
+                    Object.keys(eqPorSeccion).sort().forEach(sec => {
+                        let itemsHTML = '';
+                        let secVencidosCount = 0;
+
+                        eqPorSeccion[sec].forEach(eq => {
+                            let isVencido = false; 
+                            if(eq.vencimiento) { 
+                                const today = new Date(); 
+                                const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`; 
+                                if(eq.vencimiento <= currMonth) { 
+                                    isVencido = true; 
+                                    secVencidosCount++; 
+                                    totalVencidos++;
+                                } 
+                            }
+                            let expInfo = eq.vencimiento ? `<br><span style="color:var(--danger)">Vence: ${eq.vencimiento}</span>` : '';
+                            itemsHTML += `<div class="list-item" style="padding-left:15px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                        });
+
+                        let secBadge = secVencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; margin-left:5px;">⚠️ ${secVencidosCount} Vencidos</span>` : '';
+
+                        // Inyectar el sub-encabezado de la sección
+                        accordionContentHTML += `
+                            <div class="sub-grupo-header">
+                                <span>📍 ${sec} (${eqPorSeccion[sec].length})${secBadge}</span>
+                                <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}', '${sec}')">🖨️ QRs</button>
+                            </div>
+                            ${itemsHTML}
+                        `;
                     });
                     
-                    let badge = vencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:10px; vertical-align:middle;">⚠️ ${vencidosCount} Vencidos</span>` : '';
+                    let badgeTotal = totalVencidos > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:10px; vertical-align:middle;">⚠️ ${totalVencidos} Vencidos</span>` : '';
                     let activeClass = filtro !== '' ? 'active' : '';
 
-                    lQ.innerHTML += `<div class="accordion ${activeClass}"> <div class="grupo-header accordion-header" onclick="this.parentElement.classList.toggle('active')"> <span>${g} (${eqPorGrupo[g].length})${badge}</span> <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}')">🖨️ QRs</button> </div> <div class="accordion-content"> ${itemsHTML} </div> </div>`;
+                    lQ.innerHTML += `<div class="accordion ${activeClass}"> 
+                        <div class="grupo-header accordion-header" onclick="this.parentElement.classList.toggle('active')"> 
+                            <span>${g} (${equiposDelGrupo.length})${badgeTotal}</span> 
+                            <button class="btn-small btn-outline" style="border-color:#fff; color:#fff;" onclick="event.stopPropagation(); descargarLoteQRs('${g}', 'ALL')">🖨️ Todos</button> 
+                        </div> 
+                        <div class="accordion-content" style="padding:0;"> 
+                            ${accordionContentHTML} 
+                        </div> 
+                    </div>`;
                 });
             }
         }
 
-        window.descargarLoteQRs = function(grupo) {
+        // --- V6.16: IMPRESIÓN DE QR POR SECCIÓN O GRUPO COMPLETO ---
+        window.descargarLoteQRs = function(grupo, seccion) {
             const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
-            const equipos = Object.keys(config.equipos).filter(id => { const eq = config.equipos[id]; const matchFiltro = filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro); return eq.grupo === grupo && matchFiltro; }).map(id => ({ id: id, ...config.equipos[id] }));
-            if(equipos.length === 0) return alert("No hay equipos visibles para imprimir en este grupo.");
-            let html = `<html><head><meta charset="utf-8"><title>Lote QRs - ${grupo}</title><style>body{font-family:sans-serif; text-align:center;} .qr-box{display:inline-block; border:2px dashed #ccc; margin:10px; padding:15px; width:220px; vertical-align:top;} img{width:100%;} h3{margin:5px 0;} p{margin:0; font-size:12px; color:#555;}</style></head><body><h2>Plancha de Etiquetas: ${grupo}</h2>`;
-            const generador = new QRious({ size: 250, level: 'H' }); equipos.forEach(eq => { generador.value = eq.id; html += `<div class="qr-box"><h3>${eq.id}</h3><img src="${generador.toDataURL('image/png')}"><p>${eq.tipo}<br>${eq.seccion}</p></div>`; }); html += `</body></html>`;
-            const blob = new Blob([html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html`; a.click();
+            
+            const equipos = Object.keys(config.equipos).filter(id => { 
+                const eq = config.equipos[id]; 
+                const matchFiltro = filtro === '' || id.toLowerCase().includes(filtro) || eq.tipo.toLowerCase().includes(filtro) || eq.seccion.toLowerCase().includes(filtro); 
+                const matchSeccion = seccion === 'ALL' ? true : eq.seccion === seccion;
+                
+                return eq.grupo === grupo && matchFiltro && matchSeccion; 
+            }).map(id => ({ id: id, ...config.equipos[id] }));
+            
+            if(equipos.length === 0) return alert("No hay equipos visibles para imprimir con este filtro.");
+            
+            let titulo = seccion === 'ALL' ? `Lote QRs - ${grupo}` : `Lote QRs - ${grupo} (${seccion})`;
+            
+            let html = `<html><head><meta charset="utf-8"><title>${titulo}</title><style>body{font-family:sans-serif; text-align:center;} .qr-box{display:inline-block; border:2px dashed #ccc; margin:10px; padding:15px; width:220px; vertical-align:top;} img{width:100%;} h3{margin:5px 0;} p{margin:0; font-size:12px; color:#555;}</style></head><body><h2>Plancha de Etiquetas: ${titulo}</h2>`;
+            const generador = new QRious({ size: 250, level: 'H' }); 
+            equipos.forEach(eq => { 
+                generador.value = eq.id; 
+                html += `<div class="qr-box"><h3>${eq.id}</h3><img src="${generador.toDataURL('image/png')}"><p>${eq.tipo}<br>${eq.seccion}</p></div>`; 
+            }); 
+            html += `</body></html>`;
+            
+            const blob = new Blob([html], { type: 'text/html' }); 
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            let downloadName = seccion === 'ALL' ? `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html` : `Lote_QRs_${grupo.replace(/\s+/g, '_')}_${seccion.replace(/\s+/g, '_')}.html`;
+            a.download = downloadName; 
+            a.click();
         }
 
         function procesarFoto(event) {
