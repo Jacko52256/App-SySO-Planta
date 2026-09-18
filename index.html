@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.17 - Industrial</title>
+    <title>Gestión SySO V6.18 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -96,7 +96,6 @@
         .accordion-content { display: none; padding: 5px; background: var(--card-bg); }
         .accordion.active > .accordion-content { display: block; }
 
-        /* V6.17 Sub-Acordeones Interactivos */
         .sub-accordion { margin-bottom: 5px; border-bottom: 1px solid var(--border); }
         .sub-grupo-header { background: var(--edit); color: white; padding: 10px 12px; border-radius: 4px; margin: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
         body.dark-mode .sub-grupo-header { color: #000; }
@@ -117,8 +116,8 @@
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
-        /* BOTÓN DE PÁNICO (SOS) */
-        .btn-sos { position: fixed; bottom: 85px; right: 20px; background: #dc3545; color: white; border-radius: 50%; width: 55px; height: 55px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1500; display: none; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
+        /* BOTÓN DE PÁNICO V6.18 - SIEMPRE VISIBLE */
+        .btn-sos { position: fixed; bottom: 85px; right: 20px; background: #dc3545; color: white; border-radius: 50%; width: 55px; height: 55px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
         .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
     </style>
@@ -126,7 +125,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.17</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.18</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -162,13 +161,13 @@
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
             
-            <!-- V6.17 Botón Biométrico Dinámico -->
+            <!-- Botón Biométrico -->
             <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
         </div>
         
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.17 (Árboles + Biometría + SOS)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.18 (Bio Fix + S.O.S Global)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -287,6 +286,8 @@
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración (Excel)</h4>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si creó nuevos grupos o modificó las preguntas del Checklist, para generar el código !SCHEMA!.</p>
             <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
+            
+            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
         </div>
 
         <div class="card">
@@ -354,12 +355,11 @@
         </div>
         <div class="card">
             <h4 style="margin-bottom:10px; color:var(--primary);">Seguridad y Sistema</h4>
-            <!-- V6.17 Botón para registrar biometría -->
             <button class="btn btn-info" style="margin-bottom:15px;" onclick="registrarBiometria()">👆 Habilitar Ingreso con Huella / FaceID</button>
             
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.17</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.18</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -377,7 +377,7 @@
         </div>
     </div>
 
-    <!-- MODAL BOTÓN DE PÁNICO (V6.17) -->
+    <!-- MODAL BOTÓN DE PÁNICO (V6.18 REDUCIDO) -->
     <div id="modalSOS" class="modal-overlay hidden">
         <div class="modal-content" style="border: 3px solid var(--danger);">
             <h2 style="color:var(--danger); margin-bottom:5px; text-align:center;">🚨 S.O.S. ALERTA</h2>
@@ -390,8 +390,6 @@
             
             <button class="btn" style="background:#ff9800; color:#fff;" onclick="dispararSOS('Accidente Médico')">🚑 Accidente / Médico</button>
             <button class="btn btn-danger" onclick="dispararSOS('Incendio')">🔥 Incendio</button>
-            <button class="btn btn-info" onclick="dispararSOS('Riesgo Eléctrico')">⚡ Riesgo Eléctrico</button>
-            <button class="btn btn-dark" onclick="dispararSOS('Derrame Químico')">🧪 Derrame Químico</button>
             
             <button class="btn btn-outline" style="margin-top:10px;" onclick="cerrarModalSOS()">Cancelar</button>
         </div>
@@ -499,7 +497,7 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- V6.17: BIOMETRÍA WEBAUTHN ---
+        // --- V6.18: BIOMETRÍA MEJORADA Y MÁS PERMISIVA ---
         function verificarBotonBiometrico() {
             const btnBio = document.getElementById('btnLoginBio');
             if(localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) {
@@ -510,36 +508,50 @@
         }
 
         async function registrarBiometria() {
-            if (!window.PublicKeyCredential) return alert("Tu dispositivo no soporta o no tiene habilitada la biometría web.");
+            if (!window.PublicKeyCredential) return alert("Tu navegador no soporta biometría web (Passkeys).");
             try {
                 const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
                 const userID = new Uint8Array(16); window.crypto.getRandomValues(userID);
                 
-                await navigator.credentials.create({
+                // V6.18: rp.id dinámico y userVerification en "preferred" para evadir bloqueos de Android offline
+                let domain = window.location.hostname;
+                if(domain === "") domain = "localhost"; // Fallback para archivos locales absolutos
+                
+                const credential = await navigator.credentials.create({
                     publicKey: {
                         challenge: challenge,
-                        rp: { name: "SySO Industrial" },
+                        rp: { name: "SySO Industrial", id: domain },
                         user: { id: userID, name: usuarioActual.nombre, displayName: usuarioActual.nombre },
                         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "preferred" },
                         timeout: 60000
                     }
                 });
                 
-                localStorage.setItem('SySO_BioUser', usuarioActual.nombre);
-                localStorage.setItem('SySO_BioPin', btoa(usuarioActual.pin)); // Encriptado leve para memoria local
-                alert("✅ Autenticación Biométrica registrada correctamente en este dispositivo.");
-                verificarBotonBiometrico();
+                if(credential) {
+                    localStorage.setItem('SySO_BioUser', usuarioActual.nombre);
+                    localStorage.setItem('SySO_BioPin', btoa(usuarioActual.pin)); 
+                    alert("✅ Autenticación Biométrica registrada correctamente en este dispositivo.");
+                    verificarBotonBiometrico();
+                }
             } catch (e) {
-                alert("Registro cancelado o no soportado: Asegúrese de tener un bloqueo de pantalla activo en su celular.");
+                console.error(e);
+                alert("El sistema operativo bloqueó la creación de la llave. Asegúrese de tener un bloqueo de pantalla configurado en su celular o pruebe usando Google Chrome.");
             }
         }
 
         async function loginBiometrico() {
             try {
+                let domain = window.location.hostname;
+                if(domain === "") domain = "localhost";
+                
                 const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
                 await navigator.credentials.get({
-                    publicKey: { challenge: challenge, userVerification: "required" }
+                    publicKey: { 
+                        challenge: challenge,
+                        rpId: domain,
+                        userVerification: "preferred" 
+                    }
                 });
                 
                 const bioUser = localStorage.getItem('SySO_BioUser');
@@ -551,18 +563,18 @@
                     validarAcceso();
                 }
             } catch (e) {
-                alert("Fallo la autenticación biométrica. Ingrese su PIN manualmente.");
+                console.error(e);
+                alert("La autenticación biométrica falló o fue cancelada. Por favor, ingrese su PIN manualmente.");
             }
         }
 
-        // --- V6.17: BOTÓN DE PÁNICO (S.O.S) ---
+        // --- V6.18: S.O.S REDUCIDO Y COMANDO FINAL EN WHATSAPP ---
         function abrirModalSOS() {
             const sel = document.getElementById('sosSeccion');
             sel.innerHTML = '<option value="No Especificada en Planta">Seleccionar ubicación aproximada...</option>';
             config.secciones.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
             
-            // Intenta pre-seleccionar si el usuario ya está escaneando un equipo
-            const secActual = document.getElementById('seccionEquipo').value;
+            const secActual = document.getElementById('seccionEquipo') ? document.getElementById('seccionEquipo').value : "";
             if(secActual && secActual !== "") {
                 const nombreLimpio = secActual.split(" (")[0];
                 sel.value = nombreLimpio;
@@ -577,7 +589,8 @@
 
         function dispararSOS(tipoEmergencia) {
             const sec = document.getElementById('sosSeccion').value;
-            const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta";
+            // V6.18: Si no está logueado, lo reporta como operario anónimo en vez de fallar
+            const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta (Sin loguear)";
             
             let msg = `*🚨 ALERTA S.O.S. TIPO: ${tipoEmergencia.toUpperCase()} 🚨*\n\n`;
             msg += `📍 *Ubicación:* ${sec}\n`;
@@ -585,14 +598,13 @@
             msg += `⏰ *Hora:* ${new Date().toLocaleTimeString('es-PY')}\n\n`;
             
             if(tipoEmergencia === 'Accidente Médico') {
-                msg += `📢 *Atención requerida:* PA Equipo, Primeros Auxilios y Jefes de Brigada.`;
+                msg += `📢 *Atención requerida:* PA Equipo, Primeros Auxilios y Jefes de Brigada.\n\n`;
             } else if(tipoEmergencia === 'Incendio') {
-                msg += `📢 *Atención requerida:* EVACUACIÓN INMEDIATA. Todo el personal de Brigada de Combate y Comunicación.`;
-            } else if(tipoEmergencia === 'Riesgo Eléctrico') {
-                msg += `📢 *Atención requerida:* Personal de Mantenimiento, Corte de Energía y Jefes de Brigada.`;
-            } else {
-                msg += `📢 *Atención requerida:* Jefes de Brigada, Comunicación y Seguridad Industrial.`;
+                msg += `📢 *Atención requerida:* EVACUACIÓN INMEDIATA. Todo el personal de Brigada de Combate y Comunicación.\n\n`;
             }
+            
+            // V6.18 Comando de Cierre
+            msg += `🚨 *Brigadistas, inicien el protocolo de emergencia!*`;
             
             cerrarModalSOS();
             window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
@@ -698,12 +710,12 @@
             }
         }
 
+        // --- V6.18: PREPARAR LOGIN AHORA MUESTRA EL BOTÓN S.O.S SIEMPRE ---
         function prepararLogin() { 
             document.getElementById('loginInputUsuario').value = ''; 
             document.getElementById('loginPin').value = ''; 
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
             document.getElementById('view-login').classList.add('active'); 
-            document.getElementById('btnSOS').style.display = 'none'; // Ocultar SOS en login
         }
         
         function validarAcceso() { 
@@ -722,7 +734,6 @@
                 adminBtns.forEach(b => b.classList.add('hidden')); 
             } 
             document.getElementById('menuNavegacion').classList.remove('hidden'); 
-            document.getElementById('btnSOS').style.display = 'flex'; // Mostrar SOS al loguear
             nav('inspeccion', document.querySelectorAll('.tab-btn')[0]); 
             actualizarDashboard(); 
         }
@@ -840,7 +851,6 @@
             actualizarPrefijoUI(); 
         }
         
-        // --- V6.17: MEMORIA DE SECCIÓN EN ALTA QR ---
         function guardarQR() { 
             const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); 
             const numero = document.getElementById('qrNumero').value.trim(); 
@@ -862,13 +872,11 @@
             editQRId = null; 
             let nextNumStr = String(parseInt(numero, 10) + 1).padStart(numero.length, '0');
             
-            // Lógica de Persistencia de Sección
             document.getElementById('qrNumero').value = nextNumStr; 
             document.getElementById('qrTipo').value = ''; 
             document.getElementById('qrUbicacion').value = ''; 
             document.getElementById('qrVencimiento').value = '';
             
-            // Forzar que la sección seleccionada siga siendo la misma
             document.getElementById('qrSeccion').value = sec;
             
             const btn = document.getElementById('btnGuardarQR'); 
@@ -888,7 +896,6 @@
             const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Inventario_Maestro_SySO_${Date.now()}.csv`; a.click();
         }
 
-        // --- V6.17: SUB-ACORDEONES REALES ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
@@ -941,7 +948,6 @@
 
                         let secBadge = secVencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; margin-left:5px;">⚠️ ${secVencidosCount} Vencidos</span>` : '';
 
-                        // Inyectar el sub-acordeón
                         let activeSecClass = filtro !== '' ? 'active' : '';
                         accordionContentHTML += `
                             <div class="sub-accordion ${activeSecClass}">
