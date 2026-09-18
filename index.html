@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.18 - Industrial</title>
+    <title>Gestión SySO V6.19 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -116,7 +116,6 @@
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
-        /* BOTÓN DE PÁNICO V6.18 - SIEMPRE VISIBLE */
         .btn-sos { position: fixed; bottom: 85px; right: 20px; background: #dc3545; color: white; border-radius: 50%; width: 55px; height: 55px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
         .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
@@ -125,7 +124,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.18</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.19</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -161,13 +160,13 @@
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
             
-            <!-- Botón Biométrico -->
+            <!-- Botón Biométrico V6.19 -->
             <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
         </div>
         
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.18 (Bio Fix + S.O.S Global)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.19 (Passkey Fix)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -286,8 +285,6 @@
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración (Excel)</h4>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si creó nuevos grupos o modificó las preguntas del Checklist, para generar el código !SCHEMA!.</p>
             <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
-            
-            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
         </div>
 
         <div class="card">
@@ -355,11 +352,12 @@
         </div>
         <div class="card">
             <h4 style="margin-bottom:10px; color:var(--primary);">Seguridad y Sistema</h4>
+            <!-- V6.19 Botón para registrar biometría residente -->
             <button class="btn btn-info" style="margin-bottom:15px;" onclick="registrarBiometria()">👆 Habilitar Ingreso con Huella / FaceID</button>
             
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.18</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.19</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -377,7 +375,7 @@
         </div>
     </div>
 
-    <!-- MODAL BOTÓN DE PÁNICO (V6.18 REDUCIDO) -->
+    <!-- MODAL BOTÓN DE PÁNICO (V6.19 REDUCIDO Y CERRADO) -->
     <div id="modalSOS" class="modal-overlay hidden">
         <div class="modal-content" style="border: 3px solid var(--danger);">
             <h2 style="color:var(--danger); margin-bottom:5px; text-align:center;">🚨 S.O.S. ALERTA</h2>
@@ -497,10 +495,11 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- V6.18: BIOMETRÍA MEJORADA Y MÁS PERMISIVA ---
+        // --- V6.19: MOTOR BIOMÉTRICO (PASSKEYS RESIDENTES Y EXTRACCIÓN DE RAW-ID) ---
         function verificarBotonBiometrico() {
             const btnBio = document.getElementById('btnLoginBio');
-            if(localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) {
+            // V6.19: Ahora verifica que exista el ID de la credencial guardada
+            if(localStorage.getItem('SySO_BioCredId') && localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) {
                 btnBio.classList.remove('hidden');
             } else {
                 btnBio.classList.add('hidden');
@@ -513,9 +512,8 @@
                 const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
                 const userID = new Uint8Array(16); window.crypto.getRandomValues(userID);
                 
-                // V6.18: rp.id dinámico y userVerification en "preferred" para evadir bloqueos de Android offline
                 let domain = window.location.hostname;
-                if(domain === "") domain = "localhost"; // Fallback para archivos locales absolutos
+                if(domain === "") domain = "localhost";
                 
                 const credential = await navigator.credentials.create({
                     publicKey: {
@@ -523,20 +521,29 @@
                         rp: { name: "SySO Industrial", id: domain },
                         user: { id: userID, name: usuarioActual.nombre, displayName: usuarioActual.nombre },
                         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "preferred" },
+                        authenticatorSelection: { 
+                            authenticatorAttachment: "platform", 
+                            userVerification: "preferred",
+                            residentKey: "required",       // V6.19 Forzar guardado permanente
+                            requireResidentKey: true       // V6.19 Compatibilidad estricta
+                        },
                         timeout: 60000
                     }
                 });
                 
                 if(credential) {
+                    // V6.19 Convertir ArrayBuffer a Base64 para guardarlo en localStorage
+                    const credentialIdBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
+                    localStorage.setItem('SySO_BioCredId', credentialIdBase64);
+                    
                     localStorage.setItem('SySO_BioUser', usuarioActual.nombre);
                     localStorage.setItem('SySO_BioPin', btoa(usuarioActual.pin)); 
-                    alert("✅ Autenticación Biométrica registrada correctamente en este dispositivo.");
+                    alert("✅ Autenticación Biométrica registrada correctamente en la bóveda de Android.");
                     verificarBotonBiometrico();
                 }
             } catch (e) {
                 console.error(e);
-                alert("El sistema operativo bloqueó la creación de la llave. Asegúrese de tener un bloqueo de pantalla configurado en su celular o pruebe usando Google Chrome.");
+                alert("El sistema operativo bloqueó la creación de la llave permanente. Elimine las llaves antiguas en la configuración de su celular si el problema persiste.");
             }
         }
 
@@ -545,11 +552,28 @@
                 let domain = window.location.hostname;
                 if(domain === "") domain = "localhost";
                 
+                // V6.19: Recuperar la credencial exacta guardada
+                const credIdBase64 = localStorage.getItem('SySO_BioCredId');
+                if(!credIdBase64) throw new Error("No hay un ID de credencial registrado.");
+                
+                // Decodificar Base64 a Uint8Array para pasárselo a Android
+                const binaryString = atob(credIdBase64);
+                const credIdArray = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    credIdArray[i] = binaryString.charCodeAt(i);
+                }
+                
                 const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
+                
                 await navigator.credentials.get({
                     publicKey: { 
                         challenge: challenge,
                         rpId: domain,
+                        allowCredentials: [{
+                            type: "public-key",
+                            id: credIdArray,            // Petición de llave exacta
+                            transports: ["internal"]    // Obligar a usar sensor local del celular
+                        }],
                         userVerification: "preferred" 
                     }
                 });
@@ -564,11 +588,11 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("La autenticación biométrica falló o fue cancelada. Por favor, ingrese su PIN manualmente.");
+                alert("La autenticación biométrica falló. Es posible que deba volver a registrar su huella en la pestaña Turno.");
             }
         }
 
-        // --- V6.18: S.O.S REDUCIDO Y COMANDO FINAL EN WHATSAPP ---
+        // --- V6.19: BOTÓN S.O.S (COMANDO FINAL INTEGRADO) ---
         function abrirModalSOS() {
             const sel = document.getElementById('sosSeccion');
             sel.innerHTML = '<option value="No Especificada en Planta">Seleccionar ubicación aproximada...</option>';
@@ -589,7 +613,7 @@
 
         function dispararSOS(tipoEmergencia) {
             const sec = document.getElementById('sosSeccion').value;
-            // V6.18: Si no está logueado, lo reporta como operario anónimo en vez de fallar
+            // Identificación: Operario anónimo si no hay sesión abierta
             const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta (Sin loguear)";
             
             let msg = `*🚨 ALERTA S.O.S. TIPO: ${tipoEmergencia.toUpperCase()} 🚨*\n\n`;
@@ -603,7 +627,7 @@
                 msg += `📢 *Atención requerida:* EVACUACIÓN INMEDIATA. Todo el personal de Brigada de Combate y Comunicación.\n\n`;
             }
             
-            // V6.18 Comando de Cierre
+            // Comando final militar 
             msg += `🚨 *Brigadistas, inicien el protocolo de emergencia!*`;
             
             cerrarModalSOS();
@@ -710,7 +734,6 @@
             }
         }
 
-        // --- V6.18: PREPARAR LOGIN AHORA MUESTRA EL BOTÓN S.O.S SIEMPRE ---
         function prepararLogin() { 
             document.getElementById('loginInputUsuario').value = ''; 
             document.getElementById('loginPin').value = ''; 
