@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.19 - Industrial</title>
+    <title>Gestión SySO V6.20 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -116,6 +116,7 @@
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
+        /* BOTÓN DE PÁNICO V6.20 - SIEMPRE VISIBLE */
         .btn-sos { position: fixed; bottom: 85px; right: 20px; background: #dc3545; color: white; border-radius: 50%; width: 55px; height: 55px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
         .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
@@ -124,7 +125,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.19</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.20</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -160,13 +161,13 @@
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
             
-            <!-- Botón Biométrico V6.19 -->
+            <!-- Botón Biométrico V6.20 -->
             <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
         </div>
         
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.19 (Passkey Fix)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.20 (Fix Regresión QR)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -236,7 +237,7 @@
 
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (Individual)</h3>
-            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Memoria Activa:</b> La sección elegida se mantendrá seleccionada tras guardar para agilizar la carga.</p>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Memoria Activa:</b> La sección y grupo elegidos se mantendrán tras guardar para agilizar la carga en serie.</p>
             
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
             <div class="form-group">
@@ -352,12 +353,12 @@
         </div>
         <div class="card">
             <h4 style="margin-bottom:10px; color:var(--primary);">Seguridad y Sistema</h4>
-            <!-- V6.19 Botón para registrar biometría residente -->
+            <!-- V6.20 Botón para registrar biometría residente -->
             <button class="btn btn-info" style="margin-bottom:15px;" onclick="registrarBiometria()">👆 Habilitar Ingreso con Huella / FaceID</button>
             
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.19</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.20</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -375,7 +376,7 @@
         </div>
     </div>
 
-    <!-- MODAL BOTÓN DE PÁNICO (V6.19 REDUCIDO Y CERRADO) -->
+    <!-- MODAL BOTÓN DE PÁNICO (V6.20 REDUCIDO Y CERRADO) -->
     <div id="modalSOS" class="modal-overlay hidden">
         <div class="modal-content" style="border: 3px solid var(--danger);">
             <h2 style="color:var(--danger); margin-bottom:5px; text-align:center;">🚨 S.O.S. ALERTA</h2>
@@ -495,10 +496,10 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
-        // --- V6.19: MOTOR BIOMÉTRICO (PASSKEYS RESIDENTES Y EXTRACCIÓN DE RAW-ID) ---
+        // --- V6.20: MOTOR BIOMÉTRICO (PASSKEYS RESIDENTES Y EXTRACCIÓN DE RAW-ID) ---
         function verificarBotonBiometrico() {
             const btnBio = document.getElementById('btnLoginBio');
-            // V6.19: Ahora verifica que exista el ID de la credencial guardada
+            // Verifica que exista el ID de la credencial guardada
             if(localStorage.getItem('SySO_BioCredId') && localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) {
                 btnBio.classList.remove('hidden');
             } else {
@@ -524,15 +525,14 @@
                         authenticatorSelection: { 
                             authenticatorAttachment: "platform", 
                             userVerification: "preferred",
-                            residentKey: "required",       // V6.19 Forzar guardado permanente
-                            requireResidentKey: true       // V6.19 Compatibilidad estricta
+                            residentKey: "required",       
+                            requireResidentKey: true       
                         },
                         timeout: 60000
                     }
                 });
                 
                 if(credential) {
-                    // V6.19 Convertir ArrayBuffer a Base64 para guardarlo en localStorage
                     const credentialIdBase64 = btoa(String.fromCharCode.apply(null, new Uint8Array(credential.rawId)));
                     localStorage.setItem('SySO_BioCredId', credentialIdBase64);
                     
@@ -552,11 +552,9 @@
                 let domain = window.location.hostname;
                 if(domain === "") domain = "localhost";
                 
-                // V6.19: Recuperar la credencial exacta guardada
                 const credIdBase64 = localStorage.getItem('SySO_BioCredId');
                 if(!credIdBase64) throw new Error("No hay un ID de credencial registrado.");
                 
-                // Decodificar Base64 a Uint8Array para pasárselo a Android
                 const binaryString = atob(credIdBase64);
                 const credIdArray = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
@@ -571,8 +569,8 @@
                         rpId: domain,
                         allowCredentials: [{
                             type: "public-key",
-                            id: credIdArray,            // Petición de llave exacta
-                            transports: ["internal"]    // Obligar a usar sensor local del celular
+                            id: credIdArray,            
+                            transports: ["internal"]    
                         }],
                         userVerification: "preferred" 
                     }
@@ -592,7 +590,7 @@
             }
         }
 
-        // --- V6.19: BOTÓN S.O.S (COMANDO FINAL INTEGRADO) ---
+        // --- V6.20: BOTÓN S.O.S ---
         function abrirModalSOS() {
             const sel = document.getElementById('sosSeccion');
             sel.innerHTML = '<option value="No Especificada en Planta">Seleccionar ubicación aproximada...</option>';
@@ -613,7 +611,6 @@
 
         function dispararSOS(tipoEmergencia) {
             const sec = document.getElementById('sosSeccion').value;
-            // Identificación: Operario anónimo si no hay sesión abierta
             const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta (Sin loguear)";
             
             let msg = `*🚨 ALERTA S.O.S. TIPO: ${tipoEmergencia.toUpperCase()} 🚨*\n\n`;
@@ -627,7 +624,6 @@
                 msg += `📢 *Atención requerida:* EVACUACIÓN INMEDIATA. Todo el personal de Brigada de Combate y Comunicación.\n\n`;
             }
             
-            // Comando final militar 
             msg += `🚨 *Brigadistas, inicien el protocolo de emergencia!*`;
             
             cerrarModalSOS();
@@ -874,6 +870,7 @@
             actualizarPrefijoUI(); 
         }
         
+        // --- V6.20: FIX REGRESIÓN DE MEMORIA DE CARGA RÁPIDA ---
         function guardarQR() { 
             const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); 
             const numero = document.getElementById('qrNumero').value.trim(); 
@@ -882,10 +879,11 @@
             const ubi = document.getElementById('qrUbicacion').value.trim(); 
             const sec = document.getElementById('qrSeccion').value; 
             const vencimiento = document.getElementById('qrVencimiento').value; 
+            const grupoElegido = document.getElementById('qrGrupo').value;
             
             if(!numero || !tipo || !ubi || !sec) return alert("⛔ BLOQUEO: Tipo, Sección, Ubicación y Número son campos OBLIGATORIOS."); 
             if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); config.deleted.equipos[editQRId] = Date.now(); delete config.equipos[editQRId]; } 
-            config.equipos[id] = { tipo: tipo, seccion: sec, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value, vencimiento: vencimiento }; 
+            config.equipos[id] = { tipo: tipo, seccion: sec, ubicacion: ubi, grupo: grupoElegido, vencimiento: vencimiento }; 
             config.timestamps.equipos[id] = Date.now();
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
             
@@ -895,17 +893,24 @@
             editQRId = null; 
             let nextNumStr = String(parseInt(numero, 10) + 1).padStart(numero.length, '0');
             
+            // 1. Refrescar listas (Esto borra los menús)
+            poblarAdmin(); 
+            
+            // 2. Re-inyectar datos memorizados en la caja fuerte
+            document.getElementById('qrGrupo').value = grupoElegido;
+            actualizarPrefijoUI();
+            document.getElementById('qrSeccion').value = sec;
             document.getElementById('qrNumero').value = nextNumStr; 
+            
+            // 3. Limpiar resto de campos para el nuevo equipo
             document.getElementById('qrTipo').value = ''; 
             document.getElementById('qrUbicacion').value = ''; 
             document.getElementById('qrVencimiento').value = '';
             
-            document.getElementById('qrSeccion').value = sec;
-            
             const btn = document.getElementById('btnGuardarQR'); 
             btn.innerText = 'Guardar Equipo'; 
             btn.classList.replace('btn-info', 'btn-warning'); 
-            poblarAdmin(); 
+            
             document.getElementById('qrTipo').focus();
         }
         
@@ -1110,7 +1115,7 @@
                 if(!accesoPermitido) { alert(`Bloqueo de Perfil: No estás habilitado para inspeccionar la categoría ${eq.grupo}.`); document.getElementById('idEquipo').value = ''; return; }
                 
                 const hoy = new Date().toLocaleString('es-PY').split(',')[0]; const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); const inspeccionPrevia = db.find(r => r.ID_Equipo === id && r.Fecha.startsWith(hoy));
-                if(inspeccionPrevia) { if(!confirm(`⚠️ EQUIPO YA AUDITADO HOY.\n\nRegistrado a las ${inspeccionPrevia.Fecha.split(', ')[1]} por ${inspeccionPrevia.Inspector}.\n\n¿Desea SOBRESCRIBIR la inspección anterior?`)) { document.getElementById('idEquipo').value = ''; return; } document.getElementById('idEquipo').dataset.overwrite = "true"; } else { document.getElementById('idEquipo').dataset.overwrite = "false"; }
+                if(inspeccionPrevia) { if(!confirm(`⚠️ EQUIPO YA AUDITADO HOY.\n\nRegistrado a las ${inspeccionPrevia.Fecha.split(', ')[1]} por ${inspeccionPrevia.Inspector}.\n\n¿Desea SOBRESCRIBIR la anterior?`)) { document.getElementById('idEquipo').value = ''; return; } document.getElementById('idEquipo').dataset.overwrite = "true"; } else { document.getElementById('idEquipo').dataset.overwrite = "false"; }
 
                 document.getElementById('seccionEquipo').value = `${eq.seccion} (${eq.tipo})`; document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
                 const container = document.getElementById('moduloDinamico'); container.classList.remove('hidden'); 
