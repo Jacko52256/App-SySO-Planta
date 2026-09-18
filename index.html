@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.16 - Industrial</title>
+    <title>Gestión SySO V6.17 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -94,11 +94,14 @@
         .accordion-header { padding: 12px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         body.dark-mode .accordion-header { color: #000; }
         .accordion-content { display: none; padding: 5px; background: var(--card-bg); }
-        .accordion.active .accordion-content { display: block; }
+        .accordion.active > .accordion-content { display: block; }
 
-        /* NUEVO: Sub-Encabezados para Secciones dentro del Acordeón */
-        .sub-grupo-header { background: var(--edit); color: white; padding: 8px 12px; border-radius: 4px; margin: 10px 5px 5px 5px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        /* V6.17 Sub-Acordeones Interactivos */
+        .sub-accordion { margin-bottom: 5px; border-bottom: 1px solid var(--border); }
+        .sub-grupo-header { background: var(--edit); color: white; padding: 10px 12px; border-radius: 4px; margin: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
         body.dark-mode .sub-grupo-header { color: #000; }
+        .sub-accordion-content { display: none; padding: 0 5px; }
+        .sub-accordion.active > .sub-accordion-content { display: block; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
         .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; }
@@ -113,8 +116,9 @@
         .chk-container { max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--input-bg); }
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:15px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
-        .grupo-header { background: var(--primary); color: white; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
-        body.dark-mode .grupo-header { color: #000; }
+        
+        /* BOTÓN DE PÁNICO (SOS) */
+        .btn-sos { position: fixed; bottom: 85px; right: 20px; background: #dc3545; color: white; border-radius: 50%; width: 55px; height: 55px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1500; display: none; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
         .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
     </style>
@@ -122,9 +126,12 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.16</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.17</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
+
+    <!-- BOTÓN DE PÁNICO GLOBAL -->
+    <div id="btnSOS" class="btn-sos" onclick="abrirModalSOS()">🚨</div>
 
     <!-- VISTA 0: BOOTSTRAP -->
     <div id="view-init" class="view">
@@ -154,10 +161,14 @@
             </div>
             <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric"></div>
             <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
+            
+            <!-- V6.17 Botón Biométrico Dinámico -->
+            <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
         </div>
+        
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.16 (Árbol Dimensional)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.17 (Árboles + Biometría + SOS)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -227,7 +238,7 @@
 
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 10px;">Gestión de Equipos (Individual)</h3>
-            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Cadena Rápida:</b> Al guardar, el número avanzará automáticamente y los campos se vaciarán.</p>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Memoria Activa:</b> La sección elegida se mantendrá seleccionada tras guardar para agilizar la carga.</p>
             
             <div class="form-group"><label>Grupo (Formulario y Prefijo):</label><select id="qrGrupo" onchange="actualizarPrefijoUI()"></select></div>
             <div class="form-group">
@@ -276,8 +287,6 @@
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración (Excel)</h4>
             <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Solo use este botón si creó nuevos grupos o modificó las preguntas del Checklist, para generar el código !SCHEMA!.</p>
             <button class="btn btn-warning" onclick="generarEstructuraExcel()">Enviar Estructura (WhatsApp)</button>
-            
-            <textarea id="txtAdminExport" class="hidden" style="height: 60px; font-size:10px; margin-top:10px; width: 100%; border: 1px solid var(--border);" readonly></textarea>
         </div>
 
         <div class="card">
@@ -344,9 +353,13 @@
             <button class="btn btn-danger" style="margin-top:15px;" onclick="purgarHistorial()">🗑️ Vaciar Historial y Fotos</button>
         </div>
         <div class="card">
+            <h4 style="margin-bottom:10px; color:var(--primary);">Seguridad y Sistema</h4>
+            <!-- V6.17 Botón para registrar biometría -->
+            <button class="btn btn-info" style="margin-bottom:15px;" onclick="registrarBiometria()">👆 Habilitar Ingreso con Huella / FaceID</button>
+            
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.16</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.17</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -361,6 +374,26 @@
             <button class="btn btn-success" onclick="ejecutarFusion()">🧬 Fusionar Datos (Recomendado)</button>
             <button class="btn btn-danger" onclick="ejecutarSobrescritura()">🔥 Sobrescribir Todo (Peligro)</button>
             <button class="btn btn-outline" onclick="cerrarAduana()">Cancelar Sincronización</button>
+        </div>
+    </div>
+
+    <!-- MODAL BOTÓN DE PÁNICO (V6.17) -->
+    <div id="modalSOS" class="modal-overlay hidden">
+        <div class="modal-content" style="border: 3px solid var(--danger);">
+            <h2 style="color:var(--danger); margin-bottom:5px; text-align:center;">🚨 S.O.S. ALERTA</h2>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px; text-align:center;">Indique su ubicación y el tipo de emergencia. Esto alertará a la Brigada vía WhatsApp.</p>
+            
+            <div class="form-group">
+                <label>Ubicación del Siniestro:</label>
+                <select id="sosSeccion" style="border: 2px solid var(--danger);"></select>
+            </div>
+            
+            <button class="btn" style="background:#ff9800; color:#fff;" onclick="dispararSOS('Accidente Médico')">🚑 Accidente / Médico</button>
+            <button class="btn btn-danger" onclick="dispararSOS('Incendio')">🔥 Incendio</button>
+            <button class="btn btn-info" onclick="dispararSOS('Riesgo Eléctrico')">⚡ Riesgo Eléctrico</button>
+            <button class="btn btn-dark" onclick="dispararSOS('Derrame Químico')">🧪 Derrame Químico</button>
+            
+            <button class="btn btn-outline" style="margin-top:10px;" onclick="cerrarModalSOS()">Cancelar</button>
         </div>
     </div>
 
@@ -434,6 +467,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             migrarDatosLegados();
+            verificarBotonBiometrico();
             if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
             
             const urlParams = new URLSearchParams(window.location.search); 
@@ -448,8 +482,9 @@
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
-            if (!rawConfig) document.getElementById('view-init').classList.add('active');
-            else { 
+            if (!rawConfig) {
+                document.getElementById('view-init').classList.add('active');
+            } else { 
                 config = JSON.parse(rawConfig); 
                 validarEstructuraTimestamps();
                 prepararLogin(); iniciarCandadoTurno();
@@ -463,6 +498,106 @@
             if(!config.deleted) { config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; }
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
+
+        // --- V6.17: BIOMETRÍA WEBAUTHN ---
+        function verificarBotonBiometrico() {
+            const btnBio = document.getElementById('btnLoginBio');
+            if(localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) {
+                btnBio.classList.remove('hidden');
+            } else {
+                btnBio.classList.add('hidden');
+            }
+        }
+
+        async function registrarBiometria() {
+            if (!window.PublicKeyCredential) return alert("Tu dispositivo no soporta o no tiene habilitada la biometría web.");
+            try {
+                const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
+                const userID = new Uint8Array(16); window.crypto.getRandomValues(userID);
+                
+                await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challenge,
+                        rp: { name: "SySO Industrial" },
+                        user: { id: userID, name: usuarioActual.nombre, displayName: usuarioActual.nombre },
+                        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                        timeout: 60000
+                    }
+                });
+                
+                localStorage.setItem('SySO_BioUser', usuarioActual.nombre);
+                localStorage.setItem('SySO_BioPin', btoa(usuarioActual.pin)); // Encriptado leve para memoria local
+                alert("✅ Autenticación Biométrica registrada correctamente en este dispositivo.");
+                verificarBotonBiometrico();
+            } catch (e) {
+                alert("Registro cancelado o no soportado: Asegúrese de tener un bloqueo de pantalla activo en su celular.");
+            }
+        }
+
+        async function loginBiometrico() {
+            try {
+                const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
+                await navigator.credentials.get({
+                    publicKey: { challenge: challenge, userVerification: "required" }
+                });
+                
+                const bioUser = localStorage.getItem('SySO_BioUser');
+                const bioPin = atob(localStorage.getItem('SySO_BioPin'));
+                
+                if(bioUser && bioPin) {
+                    document.getElementById('loginInputUsuario').value = bioUser;
+                    document.getElementById('loginPin').value = bioPin;
+                    validarAcceso();
+                }
+            } catch (e) {
+                alert("Fallo la autenticación biométrica. Ingrese su PIN manualmente.");
+            }
+        }
+
+        // --- V6.17: BOTÓN DE PÁNICO (S.O.S) ---
+        function abrirModalSOS() {
+            const sel = document.getElementById('sosSeccion');
+            sel.innerHTML = '<option value="No Especificada en Planta">Seleccionar ubicación aproximada...</option>';
+            config.secciones.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+            
+            // Intenta pre-seleccionar si el usuario ya está escaneando un equipo
+            const secActual = document.getElementById('seccionEquipo').value;
+            if(secActual && secActual !== "") {
+                const nombreLimpio = secActual.split(" (")[0];
+                sel.value = nombreLimpio;
+            }
+            
+            document.getElementById('modalSOS').classList.remove('hidden');
+        }
+
+        function cerrarModalSOS() {
+            document.getElementById('modalSOS').classList.add('hidden');
+        }
+
+        function dispararSOS(tipoEmergencia) {
+            const sec = document.getElementById('sosSeccion').value;
+            const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta";
+            
+            let msg = `*🚨 ALERTA S.O.S. TIPO: ${tipoEmergencia.toUpperCase()} 🚨*\n\n`;
+            msg += `📍 *Ubicación:* ${sec}\n`;
+            msg += `👨‍🚒 *Reporta:* ${usr}\n`;
+            msg += `⏰ *Hora:* ${new Date().toLocaleTimeString('es-PY')}\n\n`;
+            
+            if(tipoEmergencia === 'Accidente Médico') {
+                msg += `📢 *Atención requerida:* PA Equipo, Primeros Auxilios y Jefes de Brigada.`;
+            } else if(tipoEmergencia === 'Incendio') {
+                msg += `📢 *Atención requerida:* EVACUACIÓN INMEDIATA. Todo el personal de Brigada de Combate y Comunicación.`;
+            } else if(tipoEmergencia === 'Riesgo Eléctrico') {
+                msg += `📢 *Atención requerida:* Personal de Mantenimiento, Corte de Energía y Jefes de Brigada.`;
+            } else {
+                msg += `📢 *Atención requerida:* Jefes de Brigada, Comunicación y Seguridad Industrial.`;
+            }
+            
+            cerrarModalSOS();
+            window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
+        }
+
 
         function procesarTokenAduana(str) {
             if(!str) return alert("Pegue un código o enlace.");
@@ -563,9 +698,41 @@
             }
         }
 
-        function prepararLogin() { document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = ''; document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById('view-login').classList.add('active'); }
-        function validarAcceso() { const nom = document.getElementById('loginInputUsuario').value.trim(); const pin = document.getElementById('loginPin').value.trim(); usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin); if(!usuarioActual) return alert("Usuario o PIN Incorrecto."); document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre; document.getElementById('loginInputUsuario').value = ''; document.getElementById('loginPin').value = ''; const adminBtns = document.querySelectorAll('.admin-only'); if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); } else { adminBtns.forEach(b => b.classList.add('hidden')); } document.getElementById('menuNavegacion').classList.remove('hidden'); nav('inspeccion', document.querySelectorAll('.tab-btn')[0]); actualizarDashboard(); }
-        function cerrarSesion(manual = false) { if(manual && !confirm("¿Cerrar sesión segura?")) return; usuarioActual = null; document.getElementById('menuNavegacion').classList.add('hidden'); prepararLogin(); }
+        function prepararLogin() { 
+            document.getElementById('loginInputUsuario').value = ''; 
+            document.getElementById('loginPin').value = ''; 
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
+            document.getElementById('view-login').classList.add('active'); 
+            document.getElementById('btnSOS').style.display = 'none'; // Ocultar SOS en login
+        }
+        
+        function validarAcceso() { 
+            const nom = document.getElementById('loginInputUsuario').value.trim(); 
+            const pin = document.getElementById('loginPin').value.trim(); 
+            usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin); 
+            if(!usuarioActual) return alert("Usuario o PIN Incorrecto."); 
+            document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${usuarioActual.rol}`; 
+            document.getElementById('lblInspectorTurno').innerText = usuarioActual.nombre; 
+            document.getElementById('loginInputUsuario').value = ''; 
+            document.getElementById('loginPin').value = ''; 
+            const adminBtns = document.querySelectorAll('.admin-only'); 
+            if(usuarioActual.rol === 'Admin') { 
+                adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(); 
+            } else { 
+                adminBtns.forEach(b => b.classList.add('hidden')); 
+            } 
+            document.getElementById('menuNavegacion').classList.remove('hidden'); 
+            document.getElementById('btnSOS').style.display = 'flex'; // Mostrar SOS al loguear
+            nav('inspeccion', document.querySelectorAll('.tab-btn')[0]); 
+            actualizarDashboard(); 
+        }
+        
+        function cerrarSesion(manual = false) { 
+            if(manual && !confirm("¿Cerrar sesión segura?")) return; 
+            usuarioActual = null; 
+            document.getElementById('menuNavegacion').classList.add('hidden'); 
+            prepararLogin(); 
+        }
 
         function nav(vista, btn) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(`view-${vista}`).classList.add('active'); btn.classList.add('active'); if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{}); if(vista === 'turno') actualizarDashboard(); }
 
@@ -660,24 +827,57 @@
         }
 
         function cargarEdicionQR(id) { const eq = config.equipos[id]; if(!eq) return; document.getElementById('qrGrupo').value = eq.grupo; const prefijoOficial = config.prefijos[eq.grupo] || ''; const match = id.match(/^(.*?)(\d+)$/); if (match) { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = match[2]; } else { document.getElementById('qrPrefijo').value = prefijoOficial; document.getElementById('qrNumero').value = ''; } document.getElementById('qrTipo').value = eq.tipo; document.getElementById('qrSeccion').value = eq.seccion; document.getElementById('qrUbicacion').value = eq.ubicacion || ''; document.getElementById('qrVencimiento').value = eq.vencimiento || ''; editQRId = id; const btn = document.getElementById('btnGuardarQR'); btn.innerText = '💾 Actualizar Equipo'; btn.classList.replace('btn-warning', 'btn-info'); document.getElementById('zonaQR').classList.add('hidden'); }
-        function cancelarEdicionQR() { editQRId = null; document.getElementById('qrNumero').value = ''; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; document.getElementById('qrVencimiento').value = ''; const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); actualizarPrefijoUI(); }
         
+        function cancelarEdicionQR() { 
+            editQRId = null; 
+            document.getElementById('qrNumero').value = ''; 
+            document.getElementById('qrTipo').value = ''; 
+            document.getElementById('qrUbicacion').value = ''; 
+            document.getElementById('qrVencimiento').value = ''; 
+            const btn = document.getElementById('btnGuardarQR'); 
+            btn.innerText = 'Guardar Equipo'; 
+            btn.classList.replace('btn-info', 'btn-warning'); 
+            actualizarPrefijoUI(); 
+        }
+        
+        // --- V6.17: MEMORIA DE SECCIÓN EN ALTA QR ---
         function guardarQR() { 
-            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); const numero = document.getElementById('qrNumero').value.trim(); const id = prefijo + numero; 
-            const tipo = document.getElementById('qrTipo').value.trim(); const ubi = document.getElementById('qrUbicacion').value.trim(); const sec = document.getElementById('qrSeccion').value; const vencimiento = document.getElementById('qrVencimiento').value; 
+            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); 
+            const numero = document.getElementById('qrNumero').value.trim(); 
+            const id = prefijo + numero; 
+            const tipo = document.getElementById('qrTipo').value.trim(); 
+            const ubi = document.getElementById('qrUbicacion').value.trim(); 
+            const sec = document.getElementById('qrSeccion').value; 
+            const vencimiento = document.getElementById('qrVencimiento').value; 
+            
             if(!numero || !tipo || !ubi || !sec) return alert("⛔ BLOQUEO: Tipo, Sección, Ubicación y Número son campos OBLIGATORIOS."); 
             if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); config.deleted.equipos[editQRId] = Date.now(); delete config.equipos[editQRId]; } 
             config.equipos[id] = { tipo: tipo, seccion: sec, ubicacion: ubi, grupo: document.getElementById('qrGrupo').value, vencimiento: vencimiento }; 
             config.timestamps.equipos[id] = Date.now();
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' }); 
             qriousObj.value = id; document.getElementById('lblQR').innerText = `${id} - ${tipo}`; document.getElementById('zonaQR').classList.remove('hidden'); 
+            
             editQRId = null; 
             let nextNumStr = String(parseInt(numero, 10) + 1).padStart(numero.length, '0');
-            document.getElementById('qrNumero').value = nextNumStr; document.getElementById('qrTipo').value = ''; document.getElementById('qrUbicacion').value = ''; document.getElementById('qrVencimiento').value = '';
-            const btn = document.getElementById('btnGuardarQR'); btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); poblarAdmin(); 
+            
+            // Lógica de Persistencia de Sección
+            document.getElementById('qrNumero').value = nextNumStr; 
+            document.getElementById('qrTipo').value = ''; 
+            document.getElementById('qrUbicacion').value = ''; 
+            document.getElementById('qrVencimiento').value = '';
+            
+            // Forzar que la sección seleccionada siga siendo la misma
+            document.getElementById('qrSeccion').value = sec;
+            
+            const btn = document.getElementById('btnGuardarQR'); 
+            btn.innerText = 'Guardar Equipo'; 
+            btn.classList.replace('btn-info', 'btn-warning'); 
+            poblarAdmin(); 
             document.getElementById('qrTipo').focus();
         }
+        
         function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { config.deleted.equipos[id] = Date.now(); delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
@@ -688,7 +888,7 @@
             const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Inventario_Maestro_SySO_${Date.now()}.csv`; a.click();
         }
 
-        // --- V6.16: RENDERIZADO DE LISTA ANIDADA ---
+        // --- V6.17: SUB-ACORDEONES REALES ---
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; Object.keys(config.grupos).forEach(g => { if(g!=='Todos') lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted">${config.grupos[g].join(', ')}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; });
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
@@ -713,7 +913,6 @@
                     let equiposDelGrupo = eqPorGrupo[g];
                     let eqPorSeccion = {};
 
-                    // Sub-agrupar por sección
                     equiposDelGrupo.forEach(eq => {
                         if(!eqPorSeccion[eq.seccion]) eqPorSeccion[eq.seccion] = [];
                         eqPorSeccion[eq.seccion].push(eq);
@@ -737,18 +936,23 @@
                                 } 
                             }
                             let expInfo = eq.vencimiento ? `<br><span style="color:var(--danger)">Vence: ${eq.vencimiento}</span>` : '';
-                            itemsHTML += `<div class="list-item" style="padding-left:15px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                            itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
                         });
 
                         let secBadge = secVencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; margin-left:5px;">⚠️ ${secVencidosCount} Vencidos</span>` : '';
 
-                        // Inyectar el sub-encabezado de la sección
+                        // Inyectar el sub-acordeón
+                        let activeSecClass = filtro !== '' ? 'active' : '';
                         accordionContentHTML += `
-                            <div class="sub-grupo-header">
-                                <span>📍 ${sec} (${eqPorSeccion[sec].length})${secBadge}</span>
-                                <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}', '${sec}')">🖨️ QRs</button>
+                            <div class="sub-accordion ${activeSecClass}">
+                                <div class="sub-grupo-header" onclick="this.parentElement.classList.toggle('active')">
+                                    <span>📍 ${sec} (${eqPorSeccion[sec].length})${secBadge}</span>
+                                    <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}', '${sec}')">🖨️ QRs</button>
+                                </div>
+                                <div class="sub-accordion-content">
+                                    ${itemsHTML}
+                                </div>
                             </div>
-                            ${itemsHTML}
                         `;
                     });
                     
@@ -768,7 +972,6 @@
             }
         }
 
-        // --- V6.16: IMPRESIÓN DE QR POR SECCIÓN O GRUPO COMPLETO ---
         window.descargarLoteQRs = function(grupo, seccion) {
             const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
             
