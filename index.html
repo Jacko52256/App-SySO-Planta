@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.21 - Industrial</title>
+    <title>Gestión SySO V6.22 - Industrial</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -128,7 +128,7 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.21</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.22</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
     </div>
 
@@ -168,7 +168,7 @@
         
         <div class="card" style="background-color: var(--input-bg);">
             <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.21 (Ficha Maestra + Embudo QR)</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.22 (Prefijos por Sección SEC-GRP-001)</b></p>
             <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
             <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
@@ -202,7 +202,6 @@
 
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
             
-            <!-- MÓDULO DINÁMICO EXCLUSIVO PARA EL CONTROL -->
             <div id="moduloDinamico" class="hidden"></div>
             
             <div class="form-group" style="margin-top:15px;" id="zonaObservaciones">
@@ -229,53 +228,53 @@
     <div id="view-qr" class="view">
         <div class="card" style="border: 2px dashed var(--primary);">
             <h3 style="color: var(--primary); margin-bottom: 5px;">⚡ Importación Rápida (Lista Maestra)</h3>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel. Soporta formato corto (ID | Tipo | Sección) o las 9 columnas de la Lista Maestra.</p>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel. El sistema aplicará automáticamente el prefijo compuesto (Ej. BAL-EXT-001) según la sección y grupo.</p>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="btn-small btn-primary" onclick="document.getElementById('divBulk').classList.toggle('hidden')">Mostrar Panel Excel</button>
                 <button class="btn-small btn-info" onclick="descargarPlantillaBulk()">📄 Descargar Plantilla Maestra</button>
             </div>
             <div id="divBulk" class="hidden">
-                <textarea id="txtBulkData" style="height: 100px; white-space: nowrap; overflow: auto; font-size:12px; font-family:monospace;" placeholder="ID | Seccion | Ubicacion | Tipo | Capacidad | Serie | Vencimiento(AAAA-MM) | Venc_PH(AAAA-MM) | Responsable"></textarea>
+                <textarea id="txtBulkData" style="height: 100px; white-space: nowrap; overflow: auto; font-size:12px; font-family:monospace;" placeholder="ID_o_Num | Seccion | Ubicacion | Tipo | Capacidad | Serie | Vencimiento(AAAA-MM) | Venc_PH(AAAA-MM) | Responsable"></textarea>
                 <button class="btn btn-success" style="margin-top:10px;" onclick="procesarImportacionMasiva()">🚀 Importar Lote al Grupo Seleccionado</button>
             </div>
         </div>
 
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 5px;">Ficha Maestra de Inventario (Alta QR)</h3>
-            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Registro Único:</b> Los campos que no correspondan al grupo seleccionado se bloquearán automáticamente sin mover la pantalla.</p>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Nomenclatura por Sector:</b> El código une automáticamente <b>Sección + Grupo + Correlativo</b> (Ej. <code>BAL-EXT-001</code>) y reinicia la numeración en cada sección.</p>
             
             <div class="form-group">
-                <label>1. Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
-                <select id="qrGrupo" onchange="alCambiarGrupoQR()"></select>
+                <label>1. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
+                <select id="qrSeccion" onchange="alCambiarGrupoOSeccionQR()"></select>
             </div>
 
             <div class="form-group">
-                <label>2. ID Único (Prefijo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
+                <label>2. Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
+                <select id="qrGrupo" onchange="alCambiarGrupoOSeccionQR()"></select>
+            </div>
+
+            <div class="form-group">
+                <label>3. ID Único (Sección + Grupo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
                 <div style="display: flex; gap: 5px;">
-                    <input type="text" id="qrPrefijo" readonly style="flex:1; text-align:right;">
-                    <input type="number" id="qrNumero" placeholder="Ej. 080" style="flex:2;">
+                    <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:15px;">
+                    <input type="number" id="qrNumero" placeholder="Ej. 001" style="flex:1.8;">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>3. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
-                <select id="qrSeccion"></select>
-            </div>
-
-            <div class="form-group">
                 <label>4. Ubicación Exacta <span style="color:var(--danger)">*</span>:</label>
-                <input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina / Columna B4">
+                <input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina / Centro comando recepción">
             </div>
 
             <div class="form-group">
                 <label><span id="lblQrTipo">5. Tipo / Agente / Descripción</span> <span style="color:var(--danger)">*</span>:</label>
-                <input type="text" id="qrTipo" placeholder="Ej. PQS ABC / Botiquín Primeros Auxilios">
+                <input type="text" id="qrTipo" placeholder="Ej. PQS ABC / CO2 / Botiquín">
             </div>
 
             <!-- CAMPOS CONDICIONALES DE LA LISTA MAESTRA -->
             <div class="form-group" id="wrapQrCapacidad">
                 <label><span id="lblQrCapacidad">6. Capacidad / Medida / Alcance</span> <span id="lockCapacidad" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                <input type="text" id="qrCapacidad" placeholder="Ej. 5 kg / 25 metros / 20 personas">
+                <input type="text" id="qrCapacidad" placeholder="Ej. 5 kg / 10 kg / 25 metros">
             </div>
 
             <div class="form-group" id="wrapQrSerie">
@@ -315,7 +314,7 @@
                 Inventario General
                 <button class="btn-small btn-success" onclick="descargarInventarioCSV()">📥 Exportar BD Maestra</button>
             </h3>
-            <input type="text" id="buscadorEquipos" placeholder="🔎 Filtrar por ID, Sección o Tipo..." onkeyup="renderListas()" style="margin-bottom: 15px; border:2px solid var(--primary);">
+            <input type="text" id="buscadorEquipos" placeholder="🔎 Filtrar por ID (Ej. BAL-EXT), Sección o Tipo..." onkeyup="renderListas()" style="margin-bottom: 15px; border:2px solid var(--primary);">
             <div id="listaEquipos" style="font-size:12px;"></div>
         </div>
     </div>
@@ -338,7 +337,7 @@
             <h3>Grupos, Checklist y Ficha de Registro</h3>
             <p class="text-muted" style="font-size:11px; margin-bottom:10px;">Defina los puntos que se evaluarán durante el Control y marque qué campos de inventario aplican al dar de alta un ítem.</p>
             <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Combate Extintores)" class="form-group">
-            <input type="text" id="nuevoGrupoPrefijo" placeholder="Prefijo Oficial (Ej. EXT-)" class="form-group" style="border: 2px solid var(--primary);">
+            <input type="text" id="nuevoGrupoPrefijo" placeholder="Prefijo de Grupo (Ej. EXT)" class="form-group" style="border: 2px solid var(--primary);">
             <input type="text" id="nuevoGrupoParams" placeholder="Puntos de Control Posterior (Ej. Manómetro, Sello, Boquilla)" class="form-group">
             
             <div class="form-group">
@@ -381,11 +380,15 @@
         </div>
 
         <div class="card">
-            <h3>Secciones de Planta</h3>
+            <h3>Secciones de Planta y Prefijos</h3>
+            <p class="text-muted" style="font-size:11px; margin-bottom:10px;">Cada sección tiene una sigla (Ej. <b>BAL</b>, <b>BAV</b>, <b>AGR</b>) que encabeza el código del equipo (<code>BAV-EXT-001</code>).</p>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <input type="text" id="nuevaSeccion" placeholder="Nombre (Ej. Balanceados Viejo)" style="flex:2;" oninput="sugerirPrefijoSeccionInput()">
+                <input type="text" id="nuevaSeccionPrefijo" placeholder="Sigla (Ej. BAV)" maxlength="5" style="flex:1; border:2px solid var(--primary); text-transform:uppercase;">
+            </div>
             <div style="display:flex; gap:5px;">
-                <input type="text" id="nuevaSeccion" placeholder="Ej. Silos Sur" style="flex:2;">
-                <button id="btnGuardarSec" class="btn btn-success" style="flex:1;" onclick="guardarSeccion()">+ Añadir</button>
-                <button id="btnCancelSec" class="btn btn-outline hidden" style="width:auto; padding:0 15px;" onclick="cancelarEdicionSec()">Cancelar</button>
+                <button id="btnGuardarSec" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarSeccion()">+ Guardar Sección</button>
+                <button id="btnCancelSec" class="btn btn-outline hidden" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionSec()">Cancelar</button>
             </div>
             <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
         </div>
@@ -416,7 +419,7 @@
             
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.21</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.22</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
@@ -516,6 +519,7 @@
         let config = { 
             usuarios: [], 
             secciones: [], 
+            prefijosSeccion: {},
             equipos: {}, 
             prefijos: {}, 
             camposGrupo: {},
@@ -541,12 +545,63 @@
         let fotoActualBase64 = null; let esCargaManual = false;
         let tokenPendiente = null;
 
-        // Función global de Ordenamiento Alfanumérico Natural (EXT-001, EXT-002, EXT-010, EXT-100)
+        // Ordenamiento Alfanumérico Natural
         function sortNatural(a, b) {
             return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
         }
 
-        // Deducción inteligente de campos de inventario por defecto según el nombre del grupo
+        // --- V6.22: MOTOR DE PREFIJOS DE SECCIÓN Y NOMENCLATURA COMPUESTA (SEC-GRP-001) ---
+        function limpiarSigla(str) {
+            return String(str || '').trim().toUpperCase().replace(/^-+|-+$/g, '').replace(/\s+/g, '');
+        }
+
+        function generarPrefijoSeccionAuto(nombreSec) {
+            if(!nombreSec) return "SEC";
+            const limpio = nombreSec.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+            // Mapeo directo para las secciones conocidas de planta
+            if(limpio === "AGROCHACO") return "AGR";
+            if(limpio === "LABFIL") return "LAB";
+            if(limpio === "BALANCEADOS") return "BAL";
+            if(limpio === "BALANCEADOS VIEJO") return "BAV";
+
+            const palabras = limpio.split(/\s+/).filter(Boolean);
+            let candidato = "";
+            if(palabras.length >= 2) {
+                candidato = (palabras[0].substring(0, 2) + palabras[1].substring(0, 1));
+            } else {
+                candidato = palabras[0].substring(0, 3);
+            }
+            return candidato || "SEC";
+        }
+
+        function obtenerSiglaSeccion(sec) {
+            if(config.prefijosSeccion && config.prefijosSeccion[sec]) {
+                return limpiarSigla(config.prefijosSeccion[sec]);
+            }
+            return generarPrefijoSeccionAuto(sec);
+        }
+
+        function obtenerSiglaGrupo(grp) {
+            if(config.prefijos && config.prefijos[grp]) {
+                return limpiarSigla(config.prefijos[grp]);
+            }
+            return limpiarSigla(grp.substring(0, 3));
+        }
+
+        function obtenerPrefijoCompuesto(grp, sec) {
+            const s = obtenerSiglaSeccion(sec);
+            const g = obtenerSiglaGrupo(grp);
+            if(s && g) return `${s}-${g}-`;
+            if(g) return `${g}-`;
+            return "";
+        }
+
+        function sugerirPrefijoSeccionInput() {
+            if(editSecNom) return; // Si está editando, no pisar manualmente a menos que lo cambie el usuario
+            const nom = document.getElementById('nuevaSeccion').value;
+            document.getElementById('nuevaSeccionPrefijo').value = generarPrefijoSeccionAuto(nom);
+        }
+
         function deducirCamposPorDefecto(nomGrupo) {
             const g = nomGrupo.toLowerCase();
             if(g.includes('extintor')) return ['capacidad', 'serie', 'vencimiento', 'vencimientoPH'];
@@ -589,8 +644,18 @@
             }
         });
 
+        // --- V6.22: VALIDACIÓN Y MIGRACIÓN AUTOMÁTICA DE EQUIPOS EXISTENTES AL FORMATO SEC-GRP-NUM ---
         function validarEstructuraTimestamps() {
             if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
+            if(!config.prefijosSeccion) { config.prefijosSeccion = {}; }
+            (config.secciones || []).forEach(sec => {
+                if(!config.prefijosSeccion[sec]) {
+                    config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
+                } else {
+                    config.prefijosSeccion[sec] = limpiarSigla(config.prefijosSeccion[sec]);
+                }
+            });
+
             if(!config.camposGrupo) { config.camposGrupo = {}; }
             Object.keys(config.grupos).forEach(g => {
                 if(g !== 'Todos' && !Array.isArray(config.camposGrupo[g])) {
@@ -601,7 +666,54 @@
             config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
             if(!config.timestamps) { config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; Object.keys(config.equipos).forEach(k => config.timestamps.equipos[k] = 1); config.usuarios.forEach(u => config.timestamps.usuarios[u.id] = 1); Object.keys(config.grupos).forEach(k => config.timestamps.grupos[k] = 1); config.secciones.forEach(k => config.timestamps.secciones[k] = 1); }
             if(!config.deleted) { config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; }
+
+            // Migración automática de IDs antiguos (ej. EXT-001 -> BAL-EXT-001) sin perder ningún equipo
+            migrarEquiposAPrefijoCompuesto();
+
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
+        }
+
+        function migrarEquiposAPrefijoCompuesto() {
+            if(!config.equipos) return;
+            const idsActuales = Object.keys(config.equipos);
+            const nowTs = Date.now();
+
+            idsActuales.forEach(oldId => {
+                const eq = config.equipos[oldId];
+                if(!eq || !eq.seccion || !eq.grupo) return;
+
+                if(!config.prefijosSeccion[eq.seccion]) {
+                    config.prefijosSeccion[eq.seccion] = generarPrefijoSeccionAuto(eq.seccion);
+                }
+                const prefCompuesto = obtenerPrefijoCompuesto(eq.grupo, eq.seccion); // Ej. "BAL-EXT-"
+                if(!prefCompuesto) return;
+
+                // Si el ID ya comienza con el prefijo compuesto correcto (ej. BAL-EXT-001), no se toca
+                if(oldId.toUpperCase().startsWith(prefCompuesto)) return;
+
+                // Extraer los dígitos finales del equipo (ej. de "EXT-001" o "PA-01" -> "001" o "01")
+                const match = oldId.match(/(\d+)$/);
+                if(match) {
+                    const numStr = match[1];
+                    const newId = prefCompuesto + numStr;
+
+                    if(newId !== oldId) {
+                        // Si el nuevo ID aún no existe, migrar el equipo conservando todos sus datos
+                        if(!config.equipos[newId]) {
+                            config.equipos[newId] = eq;
+                        }
+                        delete config.equipos[oldId];
+                        config.timestamps.equipos[newId] = nowTs + 1;
+                        config.deleted.equipos[oldId] = nowTs;
+
+                        // Migrar también cualquier falla pendiente asociada a ese equipo
+                        if(config.fallas && config.fallas[oldId]) {
+                            config.fallas[newId] = config.fallas[oldId];
+                            delete config.fallas[oldId];
+                        }
+                    }
+                }
+            });
         }
 
         // --- MOTOR BIOMÉTRICO (PASSKEYS RESIDENTES Y EXTRACCIÓN DE RAW-ID) ---
@@ -705,7 +817,7 @@
             
             const secActual = document.getElementById('seccionEquipo') ? document.getElementById('seccionEquipo').value : "";
             if(secActual && secActual !== "") {
-                const nombreLimpio = secActual.split(" (")[0];
+                const nombreLimpio = secActual.split(" |")[0].split(" (")[0];
                 sel.value = nombreLimpio;
             }
             
@@ -779,9 +891,23 @@
             if(!config.timestamps) config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!config.deleted) config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
             if(!newCfg.timestamps) newCfg.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!newCfg.deleted) newCfg.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
             if(!config.camposGrupo) config.camposGrupo = {};
+            if(!config.prefijosSeccion) config.prefijosSeccion = {};
 
-            Object.keys(newCfg.equipos || {}).forEach(id => { let tsNew = newCfg.timestamps.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; let tsDel = config.deleted.equipos[id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.equipos[id] = newCfg.equipos[id]; config.timestamps.equipos[id] = tsNew; delete config.deleted.equipos[id]; } });
-            Object.keys(newCfg.deleted.equipos || {}).forEach(id => { let tsDelNew = newCfg.deleted.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; if(tsDelNew > tsOld) { delete config.equipos[id]; config.deleted.equipos[id] = tsDelNew; } });
+            (newCfg.secciones || []).forEach(sec => { 
+                let tsNew = newCfg.timestamps.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; let tsDel = config.deleted.secciones[sec] || 0; 
+                if(tsNew > tsOld && tsNew > tsDel) { 
+                    if(!config.secciones.includes(sec)) config.secciones.push(sec); 
+                    if(newCfg.prefijosSeccion && newCfg.prefijosSeccion[sec]) {
+                        config.prefijosSeccion[sec] = newCfg.prefijosSeccion[sec];
+                    } else if(!config.prefijosSeccion[sec]) {
+                        config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
+                    }
+                    config.timestamps.secciones[sec] = tsNew; 
+                    delete config.deleted.secciones[sec]; 
+                } 
+            });
+            Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { let tsDelNew = newCfg.deleted.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; if(tsDelNew > tsOld) { config.secciones = config.secciones.filter(s => s !== sec); delete config.prefijosSeccion[sec]; config.deleted.secciones[sec] = tsDelNew; } });
+
             Object.keys(newCfg.grupos || {}).forEach(nom => { 
                 if(nom === 'Todos') return; 
                 let tsNew = newCfg.timestamps.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; let tsDel = config.deleted.grupos[nom] || 0; 
@@ -794,10 +920,15 @@
                 } 
             });
             Object.keys(newCfg.deleted.grupos || {}).forEach(nom => { let tsDelNew = newCfg.deleted.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; if(tsDelNew > tsOld) { delete config.grupos[nom]; delete config.prefijos[nom]; delete config.camposGrupo[nom]; config.deleted.grupos[nom] = tsDelNew; } });
-            (newCfg.secciones || []).forEach(sec => { let tsNew = newCfg.timestamps.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; let tsDel = config.deleted.secciones[sec] || 0; if(tsNew > tsOld && tsNew > tsDel) { if(!config.secciones.includes(sec)) config.secciones.push(sec); config.timestamps.secciones[sec] = tsNew; delete config.deleted.secciones[sec]; } });
-            Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { let tsDelNew = newCfg.deleted.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; if(tsDelNew > tsOld) { config.secciones = config.secciones.filter(s => s !== sec); config.deleted.secciones[sec] = tsDelNew; } });
+
+            Object.keys(newCfg.equipos || {}).forEach(id => { let tsNew = newCfg.timestamps.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; let tsDel = config.deleted.equipos[id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.equipos[id] = newCfg.equipos[id]; config.timestamps.equipos[id] = tsNew; delete config.deleted.equipos[id]; } });
+            Object.keys(newCfg.deleted.equipos || {}).forEach(id => { let tsDelNew = newCfg.deleted.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; if(tsDelNew > tsOld) { delete config.equipos[id]; config.deleted.equipos[id] = tsDelNew; } });
+
             (newCfg.usuarios || []).forEach(uNew => { let tsNew = newCfg.timestamps.usuarios[uNew.id] || 0; let tsOld = config.timestamps.usuarios[uNew.id] || 0; let tsDel = config.deleted.usuarios[uNew.id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.usuarios = config.usuarios.filter(u => u.id !== uNew.id); config.usuarios.push(uNew); config.timestamps.usuarios[uNew.id] = tsNew; delete config.deleted.usuarios[uNew.id]; } });
             Object.keys(newCfg.deleted.usuarios || {}).forEach(id => { let tsDelNew = newCfg.deleted.usuarios[id] || 0; let tsOld = config.timestamps.usuarios[id] || 0; if(tsDelNew > tsOld) { config.usuarios = config.usuarios.filter(u => u.id !== parseInt(id)); config.deleted.usuarios[id] = tsDelNew; } });
+
+            // Asegurar que cualquier equipo recibido sin prefijo de sección sea normalizado
+            migrarEquiposAPrefijoCompuesto();
 
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert("✅ Fusión Inteligente completada. Datos unificados."); location.reload();
         }
@@ -815,7 +946,8 @@
             const pin = document.getElementById('initAdminPin').value.trim(); 
             if(!nom || !pin) return alert("Faltan datos."); 
             config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); 
-            config.secciones = ["Silos", "Báscula", "Laboratorio", "Calderas"]; 
+            config.secciones = ["Agrochaco", "LabFil", "Balanceados", "Balanceados Viejo"]; 
+            config.prefijosSeccion = { "Agrochaco": "AGR", "LabFil": "LAB", "Balanceados": "BAL", "Balanceados Viejo": "BAV" };
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; 
             config.camposGrupo = {
                 "Combate Extintores": ['capacidad', 'serie', 'vencimiento', 'vencimientoPH'],
@@ -905,7 +1037,6 @@
             if(html5QrcodeScanner && vista !== 'inspeccion') html5QrcodeScanner.stop().catch(e=>{}); 
             if(vista === 'turno') actualizarDashboard(); 
             if(vista === 'inspeccion') {
-                // Si había un equipo cargado en pantalla y el Admin modificó parámetros en Config, refrescar su formulario
                 const currentId = document.getElementById('idEquipo').value;
                 if(currentId && config.equipos[currentId]) {
                     renderFormularioControlInspeccion(currentId);
@@ -913,7 +1044,6 @@
             }
         }
 
-        // --- V6.21: FIX CONTADOR DE VENCIDOS EN DASHBOARD DE TURNO ---
         function actualizarDashboard() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); let ok = 0, fallas = 0, vencidos = 0;
             db.forEach(r => { 
@@ -939,7 +1069,7 @@
             const selS = document.getElementById('qrSeccion'); 
             const prevSec = selS ? selS.value : '';
             selS.innerHTML = ''; 
-            config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s}</option>`); 
+            config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s} [${obtenerSiglaSeccion(s)}]</option>`); 
             if(prevSec && config.secciones.includes(prevSec)) selS.value = prevSec;
 
             const selQ = document.getElementById('qrGrupo'); 
@@ -956,13 +1086,13 @@
             renderListas(); 
         }
 
-        // Autocalcula el próximo número correlativo libre de un grupo
-        function calcularSiguienteCorrelativo(grupo) {
-            const prefijo = (config.prefijos[grupo] || '').toUpperCase();
+        // --- V6.22: CORRELATIVO INDEPENDIENTE POR SECCIÓN + GRUPO ---
+        function calcularSiguienteCorrelativo(grupo, seccion) {
             let maxNum = 0;
             let padLen = 3;
             Object.keys(config.equipos).forEach(id => {
-                if(config.equipos[id].grupo === grupo) {
+                const eq = config.equipos[id];
+                if(eq && eq.grupo === grupo && eq.seccion === seccion) {
                     const match = id.match(/^(.*?)(\d+)$/);
                     if(match) {
                         const num = parseInt(match[2], 10);
@@ -976,30 +1106,30 @@
             return String(maxNum + 1).padStart(padLen, '0');
         }
 
-        function alCambiarGrupoQR() {
+        function alCambiarGrupoOSeccionQR() {
             actualizarPrefijoUI();
             if(!editQRId) {
                 const grpSelect = document.getElementById('qrGrupo');
-                if(grpSelect && grpSelect.value) {
-                    document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grpSelect.value);
+                const secSelect = document.getElementById('qrSeccion');
+                if(grpSelect && grpSelect.value && secSelect && secSelect.value) {
+                    document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grpSelect.value, secSelect.value);
                 }
             }
         }
 
-        // --- V6.21: ADAPTACIÓN SUAVE DE LA FICHA MAESTRA SEGÚN EL GRUPO ---
         function actualizarPrefijoUI() { 
             const grpSelect = document.getElementById('qrGrupo'); 
+            const secSelect = document.getElementById('qrSeccion');
             const prefijoInput = document.getElementById('qrPrefijo'); 
             if(!grpSelect || !grpSelect.value) return;
 
             const grp = grpSelect.value;
-            prefijoInput.value = config.prefijos[grp] || ''; 
+            const sec = secSelect ? secSelect.value : '';
+            prefijoInput.value = obtenerPrefijoCompuesto(grp, sec); 
 
-            // Obtener qué campos están activos para este grupo
             const activos = obtenerCamposActivosGrupo(grp);
             const gLower = grp.toLowerCase();
 
-            // Adaptar etiquetas contextuales sin mover el layout
             const lblTipo = document.getElementById('lblQrTipo');
             const inpTipo = document.getElementById('qrTipo');
             if(gLower.includes('extintor')) {
@@ -1016,7 +1146,6 @@
                 inpTipo.placeholder = 'Ej. Descripción principal del equipo o punto';
             }
 
-            // Mapa de los 5 campos opcionales de la Lista Maestra
             const mapaCampos = [
                 { key: 'capacidad', wrap: 'wrapQrCapacidad', input: 'qrCapacidad', lock: 'lockCapacidad' },
                 { key: 'serie', wrap: 'wrapQrSerie', input: 'qrSerie', lock: 'lockSerie' },
@@ -1043,15 +1172,14 @@
                 }
             });
 
-            // Si estamos creando (no editando) y el campo número está vacío, sugerir el siguiente
-            if(!editQRId && !document.getElementById('qrNumero').value) {
-                document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grp);
+            if(!editQRId && !document.getElementById('qrNumero').value && sec) {
+                document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grp, sec);
             }
         }
 
         function cargarEdicionGrupo(nom) { 
             document.getElementById('nuevoGrupoNom').value = nom; 
-            document.getElementById('nuevoGrupoPrefijo').value = config.prefijos[nom] || ''; 
+            document.getElementById('nuevoGrupoPrefijo').value = obtenerSiglaGrupo(nom); 
             document.getElementById('nuevoGrupoParams').value = config.grupos[nom].join(', '); 
             
             const activos = obtenerCamposActivosGrupo(nom);
@@ -1080,9 +1208,10 @@
 
         function guardarGrupo() { 
             const nom = document.getElementById('nuevoGrupoNom').value.trim(); 
-            const pref = document.getElementById('nuevoGrupoPrefijo').value.trim().toUpperCase(); 
+            const prefClean = limpiarSigla(document.getElementById('nuevoGrupoPrefijo').value); 
+            const pref = prefClean ? prefClean + '-' : '';
             const paramsStr = document.getElementById('nuevoGrupoParams').value.trim(); 
-            if(!nom || !paramsStr || !pref) return alert("Faltan datos (Nombre, Prefijo y Puntos de Control son obligatorios)."); 
+            if(!nom || !paramsStr || !prefClean) return alert("Faltan datos (Nombre, Prefijo y Puntos de Control son obligatorios)."); 
             
             const nuevosParams = paramsStr.split(',').map(s => s.trim()).filter(s => s !== ""); 
             const camposSeleccionados = Array.from(document.querySelectorAll('.chk-campo-inv:checked')).map(cb => cb.value);
@@ -1090,7 +1219,6 @@
 
             if(editGrupoNom) { 
                 if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nombre."); 
-                // Actualizar equipos asociados y sellar timestamp para sincronización
                 for(let key in config.equipos) { 
                     if(config.equipos[key].grupo === editGrupoNom) {
                         config.equipos[key].grupo = nom; 
@@ -1118,6 +1246,8 @@
             config.prefijos[nom] = pref; 
             config.camposGrupo[nom] = camposSeleccionados;
             config.timestamps.grupos[nom] = nowTs; 
+
+            migrarEquiposAPrefijoCompuesto();
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
             cancelarEdicionGrupo(); 
             poblarAdmin(); 
@@ -1190,15 +1320,38 @@
         }
         
         function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); config.deleted.usuarios[id] = Date.now(); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
-        function cargarEdicionSec(sec) { document.getElementById('nuevaSeccion').value = sec; editSecNom = sec; document.getElementById('btnCancelSec').classList.remove('hidden'); const btn = document.getElementById('btnGuardarSec'); btn.innerText = '💾'; btn.classList.replace('btn-success', 'btn-info'); }
-        function cancelarEdicionSec() { editSecNom = null; document.getElementById('nuevaSeccion').value = ''; document.getElementById('btnCancelSec').classList.add('hidden'); const btn = document.getElementById('btnGuardarSec'); btn.innerText = '+ Añadir'; btn.classList.replace('btn-info', 'btn-success'); }
+        
+        function cargarEdicionSec(sec) { 
+            document.getElementById('nuevaSeccion').value = sec; 
+            document.getElementById('nuevaSeccionPrefijo').value = obtenerSiglaSeccion(sec);
+            editSecNom = sec; 
+            document.getElementById('btnCancelSec').classList.remove('hidden'); 
+            const btn = document.getElementById('btnGuardarSec'); 
+            btn.innerText = '💾 Actualizar Sección'; 
+            btn.classList.replace('btn-success', 'btn-info'); 
+        }
+
+        function cancelarEdicionSec() { 
+            editSecNom = null; 
+            document.getElementById('nuevaSeccion').value = ''; 
+            document.getElementById('nuevaSeccionPrefijo').value = '';
+            document.getElementById('btnCancelSec').classList.add('hidden'); 
+            const btn = document.getElementById('btnGuardarSec'); 
+            btn.innerText = '+ Guardar Sección'; 
+            btn.classList.replace('btn-info', 'btn-success'); 
+        }
         
         function guardarSeccion() { 
             const sec = document.getElementById('nuevaSeccion').value.trim(); 
-            if(!sec) return; 
+            let sigla = limpiarSigla(document.getElementById('nuevaSeccionPrefijo').value);
+            if(!sec) return alert("Ingrese el nombre de la sección."); 
+            if(!sigla) sigla = generarPrefijoSeccionAuto(sec);
+
             const nowTs = Date.now();
+            if(!config.prefijosSeccion) config.prefijosSeccion = {};
+
             if(editSecNom) { 
-                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe."); 
+                if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe esa sección."); 
                 for(let key in config.equipos) { 
                     if(config.equipos[key].seccion === editSecNom) {
                         config.equipos[key].seccion = sec; 
@@ -1206,26 +1359,42 @@
                     }
                 } 
                 config.secciones = config.secciones.map(s => s === editSecNom ? sec : s); 
-                if(sec !== editSecNom) config.deleted.secciones[editSecNom] = nowTs; 
+                if(sec !== editSecNom) {
+                    delete config.prefijosSeccion[editSecNom];
+                    config.deleted.secciones[editSecNom] = nowTs; 
+                }
             } else { 
-                if(config.secciones.includes(sec)) return; 
+                if(config.secciones.includes(sec)) return alert("La sección ya existe."); 
                 config.secciones.push(sec); 
             } 
+            config.prefijosSeccion[sec] = sigla;
             config.timestamps.secciones[sec] = nowTs; 
+
+            // Actualizar prefijos de equipos si cambió la sigla de la sección
+            migrarEquiposAPrefijoCompuesto();
+
             localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
             cancelarEdicionSec(); 
             poblarAdmin(); 
         }
 
-        function borrarSeccion(sec) { if(confirm("¿Borrar?")) { config.secciones = config.secciones.filter(s=>s!==sec); config.deleted.secciones[sec] = Date.now(); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarSeccion(sec) { 
+            if(confirm(`¿Borrar sección ${sec}?`)) { 
+                config.secciones = config.secciones.filter(s=>s!==sec); 
+                if(config.prefijosSeccion) delete config.prefijosSeccion[sec];
+                config.deleted.secciones[sec] = Date.now(); 
+                localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+                poblarAdmin(); 
+            } 
+        }
 
-        // --- V6.21: PLANTILLA Y CARGA MASIVA DE LA LISTA MAESTRA ---
+        // --- PLANTILLA Y CARGA MASIVA DE LA LISTA MAESTRA CON PREFIJO COMPUESTO ---
         function descargarPlantillaBulk() {
             const grp = document.getElementById('qrGrupo').value || "Combate Extintores";
-            const pref = config.prefijos[grp] || "EQ-";
-            const secEj = config.secciones[0] || "Silos";
+            const secEj = document.getElementById('qrSeccion').value || config.secciones[0] || "Balanceados";
+            const prefComp = obtenerPrefijoCompuesto(grp, secEj);
             let csv = "ID_Equipo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento_AAAA_MM;Vencimiento_PH_AAAA_MM;Responsable_Notas\r\n";
-            csv += `${pref}001;${secEj};Entrada Principal;PQS ABC;5 kg;Melisam;2027-06;2030-06;Seguridad Industrial\r\n`;
+            csv += `${prefComp}001;${secEj};Entrada Principal;PQS ABC;10 kg;Melisam;2027-02;2030-02;Seguridad Industrial\r\n`;
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -1243,23 +1412,20 @@
 
             lines.forEach((l, idx) => { 
                 if(!l.trim()) return;
-                // Ignorar fila de encabezados si el usuario la pegó
                 if(idx === 0 && l.toLowerCase().includes('id_equipo')) return;
 
                 const parts = l.includes('\t') ? l.split('\t') : l.split(';');
                 if(parts.length >= 3) {
-                    let id = parts[0].trim().toUpperCase();
-                    if(!id) return;
+                    let rawId = parts[0].trim().toUpperCase();
+                    if(!rawId) return;
 
                     let sec, ubi, tipo, cap = '', serie = '', venc = '', vencPH = '', resp = '';
 
                     if(parts.length === 3) {
-                        // Formato corto clásico: ID | Tipo | Sección
                         tipo = parts[1].trim();
                         sec = parts[2].trim();
                         ubi = 'S/D';
                     } else {
-                        // Formato Lista Maestra: ID | Seccion | Ubicacion | Tipo | Capacidad | Serie | Vencimiento | Venc_PH | Responsable
                         sec = (parts[1] || '').trim();
                         ubi = (parts[2] || 'S/D').trim();
                         tipo = (parts[3] || '').trim();
@@ -1270,12 +1436,17 @@
                         resp = (parts[8] || '').trim();
                     }
 
-                    if(id && tipo && sec) {
+                    if(rawId && tipo && sec) {
                         if(!config.secciones.includes(sec)) {
                             config.secciones.push(sec);
+                            config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
                             config.timestamps.secciones[sec] = nowTs;
                         }
-                        config.equipos[id] = { 
+                        const prefComp = obtenerPrefijoCompuesto(grp, sec);
+                        const matchDigits = rawId.match(/(\d+)$/);
+                        const finalId = rawId.startsWith(prefComp) ? rawId : (matchDigits ? prefComp + matchDigits[1].padStart(3, '0') : prefComp + rawId);
+
+                        config.equipos[finalId] = { 
                             tipo: tipo, 
                             seccion: sec, 
                             grupo: grp, 
@@ -1286,7 +1457,7 @@
                             vencimientoPH: vencPH,
                             responsable: resp
                         }; 
-                        config.timestamps.equipos[id] = nowTs; 
+                        config.timestamps.equipos[finalId] = nowTs; 
                         agregados++; 
                     }
                 }
@@ -1307,10 +1478,11 @@
             const eq = config.equipos[id]; 
             if(!eq) return; 
             editQRId = id;
+            document.getElementById('qrSeccion').value = eq.seccion; 
             document.getElementById('qrGrupo').value = eq.grupo; 
             actualizarPrefijoUI();
 
-            const prefijoOficial = config.prefijos[eq.grupo] || ''; 
+            const prefijoOficial = obtenerPrefijoCompuesto(eq.grupo, eq.seccion); 
             const match = id.match(/^(.*?)(\d+)$/); 
             if (match) { 
                 document.getElementById('qrPrefijo').value = prefijoOficial; 
@@ -1319,7 +1491,6 @@
                 document.getElementById('qrPrefijo').value = prefijoOficial; 
                 document.getElementById('qrNumero').value = ''; 
             } 
-            document.getElementById('qrSeccion').value = eq.seccion; 
             document.getElementById('qrUbicacion').value = eq.ubicacion || ''; 
             document.getElementById('qrTipo').value = eq.tipo || ''; 
             document.getElementById('qrCapacidad').value = eq.capacidad || '';
@@ -1347,18 +1518,19 @@
             const btn = document.getElementById('btnGuardarQR'); 
             btn.innerText = 'Guardar Equipo'; 
             btn.classList.replace('btn-info', 'btn-warning'); 
-            alCambiarGrupoQR(); 
+            alCambiarGrupoOSeccionQR(); 
         }
         
-        // --- GUARDADO EN FICHA MAESTRA CON PERSISTENCIA DE GRUPO, SECCIÓN Y CORRELATIVO (+1) ---
+        // --- GUARDADO EN FICHA MAESTRA CON PREFIJO COMPUESTO SEC-GRP-NUM ---
         function guardarQR() { 
-            const prefijo = document.getElementById('qrPrefijo').value.trim().toUpperCase(); 
-            const numero = document.getElementById('qrNumero').value.trim(); 
+            const sec = document.getElementById('qrSeccion').value; 
+            const grupoElegido = document.getElementById('qrGrupo').value;
+            const prefijo = obtenerPrefijoCompuesto(grupoElegido, sec);
+            const numeroRaw = document.getElementById('qrNumero').value.trim(); 
+            const numero = numeroRaw.padStart(Math.max(3, numeroRaw.length), '0');
             const id = prefijo + numero; 
             const tipo = document.getElementById('qrTipo').value.trim(); 
             const ubi = document.getElementById('qrUbicacion').value.trim(); 
-            const sec = document.getElementById('qrSeccion').value; 
-            const grupoElegido = document.getElementById('qrGrupo').value;
 
             const cap = document.getElementById('qrCapacidad').disabled ? '' : document.getElementById('qrCapacidad').value.trim();
             const serie = document.getElementById('qrSerie').disabled ? '' : document.getElementById('qrSerie').value.trim();
@@ -1366,10 +1538,14 @@
             const vencimientoPH = document.getElementById('qrVencimientoPH').disabled ? '' : document.getElementById('qrVencimientoPH').value;
             const responsable = document.getElementById('qrResponsable').disabled ? '' : document.getElementById('qrResponsable').value.trim();
             
-            if(!numero || !tipo || !ubi || !sec) return alert("⛔ BLOQUEO: Número, Sección, Ubicación y Tipo/Descripción son campos OBLIGATORIOS."); 
-            if(editQRId && id !== editQRId) { if(config.equipos[id]) return alert("ID correlativo en uso."); config.deleted.equipos[editQRId] = Date.now(); delete config.equipos[editQRId]; } 
+            if(!numeroRaw || !tipo || !ubi || !sec) return alert("⛔ BLOQUEO: Sección, Número, Ubicación y Tipo/Descripción son campos OBLIGATORIOS."); 
+            if(editQRId && id !== editQRId) { 
+                if(config.equipos[id]) return alert(`El código ${id} ya está en uso en la sección ${sec}.`); 
+                config.deleted.equipos[editQRId] = Date.now(); 
+                delete config.equipos[editQRId]; 
+            } 
             if(!editQRId && config.equipos[id]) {
-                if(!confirm(`⚠️ El equipo ${id} ya existe en el inventario. ¿Desea sobrescribir su ficha técnica?`)) return;
+                if(!confirm(`⚠️ El equipo ${id} ya existe en la sección ${sec}. ¿Desea sobrescribir su ficha técnica?`)) return;
             }
 
             config.equipos[id] = { 
@@ -1397,10 +1573,10 @@
             // 1. Refrescar listas
             poblarAdmin(); 
             
-            // 2. Re-inyectar datos memorizados en la caja fuerte (Grupo, Sección y Correlativo +1)
+            // 2. Re-inyectar datos memorizados (Sección, Grupo y Correlativo +1 de esa sección)
+            document.getElementById('qrSeccion').value = sec;
             document.getElementById('qrGrupo').value = grupoElegido;
             actualizarPrefijoUI();
-            document.getElementById('qrSeccion').value = sec;
             document.getElementById('qrNumero').value = nextNumStr; 
             
             // 3. Limpiar campos variables para el siguiente ítem
@@ -1441,12 +1617,16 @@
             Object.keys(config.grupos).forEach(g => { 
                 if(g!=='Todos') {
                     const camposAct = obtenerCamposActivosGrupo(g);
-                    lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Prefijo: ${config.prefijos[g] || 'N/A'}]<br><small class="text-muted"><b>Control:</b> ${config.grupos[g].join(', ')}</small><br><small class="text-muted" style="font-size:11px;"><b>Ficha Alta:</b> ${camposAct.length ? camposAct.join(', ') : 'Básica'}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; 
+                    lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Sigla: ${obtenerSiglaGrupo(g)}]<br><small class="text-muted"><b>Control:</b> ${config.grupos[g].join(', ')}</small><br><small class="text-muted" style="font-size:11px;"><b>Ficha Alta:</b> ${camposAct.length ? camposAct.join(', ') : 'Básica'}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; 
                 }
             });
             
             const lU = document.getElementById('listaUsuarios'); lU.innerHTML = ''; config.usuarios.forEach(u => lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(A)':''}<br><small class="text-muted">[${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`);
-            const lS = document.getElementById('listaSecciones'); lS.innerHTML = ''; config.secciones.forEach(s => lS.innerHTML += `<div class="list-item"><span>${s}</span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`);
+            
+            const lS = document.getElementById('listaSecciones'); lS.innerHTML = ''; 
+            config.secciones.forEach(s => {
+                lS.innerHTML += `<div class="list-item"><span><b>${s}</b> <small class="text-muted">[Prefijo: ${obtenerSiglaSeccion(s)}-]</small></span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`;
+            });
             
             const lQ = document.getElementById('listaEquipos'); 
             if(lQ) { 
@@ -1481,11 +1661,8 @@
                         let itemsHTML = '';
                         let secVencidosCount = 0;
 
-                        // Ordenar equipos numéricamente dentro de cada sección
                         eqPorSeccion[sec].sort((a, b) => sortNatural(a.id, b.id)).forEach(eq => {
-                            let isVencido = false; 
                             if((eq.vencimiento && eq.vencimiento <= currMonth) || (eq.vencimientoPH && eq.vencimientoPH <= currMonth)) { 
-                                isVencido = true; 
                                 secVencidosCount++; 
                                 totalVencidos++;
                             } 
@@ -1507,7 +1684,7 @@
                         accordionContentHTML += `
                             <div class="sub-accordion ${activeSecClass}">
                                 <div class="sub-grupo-header" onclick="this.parentElement.classList.toggle('active')">
-                                    <span>📍 ${sec} (${eqPorSeccion[sec].length})${secBadge}</span>
+                                    <span>📍 ${sec} [${obtenerSiglaSeccion(sec)}] (${eqPorSeccion[sec].length})${secBadge}</span>
                                     <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}', '${sec}')">🖨️ QRs</button>
                                 </div>
                                 <div class="sub-accordion-content">
@@ -1565,7 +1742,6 @@
             a.click();
         }
 
-        // --- V6.21: COMPRESIÓN FOTOGRÁFICA OPTIMIZADA (640PX) PARA EVITAR SATURAR MEMORIA ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -1602,12 +1778,12 @@
 
         function agregarTag(texto) { let obs = document.getElementById('observaciones'); if(obs.value.trim() === '') obs.value = texto; else obs.value += ", " + texto; guardarBorrador(); obs.focus(); }
         
-        // --- V6.21: EMBUDO DE 3 PASOS EN CONTINGENCIA (SECCIÓN -> GRUPO -> EQUIPO EN ORDEN NUMÉRICO) ---
+        // --- EMBUDO DE 3 PASOS EN CONTINGENCIA ---
         function abrirModalContingencia() {
             esCargaManual = true;
             const selSec = document.getElementById('contingenciaSec');
             selSec.innerHTML = '<option value="">Seleccione Sección...</option>';
-            config.secciones.slice().sort(sortNatural).forEach(s => selSec.innerHTML += `<option value="${s}">${s}</option>`);
+            config.secciones.slice().sort(sortNatural).forEach(s => selSec.innerHTML += `<option value="${s}">${s} [${obtenerSiglaSeccion(s)}]</option>`);
             
             const selGrp = document.getElementById('contingenciaGrp');
             selGrp.innerHTML = '<option value="">Primero seleccione una sección</option>';
@@ -1634,7 +1810,6 @@
                 return;
             }
 
-            // Buscar qué grupos tienen equipos en esta sección y están permitidos para el usuario
             const gruposEnSeccion = new Set();
             Object.keys(config.equipos).forEach(id => {
                 const eq = config.equipos[id];
@@ -1657,7 +1832,6 @@
             });
             selGrp.disabled = false;
 
-            // Si solo hay un grupo en esa sección, autoseleccionarlo y cargar los equipos directo
             if(listaGrupos.length === 1) {
                 selGrp.value = listaGrupos[0];
             }
@@ -1676,7 +1850,6 @@
             
             selEq.innerHTML = '<option value="">Seleccione el Equipo...</option>';
             
-            // Filtrar y ordenar numéricamente (EXT-001, EXT-002, EXT-010...)
             const idsFiltrados = Object.keys(config.equipos).filter(id => {
                 const eq = config.equipos[id];
                 const matchSec = eq.seccion === sec;
@@ -1717,7 +1890,6 @@
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Permití cámara."));
         }
         
-        // --- V6.21: ACTUALIZACIÓN DINÁMICA DEL FORMULARIO DE CONTROL POSTERIOR ---
         function renderFormularioControlInspeccion(id) {
             const eq = config.equipos[id];
             if(!eq) return;
@@ -1734,7 +1906,6 @@
             
             const params = config.grupos[eq.grupo] || [];
 
-            // Generar etiquetas rápidas dinámicas según el grupo y sus puntos de control reales
             let baseTags = smartTagsMap[eq.grupo] || [];
             if(baseTags.length === 0) {
                 baseTags = params.map(p => `Falla ${p}`).concat(smartTagsMap['default']);
@@ -1771,8 +1942,25 @@
             container.innerHTML = warningHTML + html;
         }
 
+        // --- V6.22: LECTOR CON RESOLUCIÓN INTELIGENTE DE ETIQUETAS QR ANTIGUAS ---
         function procesarEscaneo(id) {
             id = id.trim().toUpperCase(); 
+
+            // Si escanean una etiqueta vieja (ej. EXT-001 en vez de BAL-EXT-001), buscar coincidencia
+            if(!config.equipos[id]) {
+                const posibles = Object.keys(config.equipos).filter(k => k.endsWith('-' + id));
+                if(posibles.length === 1) {
+                    id = posibles[0];
+                } else if(posibles.length > 1) {
+                    const opcionesTexto = posibles.map((k, idx) => `${idx + 1}: ${k} (${config.equipos[k].seccion})`).join('\n');
+                    const eleccion = prompt(`Etiqueta sin prefijo de sección (${id}).\nIndique el número de la sección donde se encuentra:\n\n${opcionesTexto}`, "1");
+                    const idxElegido = parseInt(eleccion, 10) - 1;
+                    if(!isNaN(idxElegido) && posibles[idxElegido]) {
+                        id = posibles[idxElegido];
+                    }
+                }
+            }
+
             document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id]; 
@@ -1828,7 +2016,7 @@
             if(!id) return alert("Escanee un QR o seleccione un equipo."); 
             
             const btnSave = document.getElementById('btnGuardarControl');
-            if(btnSave.disabled) return; // Evita doble clic accidental
+            if(btnSave.disabled) return;
 
             const eq = config.equipos[id]; 
             const params = config.grupos[eq.grupo] || []; 
