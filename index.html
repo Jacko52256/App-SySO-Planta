@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.24 - Cloud Industrial</title>
+    <title>Gestión SySO V6.25 - Industrial Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -14,42 +14,45 @@
     <link rel="manifest" href="manifest.json">
     <style>
         :root { 
-            --bg: #f4f6f9; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; 
-            --success: #28a745; --text: #333; --text-muted: #555; --edit: #17a2b8; 
-            --card-bg: #fff; --input-bg: #fafafa; --border: #ccc;
+            --bg: #eef2f6; --primary: #2F5597; --accent: #ffc107; --danger: #dc3545; 
+            --success: #28a745; --text: #2c3e50; --text-muted: #596a7a; --edit: #17a2b8; 
+            --card-bg: #ffffff; --input-bg: #f8fafc; --border: #cbd5e1;
             --warn-bg: #ffeeba; --warn-text: #856404;
             --danger-bg: #dc3545; --danger-text: #fff;
             --info-bg: #17a2b8; --info-text: #fff;
         }
         
         body.dark-mode { 
-            --bg: #000000; --text: #ffffff; --text-muted: #cccccc; --card-bg: #111111; 
-            --input-bg: #222222; --primary: #00e5ff; --border: #555555; --success: #00e676;
+            --bg: #0b0f19; --text: #f1f5f9; --text-muted: #94a3b8; --card-bg: #151c2c; 
+            --input-bg: #1e293b; --primary: #00e5ff; --border: #334155; --success: #00e676;
             --warn-bg: #4a3c00; --warn-text: #ffea00;
             --danger-bg: #660000; --danger-text: #ffaaaa;
             --info-bg: #004d40; --info-text: #18ffff;
             --edit: #00b0ff;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 85px; transition: background 0.3s, color 0.3s; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 90px; transition: background 0.3s, color 0.3s; }
         
-        .header { background: var(--primary); color: white; padding: 14px 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s; position: relative; }
+        .app-shell { width: 100%; max-width: 960px; margin: 0 auto; }
+
+        .header { background: var(--primary); color: white; padding: 14px 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.12); transition: background 0.3s; position: relative; }
         body.dark-mode .header { color: #000; }
-        .cloud-badge { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 12px; background: rgba(0,0,0,0.25); color: #fff; margin-top: 4px; font-weight: bold; }
+        .cloud-badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(0,0,0,0.25); color: #fff; margin-top: 4px; font-weight: bold; cursor: pointer; }
         body.dark-mode .cloud-badge { background: rgba(0,0,0,0.75); color: #00e676; }
 
-        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; margin: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); transition: background 0.3s; }
+        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; margin: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: background 0.3s; border: 1px solid rgba(0,0,0,0.04); }
         
         .form-group { margin-bottom: 14px; position: relative; transition: opacity 0.25s ease; }
         .form-group.campo-bloqueado { opacity: 0.38; pointer-events: none; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; transition: color 0.3s;}
-        input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: var(--input-bg); color: var(--text); }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 13.5px; transition: color 0.3s;}
+        input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background: var(--input-bg); color: var(--text); }
         input:disabled, select:disabled, input[readonly] { background: var(--input-bg); opacity:0.75; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
         
         .badge-lock { font-size: 10px; background: var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal; }
 
-        .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 10px; display: block; text-align: center;}
+        .btn { width: 100%; padding: 13px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 10px; display: block; text-align: center; transition: opacity 0.2s, transform 0.1s;}
+        .btn:active { transform: scale(0.99); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: var(--primary); color: #fff;}
         body.dark-mode .btn-primary { color: #000; }
@@ -61,12 +64,12 @@
         body.dark-mode .btn-info { color: #000; }
         .btn-dark { background: #343a40; color: #fff;}
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-camera { background: #6c757d; display:flex; align-items:center; justify-content:center; gap:10px; color:#fff; transition: background 0.3s;}
+        .btn-camera { background: #64748b; display:flex; align-items:center; justify-content:center; gap:10px; color:#fff; transition: background 0.3s;}
         .btn-camera.urgent { background: var(--danger); animation: pulse 1s infinite; border: 2px solid #fff; }
         
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.65; } 100% { opacity: 1; } }
 
-        .action-btns { display: flex; gap: 5px; }
+        .action-btns { display: flex; gap: 5px; align-items: center; }
         .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 5px; border: none; cursor: pointer; color: white; font-weight: bold; }
         .btn-s-edit { background: var(--edit); }
         .btn-s-del { background: var(--danger); }
@@ -74,33 +77,33 @@
         .text-muted { color: var(--text-muted) !important; }
         .alert-warning { background: var(--warn-bg); color: var(--warn-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; }
         .alert-danger { background: var(--danger-bg); color: var(--danger-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 14px; }
-        .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 16px; }
+        .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 15px; }
         .radar-box { background: var(--input-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--primary); }
 
         .progress-bar-container { width: 100%; background: var(--border); border-radius: 8px; overflow: hidden; margin-top: 10px; height: 12px; }
         .progress-bar-fill { height: 100%; background: var(--success); transition: width 0.4s ease; }
 
-        #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; display: none; margin-bottom: 15px; position:relative;}
+        #qr-reader { width: 100%; max-width: 450px; margin: 0 auto 15px auto; border-radius: 8px; overflow: hidden; display: none; position:relative;}
         .btn-flashlight { position:absolute; top:10px; right:10px; z-index:10; background:rgba(0,0,0,0.7); color:#fff; border:2px solid #fff; border-radius:50px; width:45px; height:45px; font-size:20px; cursor:pointer; }
         
         #qrGenerado, #qrCompartirApp { display: block; margin: 12px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border-radius: 6px; }
-        #previewBox { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed var(--border); display: none;}
+        .img-preview { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed var(--border); display: none; background: #000; }
         
         .view { display: none; }
         .view.active { display: block; }
         .hidden { display: none !important; }
         
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: var(--primary); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; transition: background 0.3s; box-shadow: 0 -2px 8px rgba(0,0,0,0.15);}
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; max-width: 960px; margin: 0 auto; background: var(--primary); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; transition: background 0.3s; box-shadow: 0 -2px 10px rgba(0,0,0,0.18);}
         .tab-btn { background: none; border: none; color: white; font-weight: bold; opacity: 0.7; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 12px; flex: 1; padding: 4px 0;}
         .tab-btn.active { opacity: 1; border-bottom: 3px solid var(--accent); padding-bottom: 4px;}
         body.dark-mode .tab-bar, body.dark-mode .tab-btn { color: #000; }
         
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); gap: 10px; }
 
         .accordion { margin-bottom: 10px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
         .accordion-header { padding: 13px 15px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         body.dark-mode .accordion-header { color: #000; }
-        .accordion-content { display: none; padding: 12px; background: var(--card-bg); }
+        .accordion-content { display: none; padding: 14px; background: var(--card-bg); }
         .accordion.active > .accordion-content { display: block; }
 
         .sub-accordion { margin-bottom: 5px; border-bottom: 1px solid var(--border); }
@@ -110,7 +113,7 @@
         .sub-accordion.active > .sub-accordion-content { display: block; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
-        .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.25s ease-out; max-height: 92vh; overflow-y: auto; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 520px; padding: 22px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); animation: popIn 0.25s ease-out; max-height: 92vh; overflow-y: auto; }
         #canvasFirma { border: 2px dashed var(--border); border-radius: 8px; width: 100%; height: 180px; background: #fff; touch-action: none; margin-bottom: 12px;}
         
         @keyframes popIn { from { transform: scale(0.92); opacity:0; } to { transform: scale(1); opacity:1; } }
@@ -124,426 +127,448 @@
         
         .btn-sos { position: fixed; bottom: 80px; right: 18px; background: #dc3545; color: white; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
-        /* Banner de Alerta S.O.S. en Vivo */
         .sos-live-banner { background: #dc3545; color: #fff; padding: 15px; text-align: center; font-weight: bold; border-bottom: 4px solid #ffc107; animation: pulse 0.8s infinite; position: sticky; top: 0; z-index: 1900; }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; text-align: center; }
-        .kpi-box { background: var(--input-bg); padding: 10px 5px; border-radius: 8px; border: 1px solid var(--border); }
-        .kpi-num { font-size: 20px; font-weight: bold; display: block; }
-        .kpi-lbl { font-size: 11px; color: var(--text-muted); }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; text-align: center; }
+        .kpi-box { background: var(--input-bg); padding: 12px 5px; border-radius: 8px; border: 1px solid var(--border); }
+        .kpi-num { font-size: 22px; font-weight: bold; display: block; }
+        .kpi-lbl { font-size: 11.5px; color: var(--text-muted); }
+
+        .form-grid-pc { display: grid; grid-template-columns: 1fr; gap: 0 15px; }
+        .filter-grid-pc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 
         .version-badge { font-size: 12px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: bold;}
+
+        /* ADAPTACIÓN AUTOMÁTICA PARA MONITORES DE PC (ESCRITORIO) */
+        @media (min-width: 768px) {
+            body { padding-top: 10px; padding-bottom: 100px; }
+            .header { max-width: 940px; margin: 0 auto 10px auto; border-radius: 12px; padding: 18px 24px; }
+            .card { padding: 24px; margin: 15px auto; }
+            .form-grid-pc { grid-template-columns: 1fr 1fr; }
+            .filter-grid-pc { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+            .tab-bar { border-radius: 12px 12px 0 0; padding: 10px 0; }
+            .tab-btn { font-size: 13.5px; flex-direction: row; justify-content: center; gap: 8px; }
+            .btn-sos { right: calc(50% - 460px); bottom: 85px; width: 62px; height: 62px; font-size: 26px; }
+            #view-login .card { max-width: 480px; margin: 18px auto; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- BANNER DE EMERGENCIA EN VIVO (SE ACTIVA AUTOMÁTICAMENTE SI ALGUIEN DISPARA UN S.O.S.) -->
+    <!-- BANNER DE EMERGENCIA EN VIVO (APAGADO INDIVIDUAL POR USUARIO) -->
     <div id="sosLiveBanner" class="sos-live-banner hidden">
-        <div id="sosLiveText" style="font-size:15px; margin-bottom:8px;"></div>
-        <div style="display:flex; gap:8px; justify-content:center;">
-            <button class="btn-small" style="background:#000; color:#fff; padding:8px 14px;" onclick="silenciarSirenaLocal()">🔇 Silenciar Mi Alarma</button>
-            <button class="btn-small" style="background:#fff; color:#dc3545; padding:8px 14px;" onclick="desactivarSOSGlobal()">✅ Emergencia Controlada</button>
-        </div>
+        <div id="sosLiveText" style="font-size:15px; margin-bottom:10px;"></div>
+        <button class="btn-small" style="background:#000; color:#fff; padding:9px 18px; font-size:13px; border:2px solid #fff;" onclick="apagarMiAlarmaSOS()">🔇 Entendido / Apagar Mi Alarma</button>
     </div>
 
     <div class="header">
-        <h2>Gestión SySO <span class="version-badge">V6.24</span></h2>
+        <h2>Gestión SySO <span class="version-badge">V6.25</span></h2>
         <p id="headerInfo" style="font-weight:bold; font-size:13px;">Sistema Industrial en Nube</p>
-        <div id="cloudStatusBadge" class="cloud-badge">☁️ Conectando a la Nube...</div>
+        <div id="cloudStatusBadge" class="cloud-badge" onclick="sincronizarTodoConNube(false)" title="Sincronización automática activa">☁️ Conectando a la Nube...</div>
     </div>
 
-    <!-- BOTÓN DE PÁNICO GLOBAL -->
-    <div id="btnSOS" class="btn-sos" onclick="abrirModalSOS()" title="Botón de Emergencia S.O.S.">🚨</div>
+    <div class="app-shell">
+        <!-- BOTÓN DE PÁNICO GLOBAL -->
+        <div id="btnSOS" class="btn-sos" onclick="abrirModalSOS()" title="Botón de Emergencia S.O.S.">🚨</div>
 
-    <!-- VISTA 0: VINCULACIÓN AUTOMÁTICA EN NUBE -->
-    <div id="view-init" class="view">
-        <div class="card" style="text-align:center;">
-            <h3 style="color:var(--primary); margin-bottom: 10px;">☁️ Conectando con la Planta</h3>
-            <p id="lblEstadoInitNube" class="text-muted" style="font-size:14px; margin-bottom:20px;">Descargando base de datos automáticamente... Aguarde un segundo.</p>
-            <button class="btn btn-primary" onclick="sincronizarTodoConNube(true)">🔄 Conectar Ahora</button>
+        <!-- VISTA 0: VINCULACIÓN AUTOMÁTICA EN NUBE -->
+        <div id="view-init" class="view">
+            <div class="card" style="text-align:center; max-width:500px; margin:20px auto;">
+                <h3 style="color:var(--primary); margin-bottom: 10px;">☁️ Conectando con la Planta</h3>
+                <p id="lblEstadoInitNube" class="text-muted" style="font-size:14px; margin-bottom:20px;">Descargando base de datos automáticamente... Aguarde un instante.</p>
+                <button class="btn btn-primary" onclick="sincronizarTodoConNube(true)">🔄 Reintentar Conexión</button>
 
-            <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--danger); text-align:left;">
-                <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro Inicial</h4>
-                <label>Super-Admin:</label><input type="text" id="initAdminName">
-                <label>PIN de Acceso:</label><input type="password" id="initAdminPin" pattern="[0-9]*" inputmode="numeric">
-                <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar Base Maestra</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- VISTA 1: LOGIN -->
-    <div id="view-login" class="view">
-        <div class="card">
-            <h3 style="margin-bottom:5px;">Ingreso de Personal</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Seleccioná tu nombre e ingresá tu PIN o huella.</p>
-            <div class="form-group">
-                <label>Nombre:</label>
-                <input type="text" id="loginInputUsuario" placeholder="Tipeá o elegí tu nombre..." autocomplete="off" onkeyup="filtrarUsuarios()" onfocus="filtrarUsuarios()">
-                <div id="dropdownUsuarios"></div>
-            </div>
-            <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric" placeholder="••••"></div>
-            <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
-            <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
-        </div>
-        
-        <div class="card" style="background-color: var(--input-bg);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span style="font-size:12px;" class="text-muted">Versión instalada: <b>V6.24 Cloud</b></span>
-                <button class="btn-small btn-primary" onclick="abrirModalCompartirApp()">📲 Compartir App</button>
-            </div>
-            <button class="btn btn-outline" style="padding:10px; font-size:14px; margin-bottom:0;" onclick="forzarActualizacion()">🔄 Actualizar Versión de la App</button>
-        </div>
-    </div>
-
-    <!-- MÓDULO 1: CONTROL (ANTES INSPECCIÓN) -->
-    <div id="view-control" class="view">
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <h3 style="color:var(--primary);">📋 Realizar Control</h3>
-                <button class="btn-small btn-dark" onclick="abrirModalContingencia()">⌨️ Elegir de Lista</button>
-            </div>
-
-            <div class="form-group">
-                <label>Código del Equipo:</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="idEquipo" placeholder="Presione Escanear QR ->" disabled style="flex:1;" data-overwrite="false">
-                    <button class="btn btn-warning" style="width:auto; padding:0 18px; margin-bottom:0;" onclick="activarQR()">📷 Escanear QR</button>
+                <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--danger); text-align:left;">
+                    <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro Inicial</h4>
+                    <label>Super-Admin:</label><input type="text" id="initAdminName">
+                    <label>PIN de Acceso:</label><input type="password" id="initAdminPin" pattern="[0-9]*" inputmode="numeric">
+                    <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar Base Maestra</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- VISTA 1: LOGIN (CON COMPARTIR APP Y ACTUALIZAR ÚNICOS) -->
+        <div id="view-login" class="view">
+            <div class="card">
+                <h3 style="margin-bottom:5px;">Ingreso de Personal</h3>
+                <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Seleccioná tu nombre e ingresá tu PIN o huella.</p>
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" id="loginInputUsuario" placeholder="Tipeá o elegí tu nombre..." autocomplete="off" onkeyup="filtrarUsuarios()" onfocus="filtrarUsuarios()">
+                    <div id="dropdownUsuarios"></div>
+                </div>
+                <div class="form-group"><label>PIN de Seguridad:</label><input type="password" id="loginPin" pattern="[0-9]*" inputmode="numeric" placeholder="••••"></div>
+                <button class="btn btn-primary" onclick="validarAcceso()">Ingresar</button>
+                <button id="btnLoginBio" class="btn btn-info hidden" style="margin-top:10px;" onclick="loginBiometrico()">👆 Ingresar con Huella / FaceID</button>
             </div>
             
-            <div id="qr-reader">
-                <button class="btn-flashlight" onclick="toggleLinterna()" title="Encender Linterna">🔦</button>
-            </div>
-            
-            <div class="form-group"><label>Sección y Equipo:</label><input type="text" id="seccionEquipo" disabled></div>
-            <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="ubicacionEquipo" disabled style="color:var(--primary);"></div>
-
-            <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
-            
-            <div id="moduloDinamico" class="hidden"></div>
-            
-            <div class="form-group" style="margin-top:15px;" id="zonaObservaciones">
-                <label>Observaciones:</label>
-                <div id="smartTagsContainer"></div>
-                <textarea id="observaciones" placeholder="Opcional si está OK. Si hay falla, descríbala o toque un botón arriba..." oninput="guardarBorrador()"></textarea>
-                <small class="text-muted" style="font-size:10px;" id="lblBorrador"></small>
-            </div>
-            
-            <div class="form-group" style="margin-top:15px; border-top:1px dashed var(--border); padding-top:15px;">
-                <label style="color:var(--danger);">📸 Foto de Evidencia</label>
-                <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria únicamente si marca Falla o si eligió el equipo sin QR.</p>
-                <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
-                <button id="btnAdjuntarFoto" class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📷 Tomar Foto</button>
-                <canvas id="canvasWatermark" style="display:none;"></canvas>
-                <img id="previewBox" src="" alt="Previsualización">
-            </div>
-
-            <button id="btnGuardarControl" class="btn btn-success" style="margin-top:15px; font-size:18px;" onclick="guardarRegistro()">✅ Guardar Control en la Nube</button>
-        </div>
-    </div>
-
-    <!-- MÓDULO 2: HISTORIAL Y REPORTES EN NUBE (REEMPLAZA EL ENVÍO MANUAL DE TURNO) -->
-    <div id="view-historial" class="view">
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="color:var(--primary);">📊 Historial de Controles</h3>
-                <button class="btn-small btn-info" onclick="sincronizarInspeccionesNube(true)">🔄 Actualizar</button>
-            </div>
-            <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Todos los controles guardados por los compañeros aparecen aquí automáticamente.</p>
-
-            <!-- Resumen numérico rápido según filtro -->
-            <div class="kpi-grid">
-                <div class="kpi-box"><span id="dashOk" class="kpi-num" style="color:var(--success)">0</span><span class="kpi-lbl">✅ En Regla</span></div>
-                <div class="kpi-box"><span id="dashFallas" class="kpi-num" style="color:var(--danger)">0</span><span class="kpi-lbl">🚨 Con Falla</span></div>
-                <div class="kpi-box"><span id="dashVencidos" class="kpi-num" style="color:var(--warn-text)">0</span><span class="kpi-lbl">⏱️ Vencidos</span></div>
-            </div>
-
-            <!-- Filtros Simples -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
-                <div>
-                    <label style="font-size:12px;">Mes:</label>
-                    <input type="month" id="filtroHistMes" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
-                </div>
-                <div>
-                    <label style="font-size:12px;">Sección:</label>
-                    <select id="filtroHistSec" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
-                        <option value="ALL">Todas</option>
-                    </select>
-                </div>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:15px;">
-                <div>
-                    <label style="font-size:12px;">Grupo:</label>
-                    <select id="filtroHistGrp" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
-                        <option value="ALL">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px;">Estado:</label>
-                    <select id="filtroHistEstado" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
-                        <option value="ALL">Todos</option>
-                        <option value="FALLA">🚨 Solo Fallas</option>
-                        <option value="VENCIDO">⏱️ Solo Vencidos</option>
-                        <option value="OK">✅ Solo OK</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Botones de Descarga Directa -->
-            <div style="display:flex; gap:8px; margin-bottom:12px;">
-                <button class="btn btn-success" style="flex:1; padding:11px; font-size:14px; margin-bottom:0;" onclick="descargarHistorialCSV()">📥 Descargar Excel (CSV)</button>
-                <button class="btn btn-primary" style="flex:1; padding:11px; font-size:14px; margin-bottom:0;" onclick="abrirModalCierre()">📄 Generar PDF Firmado</button>
-            </div>
-
-            <div id="listaBitacora" style="max-height:380px; overflow-y:auto; border-top:1px solid var(--border); padding-top:8px; font-size:13px;"></div>
-        </div>
-    </div>
-
-    <!-- MÓDULO 3: EQUIPOS E INVENTARIO (ANTES ALTA QR - SOLO ADMIN) -->
-    <div id="view-equipos" class="view">
-        <!-- Inventario siempre visible arriba para acceso rápido a QRs -->
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="color:var(--primary);">📦 Inventario de Equipos</h3>
-                <button class="btn-small btn-success" onclick="descargarInventarioCSV()">📥 Exportar Excel</button>
-            </div>
-            <input type="text" id="buscadorEquipos" placeholder="🔎 Buscar por código (Ej. BAL-EXT), sección o tipo..." onkeyup="renderListas()" style="margin-bottom: 12px; border:2px solid var(--primary);">
-            <div id="listaEquipos" style="font-size:12px;"></div>
-        </div>
-
-        <!-- Desplegable para Registrar o Editar un Equipo Individual -->
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div class="accordion" id="accFormAltaQR" style="margin:0; border:none;">
-                <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                    <span id="tituloAcordeonAlta">➕ Registrar Nuevo Equipo / Generar QR</span>
-                    <span>▼</span>
-                </div>
-                <div class="accordion-content">
-                    <p class="text-muted" style="font-size: 12px; margin-bottom: 12px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y se sube solo a la nube.</p>
-                    
-                    <div class="form-group">
-                        <label>1. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
-                        <select id="qrSeccion" onchange="alCambiarGrupoOSeccionQR()"></select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>2. Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
-                        <select id="qrGrupo" onchange="alCambiarGrupoOSeccionQR()"></select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>3. ID Único (Sección + Grupo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:15px;">
-                            <input type="number" id="qrNumero" placeholder="Ej. 001" style="flex:1.8;">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>4. Ubicación Exacta <span style="color:var(--danger)">*</span>:</label>
-                        <input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina / Centro comando">
-                    </div>
-
-                    <div class="form-group">
-                        <label><span id="lblQrTipo">5. Tipo / Agente / Descripción</span> <span style="color:var(--danger)">*</span>:</label>
-                        <input type="text" id="qrTipo" placeholder="Ej. PQS ABC / CO2 / Botiquín">
-                    </div>
-
-                    <div class="form-group" id="wrapQrCapacidad">
-                        <label><span id="lblQrCapacidad">6. Capacidad / Medida / Alcance</span> <span id="lockCapacidad" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                        <input type="text" id="qrCapacidad" placeholder="Ej. 5 kg / 10 kg / 25 metros">
-                    </div>
-
-                    <div class="form-group" id="wrapQrSerie">
-                        <label><span id="lblQrSerie">7. Marca / N° de Serie / Código Fábrica</span> <span id="lockSerie" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                        <input type="text" id="qrSerie" placeholder="Ej. Melisam - N° 94820">
-                    </div>
-
-                    <div class="form-group" id="wrapQrVencimiento">
-                        <label><span id="lblQrVencimiento">8. Vencimiento Principal (Carga / Insumos)</span> <span id="lockVencimiento" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                        <input type="month" id="qrVencimiento">
-                    </div>
-
-                    <div class="form-group" id="wrapQrVencimientoPH">
-                        <label><span id="lblQrVencimientoPH">9. Vencimiento Prueba Hidráulica (PH) / Certif.</span> <span id="lockVencimientoPH" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                        <input type="month" id="qrVencimientoPH">
-                    </div>
-
-                    <div class="form-group" id="wrapQrResponsable">
-                        <label><span id="lblQrResponsable">10. Responsable / Dato Adicional</span> <span id="lockResponsable" class="badge-lock hidden">🔒 No aplica</span>:</label>
-                        <input type="text" id="qrResponsable" placeholder="Ej. Encargado Sector / Observación fija">
-                    </div>
-                    
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
-                        <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionQR()">Cancelar</button>
-                    </div>
-
-                    <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid var(--border);">
-                        <canvas id="qrGenerado"></canvas>
-                        <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
-                        <button class="btn btn-outline" onclick="descargarUnicoQR()">Descargar Etiqueta QR</button>
-                    </div>
+            <div class="card" style="background-color: var(--input-bg);">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-outline" style="flex:1; padding:10px; font-size:13px; margin-bottom:0;" onclick="abrirModalCompartirApp()">📲 Compartir App</button>
+                    <button class="btn btn-outline" style="flex:1; padding:10px; font-size:13px; margin-bottom:0;" onclick="forzarActualizacion()">🔄 Actualizar Versión</button>
                 </div>
             </div>
         </div>
 
-        <!-- Desplegable para Importación Masiva desde Excel -->
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div class="accordion" style="margin:0; border:none;">
-                <div class="accordion-header" style="background:var(--edit);" onclick="this.parentElement.classList.toggle('active')">
-                    <span>⚡ Importar Lote desde Excel</span>
-                    <span>▼</span>
+        <!-- MÓDULO 1: CONTROL -->
+        <div id="view-control" class="view">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="color:var(--primary);">📋 Realizar Control</h3>
+                    <button class="btn-small btn-dark" onclick="abrirModalContingencia()">⌨️ Elegir de Lista</button>
                 </div>
-                <div class="accordion-content">
-                    <p class="text-muted" style="font-size: 12px; margin-bottom: 10px;">Pegue las columnas de Excel para cargar varios equipos de una sola vez al grupo seleccionado arriba.</p>
-                    <button class="btn-small btn-info" style="margin-bottom:10px;" onclick="descargarPlantillaBulk()">📄 Descargar Plantilla Excel</button>
-                    <textarea id="txtBulkData" style="height: 100px; white-space: nowrap; overflow: auto; font-size:12px; font-family:monospace;" placeholder="ID_o_Num | Seccion | Ubicacion | Tipo | Capacidad | Serie | Vencimiento(AAAA-MM) | Venc_PH(AAAA-MM) | Responsable"></textarea>
-                    <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" onclick="procesarImportacionMasiva()">🚀 Importar Lote</button>
+
+                <div class="form-group">
+                    <label>Código del Equipo:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="idEquipo" placeholder="Presione Escanear QR ->" disabled style="flex:1;" data-overwrite="false">
+                        <button class="btn btn-warning" style="width:auto; padding:0 18px; margin-bottom:0;" onclick="activarQR()">📷 Escanear QR</button>
+                    </div>
                 </div>
+                
+                <div id="qr-reader">
+                    <button class="btn-flashlight" onclick="toggleLinterna()" title="Encender Linterna">🔦</button>
+                </div>
+                
+                <div class="form-grid-pc">
+                    <div class="form-group"><label>Sección y Equipo:</label><input type="text" id="seccionEquipo" disabled></div>
+                    <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="ubicacionEquipo" disabled style="color:var(--primary);"></div>
+                </div>
+
+                <!-- Botón para ver la Foto de Referencia del equipo si la tiene cargada -->
+                <div id="zonaVerFotoReferenciaControl" class="hidden" style="margin-bottom:12px;">
+                    <button type="button" class="btn btn-info" style="padding:10px; font-size:14px; margin-bottom:0;" onclick="verFotoReferenciaEquipo(document.getElementById('idEquipo').value)">🖼️ Ver Foto de Referencia del Equipo</button>
+                </div>
+
+                <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
+                
+                <div id="moduloDinamico" class="hidden"></div>
+                
+                <div class="form-group" style="margin-top:15px;" id="zonaObservaciones">
+                    <label>Observaciones:</label>
+                    <div id="smartTagsContainer"></div>
+                    <textarea id="observaciones" placeholder="Opcional si está OK. Si hay falla, descríbala o toque un botón arriba..." oninput="guardarBorrador()"></textarea>
+                    <small class="text-muted" style="font-size:10px;" id="lblBorrador"></small>
+                </div>
+                
+                <div class="form-group" style="margin-top:15px; border-top:1px dashed var(--border); padding-top:15px;">
+                    <label style="color:var(--danger);">📸 Foto de Evidencia del Control</label>
+                    <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria únicamente si marca Falla o si eligió el equipo sin QR.</p>
+                    <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
+                    <button id="btnAdjuntarFoto" class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📷 Tomar Foto de Evidencia</button>
+                    <canvas id="canvasWatermark" style="display:none;"></canvas>
+                    <img id="previewBox" class="img-preview" src="" alt="Previsualización">
+                </div>
+
+                <button id="btnGuardarControl" class="btn btn-success" style="margin-top:15px; font-size:17px;" onclick="guardarRegistro()">✅ Guardar Control</button>
             </div>
         </div>
-    </div>
 
-    <!-- MÓDULO 4: AJUSTES Y PERFIL (SIMPLIFICADO Y AGRUPADO) -->
-    <div id="view-ajustes" class="view">
-        <!-- Tarjeta 1: Compartir Aplicación con Compañeros (Visible para todos) -->
-        <div class="card" style="border-left: 4px solid var(--success);">
-            <h3 style="color:var(--primary); margin-bottom:5px;">📲 Compartir App con Compañeros</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Pida al compañero que escanee el código QR de su pantalla o envíele el enlace directo por WhatsApp.</p>
-            <div style="display:flex; gap:8px;">
-                <button class="btn btn-primary" style="flex:1; margin-bottom:0; padding:12px; font-size:14px;" onclick="abrirModalCompartirApp()">📷 Mostrar QR de la App</button>
-                <button class="btn btn-success" style="flex:1; margin-bottom:0; padding:12px; font-size:14px;" onclick="enviarEnlaceAppWhatsApp()">📲 Enviar por WhatsApp</button>
+        <!-- MÓDULO 2: HISTORIAL Y DESCARGAS -->
+        <div id="view-historial" class="view">
+            <div class="card">
+                <h3 style="color:var(--primary); margin-bottom:4px;">📊 Historial de Controles</h3>
+                <p class="text-muted" style="font-size:12px; margin-bottom:14px;">Sincronizado automáticamente en la nube. Filtre y descargue los reportes directamente en su PC o celular.</p>
+
+                <div class="kpi-grid">
+                    <div class="kpi-box"><span id="dashOk" class="kpi-num" style="color:var(--success)">0</span><span class="kpi-lbl">✅ En Regla</span></div>
+                    <div class="kpi-box"><span id="dashFallas" class="kpi-num" style="color:var(--danger)">0</span><span class="kpi-lbl">🚨 Con Falla</span></div>
+                    <div class="kpi-box"><span id="dashVencidos" class="kpi-num" style="color:var(--warn-text)">0</span><span class="kpi-lbl">⏱️ Vencidos</span></div>
+                </div>
+
+                <div class="filter-grid-pc">
+                    <div>
+                        <label style="font-size:12px;">Mes:</label>
+                        <input type="month" id="filtroHistMes" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;">Sección:</label>
+                        <select id="filtroHistSec" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
+                            <option value="ALL">Todas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;">Grupo:</label>
+                        <select id="filtroHistGrp" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
+                            <option value="ALL">Todos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;">Estado:</label>
+                        <select id="filtroHistEstado" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
+                            <option value="ALL">Todos</option>
+                            <option value="FALLA">🚨 Solo Fallas</option>
+                            <option value="VENCIDO">⏱️ Solo Vencidos</option>
+                            <option value="OK">✅ Solo OK</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                    <button class="btn btn-success" style="flex:1; padding:12px; font-size:14px; margin-bottom:0;" onclick="descargarHistorialCSV()">📥 Descargar Excel (CSV)</button>
+                    <button class="btn btn-primary" style="flex:1; padding:12px; font-size:14px; margin-bottom:0;" onclick="abrirModalCierre()">📄 Descargar PDF con Fotos</button>
+                </div>
+
+                <div id="listaBitacora" style="max-height:450px; overflow-y:auto; border-top:1px solid var(--border); padding-top:8px; font-size:13px;"></div>
             </div>
         </div>
 
-        <!-- Tarjeta 2: Preferencias Personales del Usuario -->
-        <div class="card">
-            <h3 style="color:var(--primary); margin-bottom:5px;">👤 Mi Perfil y Seguridad</h3>
-            <p class="text-muted" style="font-size:13px; margin-bottom:12px;">Usuario Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
-            
-            <button class="btn btn-info" onclick="registrarBiometria()">👆 Activar Ingreso con Huella / FaceID</button>
-            <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
-            <button class="btn btn-outline" style="margin-top:10px; margin-bottom:0;" onclick="cerrarSesion(true)">🔒 Cerrar Sesión</button>
-        </div>
+        <!-- MÓDULO 3: EQUIPOS E INVENTARIO (SOLO ADMIN) -->
+        <div id="view-equipos" class="view">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="color:var(--primary);">📦 Inventario de Equipos</h3>
+                    <button class="btn-small btn-success" onclick="descargarInventarioCSV()">📥 Exportar Excel</button>
+                </div>
+                <input type="text" id="buscadorEquipos" placeholder="🔎 Buscar por código (Ej. BAL-EXT), sección o tipo..." onkeyup="renderListas()" style="margin-bottom: 12px; border:2px solid var(--primary);">
+                <div id="listaEquipos" style="font-size:12.5px;"></div>
+            </div>
 
-        <!-- SECCIONES EXCLUSIVAS DE ADMINISTRADOR (EN ACORDEONES LIMPIOS) -->
-        <div class="admin-only">
+            <!-- Desplegable para Registrar o Editar Equipo + Foto de Referencia en Nube -->
             <div class="card" style="padding:0; overflow:hidden;">
-                <div class="accordion" style="margin:0; border:none;">
+                <div class="accordion" id="accFormAltaQR" style="margin:0; border:none;">
                     <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                        <span>👥 Gestión de Personal y Permisos</span>
+                        <span id="tituloAcordeonAlta">➕ Registrar Nuevo Equipo / Generar QR</span>
                         <span>▼</span>
                     </div>
                     <div class="accordion-content">
-                        <div style="display:flex; gap:5px;">
-                            <input type="text" id="nuevoUsuNombre" placeholder="Nombre y Apellido" style="flex:2;">
-                            <input type="password" id="nuevoUsuPin" placeholder="PIN" style="flex:1;" pattern="[0-9]*" inputmode="numeric">
-                        </div>
-                        <div style="margin-top:10px;">
-                            <label>Rol:</label>
-                            <select id="nuevoUsuRol"><option value="Inspector">Inspector / Brigadista</option><option value="Admin">Administrador</option></select>
-                        </div>
-                        <div style="margin-top:10px;">
-                            <label>Grupos Asignados:</label>
-                            <div id="nuevoUsuGrupoContainer" class="chk-container"></div>
-                        </div>
-                        <div style="display:flex; gap:10px; margin-top:15px;">
-                            <button id="btnGuardarUsu" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarUsuario()">+ Guardar Usuario</button>
-                            <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionUsu()">Cancelar</button>
-                        </div>
-                        <div id="listaUsuarios" style="margin-top:15px; font-size:14px;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="accordion" style="margin:0; border:none;">
-                    <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                        <span>🏢 Secciones de Planta y Siglas</span>
-                        <span>▼</span>
-                    </div>
-                    <div class="accordion-content">
-                        <p class="text-muted" style="font-size:11px; margin-bottom:10px;">Cada sección lleva una sigla de 3 letras (Ej. <b>BAL</b>, <b>BAV</b>, <b>AGR</b>) para numerar sus propios equipos desde el 001.</p>
-                        <div style="display:flex; gap:5px; margin-bottom:10px;">
-                            <input type="text" id="nuevaSeccion" placeholder="Nombre (Ej. Balanceados Viejo)" style="flex:2;" oninput="sugerirPrefijoSeccionInput()">
-                            <input type="text" id="nuevaSeccionPrefijo" placeholder="Sigla (BAV)" maxlength="5" style="flex:1; border:2px solid var(--primary); text-transform:uppercase;">
-                        </div>
-                        <div style="display:flex; gap:5px;">
-                            <button id="btnGuardarSec" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarSeccion()">+ Guardar Sección</button>
-                            <button id="btnCancelSec" class="btn btn-outline hidden" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionSec()">Cancelar</button>
-                        </div>
-                        <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="accordion" style="margin:0; border:none;">
-                    <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                        <span>📑 Grupos y Puntos de Chequeo</span>
-                        <span>▼</span>
-                    </div>
-                    <div class="accordion-content">
-                        <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Combate Extintores)" class="form-group">
-                        <input type="text" id="nuevoGrupoPrefijo" placeholder="Sigla de Grupo (Ej. EXT)" class="form-group" style="border: 2px solid var(--primary);">
-                        <input type="text" id="nuevoGrupoParams" placeholder="Puntos a controlar (Ej. Manómetro, Sello, Boquilla)" class="form-group">
+                        <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y guarda los datos e imagen de referencia en la nube.</p>
                         
-                        <div class="form-group">
-                            <label>Campos Habilitados al Registrar Equipo:</label>
-                            <div class="chk-container" id="chkCamposInventarioGrupo">
-                                <label><input type="checkbox" class="chk-campo-inv" value="capacidad" checked> 6. Capacidad / Medida / Alcance</label>
-                                <label><input type="checkbox" class="chk-campo-inv" value="serie" checked> 7. Marca / N° de Serie</label>
-                                <label><input type="checkbox" class="chk-campo-inv" value="vencimiento" checked> 8. Vencimiento Principal (Carga / Insumos)</label>
-                                <label><input type="checkbox" class="chk-campo-inv" value="vencimientoPH"> 9. Vencimiento Prueba Hidráulica (PH) / Certif.</label>
-                                <label><input type="checkbox" class="chk-campo-inv" value="responsable"> 10. Responsable / Dato Adicional</label>
+                        <div class="form-grid-pc">
+                            <div class="form-group">
+                                <label>1. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
+                                <select id="qrSeccion" onchange="alCambiarGrupoOSeccionQR()"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>2. Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
+                                <select id="qrGrupo" onchange="alCambiarGrupoOSeccionQR()"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>3. ID Único (Sección + Grupo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:15px;">
+                                    <input type="number" id="qrNumero" placeholder="Ej. 001" style="flex:1.8;">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>4. Ubicación Exacta <span style="color:var(--danger)">*</span>:</label>
+                                <input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina / Centro comando">
+                            </div>
+
+                            <div class="form-group">
+                                <label><span id="lblQrTipo">5. Tipo / Agente / Descripción</span> <span style="color:var(--danger)">*</span>:</label>
+                                <input type="text" id="qrTipo" placeholder="Ej. PQS ABC / CO2 / Botiquín">
+                            </div>
+
+                            <div class="form-group" id="wrapQrCapacidad">
+                                <label><span id="lblQrCapacidad">6. Capacidad / Medida / Alcance</span> <span id="lockCapacidad" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <input type="text" id="qrCapacidad" placeholder="Ej. 5 kg / 10 kg / 25 metros">
+                            </div>
+
+                            <div class="form-group" id="wrapQrSerie">
+                                <label><span id="lblQrSerie">7. Marca / N° de Serie / Código Fábrica</span> <span id="lockSerie" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <input type="text" id="qrSerie" placeholder="Ej. Melisam - N° 94820">
+                            </div>
+
+                            <div class="form-group" id="wrapQrVencimiento">
+                                <label><span id="lblQrVencimiento">8. Vencimiento Principal (Carga / Insumos)</span> <span id="lockVencimiento" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <input type="month" id="qrVencimiento">
+                            </div>
+
+                            <div class="form-group" id="wrapQrVencimientoPH">
+                                <label><span id="lblQrVencimientoPH">9. Vencimiento Prueba Hidráulica (PH) / Certif.</span> <span id="lockVencimientoPH" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <input type="month" id="qrVencimientoPH">
+                            </div>
+
+                            <div class="form-group" id="wrapQrResponsable">
+                                <label><span id="lblQrResponsable">10. Responsable / Dato Adicional</span> <span id="lockResponsable" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <input type="text" id="qrResponsable" placeholder="Ej. Encargado Sector / Observación fija">
                             </div>
                         </div>
 
-                        <div style="display:flex; gap:10px;">
-                            <button id="btnGuardarGrupo" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarGrupo()">+ Guardar Grupo</button>
-                            <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionGrupo()">Cancelar</button>
+                        <!-- V6.25: FOTO DE REFERENCIA DEL EQUIPO AL REGISTRAR -->
+                        <div class="form-group" style="margin-top:8px; border-top:1px dashed var(--border); padding-top:12px;">
+                            <label>11. 📸 Imagen de Referencia del Equipo (Opcional - Guardada en Nube):</label>
+                            <input type="file" id="inputFotoRefEquipo" accept="image/*" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="btn btn-camera" style="flex:2; margin-bottom:0; padding:11px;" onclick="document.getElementById('inputFotoRefEquipo').click()">📷 Subir / Tomar Foto del Equipo</button>
+                                <button type="button" id="btnQuitarFotoRef" class="btn btn-danger hidden" style="flex:1; margin-bottom:0; padding:11px;" onclick="quitarFotoReferenciaEquipo()">🗑️ Quitar</button>
+                            </div>
+                            <canvas id="canvasRefEquipo" style="display:none;"></canvas>
+                            <img id="previewFotoRefEquipo" class="img-preview" src="" alt="Foto de Referencia">
                         </div>
-                        <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
+                        
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                            <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
+                            <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionQR()">Cancelar</button>
+                        </div>
+
+                        <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid var(--border);">
+                            <canvas id="qrGenerado"></canvas>
+                            <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
+                            <button class="btn btn-outline" onclick="descargarUnicoQR()">Descargar Etiqueta QR</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Desplegable para Importación Masiva desde Excel -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="accordion" style="margin:0; border:none;">
+                    <div class="accordion-header" style="background:var(--edit);" onclick="this.parentElement.classList.toggle('active')">
+                        <span>⚡ Importar Lote desde Excel</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p class="text-muted" style="font-size: 12px; margin-bottom: 10px;">Pegue las columnas de Excel para cargar varios equipos de una sola vez al grupo seleccionado arriba.</p>
+                        <button class="btn-small btn-info" style="margin-bottom:10px;" onclick="descargarPlantillaBulk()">📄 Descargar Plantilla Excel</button>
+                        <textarea id="txtBulkData" style="height: 100px; white-space: nowrap; overflow: auto; font-size:12px; font-family:monospace;" placeholder="ID_o_Num | Seccion | Ubicacion | Tipo | Capacidad | Serie | Vencimiento(AAAA-MM) | Venc_PH(AAAA-MM) | Responsable"></textarea>
+                        <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" onclick="procesarImportacionMasiva()">🚀 Importar Lote</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 4: AJUSTES (LIMPIO Y SIN DUPLICADOS) -->
+        <div id="view-ajustes" class="view">
             <div class="card">
-                <h4 style="color:var(--primary); margin-bottom:8px;">Mantenimiento de Nube y Excel</h4>
-                <button class="btn btn-info" onclick="sincronizarTodoConNube(true)">☁️ Forzar Sincronización Completa con Nube</button>
-                <button class="btn btn-warning" onclick="generarEstructuraExcel()">📊 Exportar Estructura (!SCHEMA!) para Macro</button>
-                <button class="btn btn-danger" style="margin-top:10px; margin-bottom:0;" onclick="purgarHistorial()">🗑️ Limpiar Historial de Controles</button>
+                <h3 style="color:var(--primary); margin-bottom:5px;">👤 Mi Perfil y Seguridad</h3>
+                <p class="text-muted" style="font-size:13px; margin-bottom:14px;">Usuario Activo: <b id="lblInspectorTurno" style="color:var(--primary);"></b></p>
+                
+                <div class="form-grid-pc">
+                    <button class="btn btn-info" onclick="registrarBiometria()">👆 Activar Huella / FaceID</button>
+                    <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
+                </div>
+                <button class="btn btn-outline" style="margin-top:5px; margin-bottom:0;" onclick="cerrarSesion(true)">🔒 Cerrar Sesión</button>
+            </div>
+
+            <!-- SECCIONES EXCLUSIVAS DE ADMINISTRADOR -->
+            <div class="admin-only">
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="accordion" style="margin:0; border:none;">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <span>👥 Gestión de Personal y Permisos</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div style="display:flex; gap:5px;">
+                                <input type="text" id="nuevoUsuNombre" placeholder="Nombre y Apellido" style="flex:2;">
+                                <input type="password" id="nuevoUsuPin" placeholder="PIN" style="flex:1;" pattern="[0-9]*" inputmode="numeric">
+                            </div>
+                            <div style="margin-top:10px;">
+                                <label>Rol:</label>
+                                <select id="nuevoUsuRol"><option value="Inspector">Inspector / Brigadista</option><option value="Admin">Administrador</option></select>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <label>Grupos Asignados:</label>
+                                <div id="nuevoUsuGrupoContainer" class="chk-container"></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:15px;">
+                                <button id="btnGuardarUsu" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarUsuario()">+ Guardar Usuario</button>
+                                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionUsu()">Cancelar</button>
+                            </div>
+                            <div id="listaUsuarios" style="margin-top:15px; font-size:14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="accordion" style="margin:0; border:none;">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <span>🏢 Secciones de Planta y Siglas</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <p class="text-muted" style="font-size:11px; margin-bottom:10px;">Cada sección lleva una sigla (Ej. <b>BAL</b>, <b>BAV</b>, <b>AGR</b>) para numerar sus propios equipos desde el 001.</p>
+                            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                                <input type="text" id="nuevaSeccion" placeholder="Nombre (Ej. Balanceados Viejo)" style="flex:2;" oninput="sugerirPrefijoSeccionInput()">
+                                <input type="text" id="nuevaSeccionPrefijo" placeholder="Sigla (BAV)" maxlength="5" style="flex:1; border:2px solid var(--primary); text-transform:uppercase;">
+                            </div>
+                            <div style="display:flex; gap:5px;">
+                                <button id="btnGuardarSec" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarSeccion()">+ Guardar Sección</button>
+                                <button id="btnCancelSec" class="btn btn-outline hidden" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionSec()">Cancelar</button>
+                            </div>
+                            <div id="listaSecciones" style="margin-top:15px; font-size:14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div class="accordion" style="margin:0; border:none;">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                            <span>📑 Grupos y Puntos de Chequeo</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Combate Extintores)" class="form-group">
+                            <input type="text" id="nuevoGrupoPrefijo" placeholder="Sigla de Grupo (Ej. EXT)" class="form-group" style="border: 2px solid var(--primary);">
+                            <input type="text" id="nuevoGrupoParams" placeholder="Puntos a controlar (Ej. Manómetro, Sello, Boquilla)" class="form-group">
+                            
+                            <div class="form-group">
+                                <label>Campos Habilitados al Registrar Equipo:</label>
+                                <div class="chk-container" id="chkCamposInventarioGrupo">
+                                    <label><input type="checkbox" class="chk-campo-inv" value="capacidad" checked> 6. Capacidad / Medida / Alcance</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="serie" checked> 7. Marca / N° de Serie</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimiento" checked> 8. Vencimiento Principal (Carga / Insumos)</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimientoPH"> 9. Vencimiento Prueba Hidráulica (PH) / Certif.</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="responsable"> 10. Responsable / Dato Adicional</label>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:10px;">
+                                <button id="btnGuardarGrupo" class="btn btn-success" style="flex:2; margin-bottom:0;" onclick="guardarGrupo()">+ Guardar Grupo</button>
+                                <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionGrupo()">Cancelar</button>
+                            </div>
+                            <div id="listaGrupos" style="margin-top:15px; font-size:14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <button class="btn btn-danger" style="margin-bottom:0;" onclick="purgarHistorial()">🗑️ Limpiar Historial Mensual de Controles</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL COMPARTIR APLICACIÓN (QR + ENLACE CORTO) -->
+    <!-- MODAL VER FOTO DE REFERENCIA DEL EQUIPO -->
+    <div id="modalFotoRef" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align:center;">
+            <h3 id="tituloModalFotoRef" style="color:var(--primary); margin-bottom:10px;">🖼️ Foto de Referencia</h3>
+            <img id="imgModalFotoRef" src="" alt="Referencia del Equipo" style="width:100%; max-height:65vh; object-fit:contain; border-radius:8px; border:1px solid var(--border); background:#000;">
+            <button class="btn btn-primary" style="margin-top:15px; margin-bottom:0;" onclick="document.getElementById('modalFotoRef').classList.add('hidden')">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- MODAL COMPARTIR APLICACIÓN (DESDE PANTALLA INICIAL) -->
     <div id="modalCompartirApp" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
-            <h3 style="color:var(--primary); margin-bottom:5px;">📲 Instalar / Abrir Aplicación</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Escanee este código QR con la cámara de otro celular para abrir la aplicación ya vinculada a la nube:</p>
+            <h3 style="color:var(--primary); margin-bottom:5px;">📲 Compartir Aplicación</h3>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Escanee este código QR con otro celular o envíe el enlace directo por WhatsApp:</p>
             <canvas id="qrCompartirApp"></canvas>
             <p id="lblUrlCompartir" style="font-size:11px; font-family:monospace; word-break:break-all; margin:10px 0; color:var(--primary); font-weight:bold;"></p>
             <button class="btn btn-success" onclick="enviarEnlaceAppWhatsApp()">📲 Enviar Enlace por WhatsApp</button>
-            <button class="btn btn-info" onclick="copiarEnlaceApp()">📋 Copiar Enlace Corto</button>
+            <button class="btn btn-info" onclick="copiarEnlaceApp()">📋 Copiar Enlace</button>
             <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('modalCompartirApp').classList.add('hidden')">Cerrar</button>
         </div>
     </div>
 
-    <!-- MODAL BOTÓN DE PÁNICO (ALERTA EN NUBE + NOTIFICACIÓN + WHATSAPP) -->
+    <!-- MODAL BOTÓN DE PÁNICO -->
     <div id="modalSOS" class="modal-overlay hidden">
         <div class="modal-content" style="border: 3px solid var(--danger);">
             <h2 style="color:var(--danger); margin-bottom:5px; text-align:center;">🚨 S.O.S. EMERGENCIA</h2>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px; text-align:center;">Al tocar una opción, se disparará una <b>Sirena Sonora en Vivo</b> en los celulares conectados a la App y se preparará el aviso de WhatsApp.</p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px; text-align:center;">Activa la sirena en los dispositivos conectados y abre el alerta directo para el grupo de Brigada en WhatsApp.</p>
             
             <div class="form-group">
                 <label>Sector de la Emergencia:</label>
                 <select id="sosSeccion" style="border: 2px solid var(--danger);"></select>
             </div>
             
-            <button class="btn" style="background:#ff9800; color:#fff; font-size:18px;" onclick="dispararSOS('Accidente Médico')">🚑 Accidente / Emergencia Médica</button>
-            <button class="btn btn-danger" style="font-size:18px;" onclick="dispararSOS('Incendio')">🔥 Incendio / Fuego</button>
+            <button class="btn" style="background:#ff9800; color:#fff; font-size:17px;" onclick="dispararSOS('Accidente Médico')">🚑 Accidente / Emergencia Médica</button>
+            <button class="btn btn-danger" style="font-size:17px;" onclick="dispararSOS('Incendio')">🔥 Incendio / Fuego</button>
             
             <button class="btn btn-outline" style="margin-top:10px; margin-bottom:0;" onclick="cerrarModalSOS()">Cancelar</button>
         </div>
@@ -591,28 +616,29 @@
     <div id="modalCierre" class="modal-overlay hidden">
         <div class="modal-content">
             <h3 style="color:var(--primary); margin-bottom:5px;">📄 Generar Reporte PDF Firmado</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Firme en el recuadro para descargar o compartir el reporte PDF con los controles filtrados en pantalla.</p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Firme con el dedo o el mouse para descargar el reporte PDF con fotos de los controles filtrados.</p>
             <canvas id="canvasFirma"></canvas>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cerrarModalCierre()">Cancelar</button>
                 <button class="btn btn-warning" style="flex:1; margin-bottom:0;" onclick="limpiarFirma()">Borrar Firma</button>
             </div>
-            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Descargar / Compartir PDF</button>
+            <button class="btn btn-success" style="margin-top:10px; margin-bottom:0;" id="btnConfirmarFirma" onclick="confirmarFirmaYEnviar()">Descargar PDF</button>
         </div>
     </div>
 
-    <!-- BARRA DE NAVEGACIÓN PRINCIPAL REORGANIZADA -->
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
     <div class="tab-bar hidden" id="menuNavegacion">
-        <button class="tab-btn active" onclick="nav('control', this)">📋<br>Control</button>
-        <button class="tab-btn" onclick="nav('historial', this)">📊<br>Historial</button>
-        <button class="tab-btn admin-only" onclick="nav('equipos', this)">📦<br>Equipos</button>
-        <button class="tab-btn" onclick="nav('ajustes', this)">⚙️<br>Ajustes</button>
+        <button class="tab-btn active" onclick="nav('control', this)"><span>📋</span><span>Control</span></button>
+        <button class="tab-btn" onclick="nav('historial', this)"><span>📊</span><span>Historial</span></button>
+        <button class="tab-btn admin-only" onclick="nav('equipos', this)"><span>📦</span><span>Equipos</span></button>
+        <button class="tab-btn" onclick="nav('ajustes', this)"><span>⚙️</span><span>Ajustes</span></button>
     </div>
 
     <script>
         const CFG_KEY = 'SySO_Config_Master'; 
         const DB_KEY = 'SySO_Data_Master'; 
         const PHOTO_KEY = 'SySO_Photos_Master'; 
+        const EQ_REF_PHOTO_KEY = 'SySO_EqRefPhotos_Cache';
         const DRAFT_KEY = 'SySO_Draft_Master'; 
         const ACTIVITY_KEY = 'SySO_LastActivity';
         
@@ -648,9 +674,10 @@
 
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj; let qrAppShareObj; let canvas, ctx, firmaVacia = true; 
         let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null; 
-        let fotoActualBase64 = null; let esCargaManual = false;
+        let fotoActualBase64 = null; let fotoRefEquipoActualBase64 = null; let fotoRefEquipoEliminada = false;
+        let esCargaManual = false;
         let sincronizandoNube = false;
-        let ultimoSOSVistoId = localStorage.getItem('SySO_LastSOS_Muted') || '';
+        let ultimoSOSDescartadoId = localStorage.getItem('SySO_LastSOS_Dismissed') || '';
         let intervaloSirena = null;
 
         function sortNatural(a, b) {
@@ -744,7 +771,6 @@
             blindarAlmacenamientoPersistente();
             verificarBotonBiometrico();
 
-            // Mes actual por defecto en el filtro de Historial
             const hoy = new Date();
             const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2, '0')}`;
             const inpMes = document.getElementById('filtroHistMes');
@@ -771,8 +797,7 @@
                 sincronizarTodoConNube(false);
             }
 
-            // Monitoreo continuo de emergencias S.O.S. en la nube cada 12 segundos
-            setInterval(verificarSOSActivoEnNube, 12000);
+            setInterval(verificarSOSActivoEnNube, 10000);
         });
 
         function normalizarObjetoConfig(cfg) {
@@ -984,7 +1009,6 @@
                         });
                     }
 
-                    // Sincronizar también el historial de inspecciones y alertas SOS
                     await sincronizarInspeccionesNube(false);
                     await verificarSOSActivoEnNube();
 
@@ -997,10 +1021,6 @@
                         poblarFiltrosHistorial();
                         if(usuarioActual.rol === 'Admin') poblarAdmin();
                     }
-
-                    if(mostrarAlertaManual) {
-                        alert(`✅ Sincronización completada.\n\nEquipos en planta: ${cantEqDespues}\nUsuarios activos: ${config.usuarios.length}`);
-                    }
                 } else {
                     if(config.usuarios && config.usuarios.length > 0) {
                         await fetch(CLOUD_CFG_URL, {
@@ -1010,15 +1030,13 @@
                         });
                         await sincronizarInspeccionesNube(false);
                         const totalEq = Object.keys(config.equipos || {}).length;
-                        actualizarBadgeNube(`☁️ Base Subida (${totalEq} Eq.)`, '#00e676');
-                        if(mostrarAlertaManual) alert(`✅ Base Maestra subida a la Nube (${totalEq} equipos).`);
+                        actualizarBadgeNube(`☁️ Nube OK (${totalEq} Eq.)`, '#00e676');
                     } else {
                         actualizarBadgeNube('⚠️ Esperando Base Inicial', '#ffc107');
                     }
                 }
             } catch(err) {
                 actualizarBadgeNube('⚡ Offline (Memoria Local)', '#ffc107');
-                if(mostrarAlertaManual) alert('⚠️ Sin conexión a internet en este momento. Los controles se guardarán en el celular y subirán al recuperar señal.');
             } finally {
                 sincronizandoNube = false;
             }
@@ -1049,7 +1067,100 @@
             }
         }
 
-        // --- V6.24: MOTOR DE HISTORIAL DE INSPECCIONES EN LA NUBE ---
+        // --- V6.25: FOTOS DE REFERENCIA DE EQUIPOS EN NUBE ---
+        function procesarFotoReferenciaEquipo(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvasRef = document.getElementById('canvasRefEquipo');
+                    const MAX_W = 480;
+                    const scale = Math.min(1, MAX_W / img.width);
+                    canvasRef.width = Math.round(img.width * scale);
+                    canvasRef.height = Math.round(img.height * scale);
+                    const ctxR = canvasRef.getContext('2d');
+                    ctxR.drawImage(img, 0, 0, canvasRef.width, canvasRef.height);
+                    fotoRefEquipoActualBase64 = canvasRef.toDataURL('image/jpeg', 0.62);
+                    fotoRefEquipoEliminada = false;
+
+                    const prev = document.getElementById('previewFotoRefEquipo');
+                    prev.src = fotoRefEquipoActualBase64;
+                    prev.style.display = 'block';
+                    document.getElementById('btnQuitarFotoRef').classList.remove('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function quitarFotoReferenciaEquipo() {
+            fotoRefEquipoActualBase64 = null;
+            fotoRefEquipoEliminada = true;
+            document.getElementById('inputFotoRefEquipo').value = '';
+            const prev = document.getElementById('previewFotoRefEquipo');
+            prev.src = '';
+            prev.style.display = 'none';
+            document.getElementById('btnQuitarFotoRef').classList.add('hidden');
+        }
+
+        async function guardarFotoReferenciaEnNube(idEquipo, base64Img) {
+            try {
+                const cacheLocal = JSON.parse(localStorage.getItem(EQ_REF_PHOTO_KEY) || '{}');
+                if(base64Img) {
+                    cacheLocal[idEquipo] = base64Img;
+                    try { localStorage.setItem(EQ_REF_PHOTO_KEY, JSON.stringify(cacheLocal)); } catch(e){}
+                    await fetch(`${CLOUD_BASE_URL}/syso_eq_photos/${encodeURIComponent(idEquipo)}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ img: base64Img, ts: Date.now() })
+                    });
+                } else {
+                    delete cacheLocal[idEquipo];
+                    try { localStorage.setItem(EQ_REF_PHOTO_KEY, JSON.stringify(cacheLocal)); } catch(e){}
+                    await fetch(`${CLOUD_BASE_URL}/syso_eq_photos/${encodeURIComponent(idEquipo)}.json`, {
+                        method: 'DELETE'
+                    });
+                }
+            } catch(e) {}
+        }
+
+        async function obtenerFotoReferenciaEquipo(idEquipo) {
+            const cacheLocal = JSON.parse(localStorage.getItem(EQ_REF_PHOTO_KEY) || '{}');
+            if(cacheLocal[idEquipo]) return cacheLocal[idEquipo];
+            try {
+                const res = await fetch(`${CLOUD_BASE_URL}/syso_eq_photos/${encodeURIComponent(idEquipo)}.json`);
+                if(res.ok) {
+                    const data = await res.json();
+                    if(data && data.img) {
+                        cacheLocal[idEquipo] = data.img;
+                        try { localStorage.setItem(EQ_REF_PHOTO_KEY, JSON.stringify(cacheLocal)); } catch(e){}
+                        return data.img;
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        window.verFotoReferenciaEquipo = async function(idEquipo) {
+            if(!idEquipo) return;
+            const eq = config.equipos[idEquipo];
+            document.getElementById('tituloModalFotoRef').innerText = `🖼️ ${idEquipo} ${eq ? '('+eq.tipo+')' : ''}`;
+            const imgEl = document.getElementById('imgModalFotoRef');
+            imgEl.src = '';
+            document.getElementById('modalFotoRef').classList.remove('hidden');
+
+            const base64 = await obtenerFotoReferenciaEquipo(idEquipo);
+            if(base64) {
+                imgEl.src = base64;
+            } else {
+                document.getElementById('modalFotoRef').classList.add('hidden');
+                alert("No se encontró la imagen de referencia en la nube.");
+            }
+        }
+
+        // --- MOTOR DE HISTORIAL DE INSPECCIONES EN LA NUBE ---
         function generarClaveUnicaInspeccion(r) {
             const fechaLimpia = String(r.Fecha || '').split(',')[0].replace(/\D/g, '');
             const idLimpio = String(r.ID_Equipo || 'EQ').replace(/[^A-Za-z0-9_-]/g, '');
@@ -1083,7 +1194,6 @@
                 let dbLocal = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
                 const photoDBLocal = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
 
-                // 1. Subir cualquier control local que aún no tenga marca de sincronizado
                 for(let i = 0; i < dbLocal.length; i++) {
                     if(!dbLocal[i].uid) dbLocal[i].uid = generarClaveUnicaInspeccion(dbLocal[i]);
                     if(!dbLocal[i].synced) {
@@ -1093,7 +1203,6 @@
                     }
                 }
 
-                // 2. Descargar todos los controles de la planta desde Firebase
                 const res = await fetch(CLOUD_INSP_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
                 if(res.ok) {
                     const cloudInspObj = await res.json();
@@ -1116,14 +1225,12 @@
                     }
                 }
                 renderHistorial();
-                if(mostrarFeedback) alert(`✅ Historial actualizado desde la nube (${dbLocal.length} controles registrados).`);
             } catch(e) {
                 renderHistorial();
-                if(mostrarFeedback) alert("⚠️ Mostrando historial guardado en el dispositivo (sin conexión momentánea).");
             }
         }
 
-        // --- V6.24: COMPARTIR APLICACIÓN (QR Y WHATSAPP) ---
+        // --- COMPARTIR APLICACIÓN ---
         function obtenerUrlLimpiaApp() {
             return window.location.href.split('?')[0].split('#')[0];
         }
@@ -1141,7 +1248,7 @@
 
         function enviarEnlaceAppWhatsApp() {
             const url = obtenerUrlLimpiaApp();
-            const msg = `*📲 Aplicación Gestión SySO Industrial*\n\nAcceda desde este enlace para realizar controles o ver el estado de planta (se conecta automáticamente a la nube):\n${url}`;
+            const msg = `*📲 Aplicación Gestión SySO Industrial*\n\nAcceda desde este enlace (se sincroniza automáticamente en la nube):\n${url}`;
             window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
         }
 
@@ -1154,7 +1261,7 @@
             }
         }
 
-        // --- V6.24: SISTEMA S.O.S. EN TIEMPO REAL (SIRENA SONORA + NOTIFICACIÓN + NUBE) ---
+        // --- V6.25: SISTEMA S.O.S. CON APAGADO INDIVIDUAL POR DISPOSITIVO ---
         function sonarSirenaWebAudio() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1176,21 +1283,26 @@
         }
 
         function activarAlarmaVisualYSonora(sosData) {
+            // Si este usuario ya apagó esta alarma específica en su dispositivo, no volver a mostrársela
+            if(ultimoSOSDescartadoId === String(sosData.id)) {
+                document.getElementById('sosLiveBanner').classList.add('hidden');
+                return;
+            }
+
             const banner = document.getElementById('sosLiveBanner');
             const txt = document.getElementById('sosLiveText');
             txt.innerHTML = `🚨 ¡ALERTA S.O.S.: ${sosData.tipo.toUpperCase()}!<br>📍 Sector: ${sosData.seccion} | Reporta: ${sosData.reporta} (${sosData.hora})`;
             banner.classList.remove('hidden');
 
-            if(ultimoSOSVistoId !== sosData.id) {
+            if(!intervaloSirena) {
                 sonarSirenaWebAudio();
-                if(intervaloSirena) clearInterval(intervaloSirena);
                 intervaloSirena = setInterval(sonarSirenaWebAudio, 2500);
 
-                // Disparar notificación del sistema si el navegador lo permite
                 if("Notification" in window && Notification.permission === "granted") {
                     try {
                         new Notification(`🚨 EMERGENCIA: ${sosData.tipo.toUpperCase()}`, {
                             body: `Ubicación: ${sosData.seccion} | Reporta: ${sosData.reporta}. ¡Inicien protocolo!`,
+                            requireInteraction: true,
                             vibrate: [500, 200, 500]
                         });
                     } catch(e) {}
@@ -1198,35 +1310,23 @@
             }
         }
 
-        function silenciarSirenaLocal() {
+        // Apaga la alarma y oculta el cartel SOLO en este dispositivo
+        function apagarMiAlarmaSOS() {
             if(intervaloSirena) {
                 clearInterval(intervaloSirena);
                 intervaloSirena = null;
             }
             if(window.sosActivoActualId) {
-                ultimoSOSVistoId = window.sosActivoActualId;
-                localStorage.setItem('SySO_LastSOS_Muted', ultimoSOSVistoId);
+                ultimoSOSDescartadoId = String(window.sosActivoActualId);
+                localStorage.setItem('SySO_LastSOS_Dismissed', ultimoSOSDescartadoId);
             }
-        }
-
-        async function desactivarSOSGlobal() {
-            if(!confirm("¿Confirmar que la emergencia fue controlada y apagar la alerta en todos los teléfonos?")) return;
-            silenciarSirenaLocal();
             document.getElementById('sosLiveBanner').classList.add('hidden');
-            try {
-                await fetch(CLOUD_SOS_URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ active: false })
-                });
-            } catch(e) {}
         }
 
         function usuarioDebeRecibirSOS(sosData) {
-            if(sosData.tipo === 'Incendio') return true; // Incendio alerta a toda la planta
-            if(!usuarioActual) return true; // En pantalla de login alerta siempre
+            if(sosData.tipo === 'Incendio') return true;
+            if(!usuarioActual) return true;
             if(usuarioActual.rol === 'Admin' || usuarioActual.grupo.includes('Todos')) return true;
-            // Si es Accidente Médico, alertar a grupos de Primeros Auxilios (PA), Comunicación o Brigada
             return usuarioActual.grupo.some(g => {
                 const gl = g.toLowerCase();
                 return gl.includes('pa ') || gl.includes('auxilio') || gl.includes('botiqu') || gl.includes('comunica') || gl.includes('jefe') || gl.includes('brigada');
@@ -1238,14 +1338,17 @@
                 const res = await fetch(CLOUD_SOS_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
                 if(!res.ok) return;
                 const sosData = await res.json();
-                // Vigencia automática de 45 minutos para alertas activas
-                if(sosData && sosData.active && (Date.now() - (sosData.id || 0)) < 45 * 60 * 1000) {
+                // Vigencia de 30 minutos para cada alerta S.O.S.
+                if(sosData && sosData.active && (Date.now() - (sosData.id || 0)) < 30 * 60 * 1000) {
                     window.sosActivoActualId = String(sosData.id);
                     if(usuarioDebeRecibirSOS(sosData)) {
                         activarAlarmaVisualYSonora(sosData);
                     }
                 } else {
-                    silenciarSirenaLocal();
+                    if(intervaloSirena) {
+                        clearInterval(intervaloSirena);
+                        intervaloSirena = null;
+                    }
                     document.getElementById('sosLiveBanner').classList.add('hidden');
                 }
             } catch(e) {}
@@ -1287,7 +1390,6 @@
 
             cerrarModalSOS();
 
-            // 1. Publicar alerta inmediata en la Nube para activar sirenas en la App
             try {
                 await fetch(CLOUD_SOS_URL, {
                     method: 'PUT',
@@ -1297,7 +1399,6 @@
                 verificarSOSActivoEnNube();
             } catch(e) {}
 
-            // 2. Abrir respaldo en WhatsApp por si algún brigadista tiene la pantalla bloqueada
             let msg = `*🚨 ALERTA S.O.S. TIPO: ${tipoEmergencia.toUpperCase()} 🚨*\n\n`;
             msg += `📍 *Ubicación:* ${sec}\n`;
             msg += `👨‍🚒 *Reporta:* ${usr}\n`;
@@ -1417,16 +1518,6 @@
             config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; 
             await guardarYSubirANube();
             window.location.href = window.location.href.split('?')[0]; 
-        }
-        
-        async function generarEstructuraExcel() { 
-            const schemaStr = "!SCHEMA!" + btoa(encodeURIComponent(JSON.stringify({ grupos: config.grupos }))); 
-            const fileSchema = new File([schemaStr], `Schema_Macro_${Date.now()}.txt`, { type: 'text/plain' });
-            if (navigator.canShare && navigator.canShare({ files: [fileSchema] })) {
-                try { await navigator.share({ files: [fileSchema], title: 'Estructura Macro SySO' }); } catch (e) {}
-            } else {
-                const l = document.createElement("a"); l.href = URL.createObjectURL(fileSchema); l.download = fileSchema.name; l.click();
-            }
         }
 
         function prepararLogin() { 
@@ -1577,7 +1668,7 @@
                 lista.innerHTML += `
                     <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:9px 4px; align-items:center;">
                         <div>
-                            <b style="color:${color}; font-size:14px;">${r.ID_Equipo} (${estadoBadge})</b> — <small>${r.Seccion}</small><br>
+                            <b style="color:${color}; font-size:14px;">${r.ID_Equipo} (${estadoBadge})</b> — <small>${r.Seccion} (${r.Grupo})</small><br>
                             <small class="text-muted">👷 ${r.Inspector} | 🕒 ${r.Fecha}</small>
                             ${r.Observaciones ? `<br><small style="color:var(--text);">💬 ${r.Observaciones}</small>` : ''}
                         </div>
@@ -1601,21 +1692,36 @@
             const registros = obtenerRegistrosFiltradosHistorial();
             if(registros.length === 0) return alert("No hay controles en el filtro actual para descargar.");
 
-            let maxCols = 0; 
-            registros.forEach(r => { 
-                const colCount = Object.keys(r.Controles || {}).length; 
-                if(colCount > maxCols) maxCols = colCount; 
-            });
-            
-            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo"]; 
-            for(let i=1; i<=maxCols; i++) head.push(`Control_${i}`); 
-            head.push("Observaciones", "Alerta_Fraude");
+            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo", "Tipo_Equipo", "Capacidad", "Estado_General", "Detalle_Puntos_Controlados", "Observaciones", "Alerta_Fraude"]; 
+            let csv = "\uFEFF" + head.join(";") + "\r\n"; 
 
-            let csv = head.join(";") + "\r\n"; 
             registros.forEach(r => { 
-                let row = [r.Fecha, r.Inspector, r.Grupo, r.Seccion, r.Ubicacion, r.ID_Equipo]; 
-                for(let i=1; i<=maxCols; i++) row.push((r.Controles && r.Controles[`Control_${i}`]) || ""); 
-                row.push(r.Observaciones || "", r.Alerta_Fraude || "NO"); 
+                const eq = config.equipos[r.ID_Equipo] || {};
+                const tieneFalla = Object.values(r.Controles || {}).includes('Falla');
+                const estadoGral = tieneFalla ? "FALLA" : "OK";
+
+                let detallesArr = [];
+                let idx = 0;
+                Object.keys(r.Controles || {}).forEach(k => {
+                    let paramName = (config.grupos[r.Grupo] && config.grupos[r.Grupo][idx]) ? config.grupos[r.Grupo][idx] : k;
+                    detallesArr.push(`${paramName}: ${r.Controles[k]}`);
+                    idx++;
+                });
+
+                let row = [
+                    r.Fecha, 
+                    r.Inspector, 
+                    r.Grupo, 
+                    r.Seccion, 
+                    r.Ubicacion, 
+                    r.ID_Equipo,
+                    eq.tipo || "",
+                    eq.capacidad || "",
+                    estadoGral,
+                    detallesArr.join(" | "),
+                    r.Observaciones || "", 
+                    r.Alerta_Fraude || "NO"
+                ]; 
                 csv += row.join(";") + "\r\n"; 
             });
 
@@ -1623,7 +1729,7 @@
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `Historial_Controles_SySO_${mes}.csv`;
+            a.download = `Controles_SySO_${mes}.csv`;
             a.click();
         }
 
@@ -1958,7 +2064,7 @@
             const grp = document.getElementById('qrGrupo').value || "Combate Extintores";
             const secEj = document.getElementById('qrSeccion').value || config.secciones[0] || "Balanceados";
             const prefComp = obtenerPrefijoCompuesto(grp, secEj);
-            let csv = "ID_Equipo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento_AAAA_MM;Vencimiento_PH_AAAA_MM;Responsable_Notas\r\n";
+            let csv = "\uFEFFID_Equipo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento_AAAA_MM;Vencimiento_PH_AAAA_MM;Responsable_Notas\r\n";
             csv += `${prefComp}001;${secEj};Entrada Principal;PQS ABC;10 kg;Melisam;2027-02;2030-02;Seguridad Industrial\r\n`;
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
@@ -2020,7 +2126,8 @@
                             serie: serie,
                             vencimiento: venc,
                             vencimientoPH: vencPH,
-                            responsable: resp
+                            responsable: resp,
+                            tieneFotoRef: false
                         }; 
                         config.timestamps.equipos[finalId] = nowTs; 
                         agregados++; 
@@ -2038,7 +2145,7 @@
             }
         }
 
-        function cargarEdicionQR(id) { 
+        async function cargarEdicionQR(id) { 
             const eq = config.equipos[id]; 
             if(!eq) return; 
             editQRId = id;
@@ -2065,6 +2172,20 @@
             document.getElementById('qrVencimientoPH').value = eq.vencimientoPH || '';
             document.getElementById('qrResponsable').value = eq.responsable || '';
 
+            // Cargar foto de referencia si el equipo la tiene
+            quitarFotoReferenciaEquipo();
+            fotoRefEquipoEliminada = false;
+            if(eq.tieneFotoRef) {
+                const imgRef = await obtenerFotoReferenciaEquipo(id);
+                if(imgRef) {
+                    fotoRefEquipoActualBase64 = imgRef;
+                    const prev = document.getElementById('previewFotoRefEquipo');
+                    prev.src = imgRef;
+                    prev.style.display = 'block';
+                    document.getElementById('btnQuitarFotoRef').classList.remove('hidden');
+                }
+            }
+
             const btn = document.getElementById('btnGuardarQR'); 
             btn.innerText = '💾 Actualizar Equipo'; 
             btn.classList.replace('btn-warning', 'btn-info'); 
@@ -2082,13 +2203,15 @@
             document.getElementById('qrVencimiento').value = ''; 
             document.getElementById('qrVencimientoPH').value = '';
             document.getElementById('qrResponsable').value = '';
+            quitarFotoReferenciaEquipo();
+            fotoRefEquipoEliminada = false;
             const btn = document.getElementById('btnGuardarQR'); 
             btn.innerText = 'Guardar Equipo'; 
             btn.classList.replace('btn-info', 'btn-warning'); 
             alCambiarGrupoOSeccionQR(); 
         }
         
-        function guardarQR() { 
+        async function guardarQR() { 
             const sec = document.getElementById('qrSeccion').value; 
             const grupoElegido = document.getElementById('qrGrupo').value;
             const prefijo = obtenerPrefijoCompuesto(grupoElegido, sec);
@@ -2114,6 +2237,9 @@
                 if(!confirm(`⚠️ El equipo ${id} ya existe en ${sec}. ¿Desea sobrescribirlo?`)) return;
             }
 
+            const teniaFotoAntes = (config.equipos[id] && config.equipos[id].tieneFotoRef) || false;
+            const tendraFoto = fotoRefEquipoActualBase64 ? true : (fotoRefEquipoEliminada ? false : teniaFotoAntes);
+
             config.equipos[id] = { 
                 tipo: tipo, 
                 seccion: sec, 
@@ -2123,9 +2249,17 @@
                 serie: serie,
                 vencimiento: vencimiento,
                 vencimientoPH: vencimientoPH,
-                responsable: responsable
+                responsable: responsable,
+                tieneFotoRef: tendraFoto
             }; 
             config.timestamps.equipos[id] = Date.now();
+
+            if(fotoRefEquipoActualBase64) {
+                await guardarFotoReferenciaEnNube(id, fotoRefEquipoActualBase64);
+            } else if(fotoRefEquipoEliminada) {
+                await guardarFotoReferenciaEnNube(id, null);
+            }
+
             guardarYSubirANube();
             
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' }); 
@@ -2151,6 +2285,8 @@
             document.getElementById('qrVencimiento').value = '';
             document.getElementById('qrVencimientoPH').value = '';
             document.getElementById('qrResponsable').value = '';
+            quitarFotoReferenciaEquipo();
+            fotoRefEquipoEliminada = false;
             
             const btn = document.getElementById('btnGuardarQR'); 
             btn.innerText = 'Guardar Equipo'; 
@@ -2163,6 +2299,7 @@
             if(confirm(`¿Borrar equipo ${id}?`)) { 
                 config.deleted.equipos[id] = Date.now(); 
                 delete config.equipos[id]; 
+                guardarFotoReferenciaEnNube(id, null);
                 guardarYSubirANube();
                 poblarAdmin(); 
             } 
@@ -2171,10 +2308,10 @@
 
         function descargarInventarioCSV() {
             if(Object.keys(config.equipos).length === 0) return alert("El inventario está vacío.");
-            let csv = "ID_Equipo;Grupo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento;Vencimiento_PH;Responsable_Notas\r\n";
+            let csv = "\uFEFFID_Equipo;Grupo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento;Vencimiento_PH;Responsable_Notas;Tiene_Foto_Ref\r\n";
             Object.keys(config.equipos).sort(sortNatural).forEach(id => { 
                 const eq = config.equipos[id]; 
-                csv += `${id};${eq.grupo || ""};${eq.seccion || ""};${eq.ubicacion || ""};${eq.tipo || ""};${eq.capacidad || ""};${eq.serie || ""};${eq.vencimiento || ""};${eq.vencimientoPH || ""};${eq.responsable || ""}\r\n`; 
+                csv += `${id};${eq.grupo || ""};${eq.seccion || ""};${eq.ubicacion || ""};${eq.tipo || ""};${eq.capacidad || ""};${eq.serie || ""};${eq.vencimiento || ""};${eq.vencimientoPH || ""};${eq.responsable || ""};${eq.tieneFotoRef ? "SI" : "NO"}\r\n`; 
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); 
             const a = document.createElement('a'); 
@@ -2246,7 +2383,9 @@
                             if(eq.vencimiento) expInfo += `<br><span style="color:${eq.vencimiento <= currMonth ? 'var(--danger)' : 'var(--text-muted)'}; font-size:11px;">Vence: ${eq.vencimiento}</span>`;
                             if(eq.vencimientoPH) expInfo += ` <span style="color:${eq.vencimientoPH <= currMonth ? 'var(--danger)' : 'var(--text-muted)'}; font-size:11px;">| PH: ${eq.vencimientoPH}</span>`;
 
-                            itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${strExtra}${expInfo}</div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                            let btnFotoRef = eq.tieneFotoRef ? `<button class="btn-small" style="background:#6366f1;" onclick="verFotoReferenciaEquipo('${eq.id}')" title="Ver Foto del Equipo">🖼️</button>` : '';
+
+                            itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${strExtra}${expInfo}</div><div class="action-btns">${btnFotoRef}<button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
                         });
 
                         let secBadge = secVencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; margin-left:5px;">⚠️ ${secVencidosCount} Vencidos</span>` : '';
@@ -2469,6 +2608,14 @@
 
             document.getElementById('seccionEquipo').value = fichaResumen;
             document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+
+            // Mostrar botón de Foto de Referencia si el equipo tiene una cargada
+            const divBtnFotoRef = document.getElementById('zonaVerFotoReferenciaControl');
+            if(eq.tieneFotoRef) {
+                divBtnFotoRef.classList.remove('hidden');
+            } else {
+                divBtnFotoRef.classList.add('hidden');
+            }
             
             const container = document.getElementById('moduloDinamico'); 
             container.classList.remove('hidden'); 
@@ -2500,7 +2647,7 @@
                 warningHTML += `<div class="alert-warning"><b>⚠️ Falla Previa Registrada:</b><br><i>${config.fallas[id]}</i>.</div>`; 
             }
             
-            let html = ''; 
+            let html = '<div class="form-grid-pc">'; 
             if(params.length > 0) { 
                 params.forEach((p, index) => { 
                     html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="revisarFallas(this.value)"><option value="OK">✅ OK</option><option value="Falla">🚨 Falla</option></select></div>`; 
@@ -2508,6 +2655,7 @@
             } else {
                 html += `<div class="alert-warning">Sin puntos específicos. Registre el estado en Observaciones.</div>`;
             }
+            html += '</div>';
             container.innerHTML = warningHTML + html;
         }
 
@@ -2655,7 +2803,6 @@
                 } catch(quotaErr) {}
             }
 
-            // Subir control a la nube en tiempo real
             const subidoOk = await subirInspeccionIndividualANube(registro, fotoCopia);
             registro.synced = subidoOk;
 
@@ -2680,7 +2827,7 @@
                 } else { modalHTML += `<p class="text-muted" style="font-size:16px; margin-top:15px;">🏁 Sección completada para el bloque <b>${prefijo}</b>.</p>`; }
             }
             
-            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('zonaVerFotoReferenciaControl').classList.add('hidden'); document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
             btnSave.disabled = false;
             mostrarRadar(modalHTML);
         }
@@ -2716,7 +2863,6 @@
             const registros = obtenerRegistrosFiltradosHistorial(); 
             const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
 
-            // Si algún registro con falla no tiene la foto en el celular actual, intentar traerla de la nube
             for(let r of registros) {
                 const kFoto = r.ID_Equipo + '_' + r.Fecha;
                 if(!photoDB[kFoto] && r.uid) {
@@ -2762,12 +2908,13 @@
             }
             
             cerrarModalCierre(); 
-            document.getElementById('btnConfirmarFirma').innerText = "Descargar / Compartir PDF"; 
+            document.getElementById('btnConfirmarFirma').innerText = "Descargar PDF"; 
             document.getElementById('btnConfirmarFirma').disabled = false;
         }
 
         async function compartirODescargarArchivo(archivo) {
-            if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile && navigator.canShare && navigator.canShare({ files: [archivo] })) {
                 try {
                     await navigator.share({ files: [archivo], title: 'Reporte SySO Industrial' });
                     return;
@@ -2777,7 +2924,7 @@
         }
 
         async function purgarHistorial() { 
-            if(confirm("⚠️ ¿Desea vaciar el historial de controles de la nube y del dispositivo? (Haga esto únicamente luego de haber descargado el Excel/PDF del mes).")) { 
+            if(confirm("⚠️ ¿Desea vaciar el historial de controles de la nube y del dispositivo? (Haga esto únicamente luego de haber descargado el Excel/PDF del mes en su PC).")) { 
                 localStorage.removeItem(DB_KEY); 
                 localStorage.removeItem(PHOTO_KEY); 
                 try {
