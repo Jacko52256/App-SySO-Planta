@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.22 - Industrial</title>
+    <title>Gestión SySO V6.23 - Industrial Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -34,8 +34,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: var(--bg); color: var(--text); padding-bottom: 80px; transition: background 0.3s, color 0.3s; }
         
-        .header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s; }
+        .header { background: var(--primary); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s; position: relative; }
         body.dark-mode .header { color: #000; }
+        .cloud-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(0,0,0,0.25); color: #fff; margin-top: 4px; font-weight: bold; }
+        body.dark-mode .cloud-badge { background: rgba(0,0,0,0.7); color: #00e676; }
+
         .card { background: var(--card-bg); padding: 20px; border-radius: 8px; margin: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background 0.3s; }
         
         .form-group { margin-bottom: 15px; position: relative; transition: opacity 0.25s ease; }
@@ -128,22 +131,23 @@
 <body>
 
     <div class="header">
-        <h2>Auditoría SySO <span class="version-badge">V6.22</span></h2>
+        <h2>Auditoría SySO <span class="version-badge">V6.23</span></h2>
         <p id="headerInfo" style="font-weight:bold;">Sistema de Gestión Industrial</p>
+        <div id="cloudStatusBadge" class="cloud-badge">☁️ Conectando a la Nube...</div>
     </div>
 
     <!-- BOTÓN DE PÁNICO GLOBAL -->
     <div id="btnSOS" class="btn-sos" onclick="abrirModalSOS()">🚨</div>
 
-    <!-- VISTA 0: BOOTSTRAP -->
+    <!-- VISTA 0: VINCULACIÓN AUTOMÁTICA EN NUBE -->
     <div id="view-init" class="view">
-        <div class="card">
-            <h3 style="color:var(--danger); margin-bottom: 15px;">Dispositivo No Vinculado</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;"><b>Extractor Inteligente:</b> Si el enlace de WhatsApp se rompió, copie el mensaje de WhatsApp COMPLETO y péguelo aquí abajo.</p>
-            <textarea id="initToken" style="height: 100px; font-family: monospace;" class="form-group" placeholder="Pegue el Token o el Enlace roto completo aquí..."></textarea>
-            <button class="btn btn-warning" onclick="procesarTokenAduana(document.getElementById('initToken').value)">Sincronizar Dispositivo</button>
-            <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--danger);">
-                <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro</h4>
+        <div class="card" style="text-align:center;">
+            <h3 style="color:var(--primary); margin-bottom: 10px;">☁️ Vinculación Automática en Nube</h3>
+            <p id="lblEstadoInitNube" class="text-muted" style="font-size:14px; margin-bottom:20px;">Descargando base de datos maestra de la planta... Aguarde un instante.</p>
+            <button class="btn btn-primary" onclick="sincronizarDesdeNube(true)">🔄 Conectar y Descargar Base de la Nube</button>
+
+            <div id="divCrearAdmin" class="hidden" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--danger); text-align:left;">
+                <h4 style="color:var(--danger); margin-bottom:10px;">⚙️ Setup Maestro Inicial</h4>
                 <label>Super-Admin:</label><input type="text" id="initAdminName">
                 <label>PIN de Acceso:</label><input type="password" id="initAdminPin" pattern="[0-9]*" inputmode="numeric">
                 <button class="btn btn-success" style="margin-top:10px;" onclick="inicializarSistema()">Inicializar Base Maestra</button>
@@ -167,15 +171,10 @@
         </div>
         
         <div class="card" style="background-color: var(--input-bg);">
-            <h4 style="color: var(--primary); margin-bottom: 5px;">¿Opciones Avanzadas?</h4>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Actual: <b>V6.22 (Prefijos por Sección SEC-GRP-001)</b></p>
-            <button class="btn btn-outline" onclick="document.getElementById('divTokenLogin').classList.toggle('hidden')">🔄 Operaciones de Token / Refresco</button>
-            <div id="divTokenLogin" class="hidden" style="margin-top: 15px;">
-                <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Forzar Actualización de la App</button>
-                <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
-                <textarea id="tokenLogin" placeholder="Pegue el Token o Enlace Roto aquí..." style="height: 70px; font-family: monospace;"></textarea>
-                <button class="btn btn-warning" onclick="procesarTokenAduana(document.getElementById('tokenLogin').value)">Procesar Manualmente</button>
-            </div>
+            <h4 style="color: var(--primary); margin-bottom: 5px;">Estado del Sistema</h4>
+            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Versión Activa: <b>V6.23 (Sincronización Automática en Nube)</b></p>
+            <button class="btn btn-outline" onclick="sincronizarDesdeNube(true)">☁️ Sincronizar Nube Ahora</button>
+            <button class="btn btn-outline" style="margin-top:8px;" onclick="forzarActualizacion()">🔄 Buscar Nueva Versión de la App</button>
         </div>
     </div>
 
@@ -228,7 +227,7 @@
     <div id="view-qr" class="view">
         <div class="card" style="border: 2px dashed var(--primary);">
             <h3 style="color: var(--primary); margin-bottom: 5px;">⚡ Importación Rápida (Lista Maestra)</h3>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel. El sistema aplicará automáticamente el prefijo compuesto (Ej. BAL-EXT-001) según la sección y grupo.</p>
+            <p class="text-muted" style="font-size: 11px; margin-bottom: 10px;">Pegue columnas desde Excel. El sistema aplicará automáticamente el prefijo compuesto (Ej. BAL-EXT-001) y subirá el lote a la nube.</p>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="btn-small btn-primary" onclick="document.getElementById('divBulk').classList.toggle('hidden')">Mostrar Panel Excel</button>
                 <button class="btn-small btn-info" onclick="descargarPlantillaBulk()">📄 Descargar Plantilla Maestra</button>
@@ -241,7 +240,7 @@
 
         <div class="card">
             <h3 style="color: var(--primary); margin-bottom: 5px;">Ficha Maestra de Inventario (Alta QR)</h3>
-            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Nomenclatura por Sector:</b> El código une automáticamente <b>Sección + Grupo + Correlativo</b> (Ej. <code>BAL-EXT-001</code>) y reinicia la numeración en cada sección.</p>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;"><b>Nomenclatura y Nube Automática:</b> Al guardar un equipo, se genera el código <b>Sección + Grupo + Correlativo</b> (Ej. <code>BAL-EXT-001</code>) y se actualiza en la nube para todos los compañeros.</p>
             
             <div class="form-group">
                 <label>1. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
@@ -322,10 +321,10 @@
     <!-- VISTA 4: CONFIGURACIÓN (Admin) -->
     <div id="view-admin" class="view">
         <div class="card" style="border-left: 4px solid var(--info-bg);">
-            <h3 style="margin-bottom: 10px;">Sincronización Mágica</h3>
-            <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Debido a los límites de WhatsApp, si el enlace azul se rompe, pida al inspector que copie todo el mensaje y lo pegue manualmente.</p>
+            <h3 style="margin-bottom: 8px;">☁️ Sincronización Central en Nube</h3>
+            <p class="text-muted" style="font-size: 12px; margin-bottom: 15px;">Todos los dispositivos de la planta se actualizan automáticamente al abrir la aplicación. Si desea forzar una sincronización inmediata con el servidor, presione el botón inferior.</p>
             
-            <button class="btn btn-info" onclick="generarYEnviarEnlaceMaestro()">📲 Enviar Enlace Maestro (WhatsApp)</button>
+            <button class="btn btn-info" onclick="sincronizarDesdeNube(true)">☁️ Sincronizar Base de Datos con la Nube Ahora</button>
             
             <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
             <h4 style="color:var(--primary); font-size:14px; margin-bottom:10px;">Opciones de Integración (Excel)</h4>
@@ -419,21 +418,10 @@
             
             <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
             <button class="btn btn-primary" onclick="forzarActualizacion()">🔄 Buscar Actualización</button>
-            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.22</b></p>
+            <p class="text-muted" style="font-size:12px; text-align:center; margin-top:5px;">Versión Activa Instalada: <b style="color:var(--primary);">V6.23 Cloud</b></p>
         </div>
         <div class="card">
             <button class="btn btn-outline" onclick="cerrarSesion(true)">🔒 Cerrar Sesión Segura</button>
-        </div>
-    </div>
-
-    <!-- MODAL ADUANA DE SINCRONIZACIÓN -->
-    <div id="modalAduana" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 style="color:var(--primary); margin-bottom:10px;">⚠️ Aduana de Sincronización</h3>
-            <div id="aduanaStats" style="background:var(--input-bg); padding:15px; border-radius:6px; margin-bottom:15px; font-size:14px; border:1px solid var(--border);"></div>
-            <button class="btn btn-success" onclick="ejecutarFusion()">🧬 Fusionar Datos (Recomendado)</button>
-            <button class="btn btn-danger" onclick="ejecutarSobrescritura()">🔥 Sobrescribir Todo (Peligro)</button>
-            <button class="btn btn-outline" onclick="cerrarAduana()">Cancelar Sincronización</button>
         </div>
     </div>
 
@@ -515,7 +503,15 @@
     </div>
 
     <script>
-        const CFG_KEY = 'SySO_Config_Master'; const DB_KEY = 'SySO_Data_Master'; const PHOTO_KEY = 'SySO_Photos_Master'; const DRAFT_KEY = 'SySO_Draft_Master'; const ACTIVITY_KEY = 'SySO_LastActivity';
+        const CFG_KEY = 'SySO_Config_Master'; 
+        const DB_KEY = 'SySO_Data_Master'; 
+        const PHOTO_KEY = 'SySO_Photos_Master'; 
+        const DRAFT_KEY = 'SySO_Draft_Master'; 
+        const ACTIVITY_KEY = 'SySO_LastActivity';
+        
+        // URL OFICIAL EN LA NUBE (FIREBASE REALTIME DATABASE)
+        const CLOUD_DB_URL = 'https://syso-industrial-default-rtdb.firebaseio.com/syso_master_config.json';
+
         let config = { 
             usuarios: [], 
             secciones: [], 
@@ -543,14 +539,29 @@
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj; let canvas, ctx, firmaVacia = true; 
         let editGrupoNom = null, editUsuId = null, editSecNom = null, editQRId = null; 
         let fotoActualBase64 = null; let esCargaManual = false;
-        let tokenPendiente = null;
+        let sincronizandoNube = false;
 
-        // Ordenamiento Alfanumérico Natural
         function sortNatural(a, b) {
             return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
         }
 
-        // --- V6.22: MOTOR DE PREFIJOS DE SECCIÓN Y NOMENCLATURA COMPUESTA (SEC-GRP-001) ---
+        function actualizarBadgeNube(texto, colorTexto = '#ffffff') {
+            const badge = document.getElementById('cloudStatusBadge');
+            if(badge) {
+                badge.innerText = texto;
+                badge.style.color = colorTexto;
+            }
+        }
+
+        // Blindaje de memoria persistente para evitar borrados en Nokia G10 y gama entrada
+        async function blindarAlmacenamientoPersistente() {
+            try {
+                if (navigator.storage && navigator.storage.persist) {
+                    await navigator.storage.persist();
+                }
+            } catch(e) {}
+        }
+
         function limpiarSigla(str) {
             return String(str || '').trim().toUpperCase().replace(/^-+|-+$/g, '').replace(/\s+/g, '');
         }
@@ -558,7 +569,6 @@
         function generarPrefijoSeccionAuto(nombreSec) {
             if(!nombreSec) return "SEC";
             const limpio = nombreSec.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
-            // Mapeo directo para las secciones conocidas de planta
             if(limpio === "AGROCHACO") return "AGR";
             if(limpio === "LABFIL") return "LAB";
             if(limpio === "BALANCEADOS") return "BAL";
@@ -597,7 +607,7 @@
         }
 
         function sugerirPrefijoSeccionInput() {
-            if(editSecNom) return; // Si está editando, no pisar manualmente a menos que lo cambie el usuario
+            if(editSecNom) return;
             const nom = document.getElementById('nuevaSeccion').value;
             document.getElementById('nuevaSeccionPrefijo').value = generarPrefijoSeccionAuto(nom);
         }
@@ -620,56 +630,64 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             migrarDatosLegados();
+            blindarAlmacenamientoPersistente();
             verificarBotonBiometrico();
             if(localStorage.getItem('SySO_DarkMode') === 'true') { document.body.classList.add('dark-mode'); const btn = document.getElementById('btnDarkMode'); if(btn) btn.innerHTML = '☀️ Activar Modo Día'; }
             
             const urlParams = new URLSearchParams(window.location.search); 
-            let magicToken = urlParams.get('t');
-            
-            if (magicToken) { 
-                magicToken = magicToken.replace(/ /g, '+');
-                window.history.replaceState(null, null, window.location.pathname); 
-                setTimeout(() => procesarTokenAduana(magicToken.trim()), 300); 
-            }
-            
             if (urlParams.get('setup') === '1') document.getElementById('divCrearAdmin').classList.remove('hidden');
 
             const rawConfig = localStorage.getItem(CFG_KEY);
             if (!rawConfig) {
+                // Dispositivo nuevo o con memoria limpia (Ej. Nokia G10): descarga automática desde la nube
                 document.getElementById('view-init').classList.add('active');
+                sincronizarDesdeNube(false);
             } else { 
+                // Apertura en 0 segundos con memoria local y sincronización silenciosa en segundo plano
                 config = JSON.parse(rawConfig); 
                 validarEstructuraTimestamps();
-                prepararLogin(); iniciarCandadoTurno();
+                prepararLogin(); 
+                iniciarCandadoTurno();
+                sincronizarDesdeNube(false);
             }
         });
 
-        // --- V6.22: VALIDACIÓN Y MIGRACIÓN AUTOMÁTICA DE EQUIPOS EXISTENTES AL FORMATO SEC-GRP-NUM ---
+        function normalizarObjetoConfig(cfg) {
+            if(!cfg.usuarios) cfg.usuarios = [];
+            if(!cfg.secciones) cfg.secciones = [];
+            if(!cfg.equipos) cfg.equipos = {};
+            if(!cfg.grupos) cfg.grupos = { "Combate Extintores": ["Manómetro", "Sello", "Boquilla", "Cuerpo"], "Todos": [] };
+            if(!cfg.prefijos) { cfg.prefijos = {}; Object.keys(cfg.grupos).forEach(g => { if(g !== 'Todos') cfg.prefijos[g] = ""; }); }
+            if(!cfg.prefijosSeccion) cfg.prefijosSeccion = {};
+            (cfg.secciones || []).forEach(sec => {
+                if(!cfg.prefijosSeccion[sec]) cfg.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
+                else cfg.prefijosSeccion[sec] = limpiarSigla(cfg.prefijosSeccion[sec]);
+            });
+            if(!cfg.camposGrupo) cfg.camposGrupo = {};
+            Object.keys(cfg.grupos).forEach(g => {
+                if(g !== 'Todos' && !Array.isArray(cfg.camposGrupo[g])) cfg.camposGrupo[g] = deducirCamposPorDefecto(g);
+            });
+            if(!cfg.fallas) cfg.fallas = {};
+            cfg.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
+            if(!cfg.timestamps) { cfg.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; }
+            if(!cfg.timestamps.equipos) cfg.timestamps.equipos = {};
+            if(!cfg.timestamps.usuarios) cfg.timestamps.usuarios = {};
+            if(!cfg.timestamps.grupos) cfg.timestamps.grupos = {};
+            if(!cfg.timestamps.secciones) cfg.timestamps.secciones = {};
+            Object.keys(cfg.equipos).forEach(k => { if(!cfg.timestamps.equipos[k]) cfg.timestamps.equipos[k] = 1; });
+            cfg.usuarios.forEach(u => { if(!cfg.timestamps.usuarios[u.id]) cfg.timestamps.usuarios[u.id] = 1; });
+            Object.keys(cfg.grupos).forEach(k => { if(!cfg.timestamps.grupos[k]) cfg.timestamps.grupos[k] = 1; });
+            cfg.secciones.forEach(k => { if(!cfg.timestamps.secciones[k]) cfg.timestamps.secciones[k] = 1; });
+            if(!cfg.deleted) { cfg.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; }
+            if(!cfg.deleted.equipos) cfg.deleted.equipos = {};
+            if(!cfg.deleted.usuarios) cfg.deleted.usuarios = {};
+            if(!cfg.deleted.grupos) cfg.deleted.grupos = {};
+            if(!cfg.deleted.secciones) cfg.deleted.secciones = {};
+        }
+
         function validarEstructuraTimestamps() {
-            if(!config.prefijos) { config.prefijos = {}; Object.keys(config.grupos).forEach(g => { if(g !== 'Todos') config.prefijos[g] = ""; }); }
-            if(!config.prefijosSeccion) { config.prefijosSeccion = {}; }
-            (config.secciones || []).forEach(sec => {
-                if(!config.prefijosSeccion[sec]) {
-                    config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
-                } else {
-                    config.prefijosSeccion[sec] = limpiarSigla(config.prefijosSeccion[sec]);
-                }
-            });
-
-            if(!config.camposGrupo) { config.camposGrupo = {}; }
-            Object.keys(config.grupos).forEach(g => {
-                if(g !== 'Todos' && !Array.isArray(config.camposGrupo[g])) {
-                    config.camposGrupo[g] = deducirCamposPorDefecto(g);
-                }
-            });
-            if(!config.fallas) config.fallas = {}; 
-            config.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
-            if(!config.timestamps) { config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; Object.keys(config.equipos).forEach(k => config.timestamps.equipos[k] = 1); config.usuarios.forEach(u => config.timestamps.usuarios[u.id] = 1); Object.keys(config.grupos).forEach(k => config.timestamps.grupos[k] = 1); config.secciones.forEach(k => config.timestamps.secciones[k] = 1); }
-            if(!config.deleted) { config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; }
-
-            // Migración automática de IDs antiguos (ej. EXT-001 -> BAL-EXT-001) sin perder ningún equipo
+            normalizarObjetoConfig(config);
             migrarEquiposAPrefijoCompuesto();
-
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
@@ -685,20 +703,17 @@
                 if(!config.prefijosSeccion[eq.seccion]) {
                     config.prefijosSeccion[eq.seccion] = generarPrefijoSeccionAuto(eq.seccion);
                 }
-                const prefCompuesto = obtenerPrefijoCompuesto(eq.grupo, eq.seccion); // Ej. "BAL-EXT-"
+                const prefCompuesto = obtenerPrefijoCompuesto(eq.grupo, eq.seccion);
                 if(!prefCompuesto) return;
 
-                // Si el ID ya comienza con el prefijo compuesto correcto (ej. BAL-EXT-001), no se toca
                 if(oldId.toUpperCase().startsWith(prefCompuesto)) return;
 
-                // Extraer los dígitos finales del equipo (ej. de "EXT-001" o "PA-01" -> "001" o "01")
                 const match = oldId.match(/(\d+)$/);
                 if(match) {
                     const numStr = match[1];
                     const newId = prefCompuesto + numStr;
 
                     if(newId !== oldId) {
-                        // Si el nuevo ID aún no existe, migrar el equipo conservando todos sus datos
                         if(!config.equipos[newId]) {
                             config.equipos[newId] = eq;
                         }
@@ -706,7 +721,6 @@
                         config.timestamps.equipos[newId] = nowTs + 1;
                         config.deleted.equipos[oldId] = nowTs;
 
-                        // Migrar también cualquier falla pendiente asociada a ese equipo
                         if(config.fallas && config.fallas[oldId]) {
                             config.fallas[newId] = config.fallas[oldId];
                             delete config.fallas[oldId];
@@ -714,6 +728,213 @@
                     }
                 }
             });
+        }
+
+        // --- V6.23: MOTOR DE SINCRONIZACIÓN AUTOMÁTICA EN LA NUBE (FIREBASE) ---
+        function fusionarConfiguracionesEnMemoria(newCfg) {
+            normalizarObjetoConfig(config);
+            normalizarObjetoConfig(newCfg);
+
+            // 1. Secciones
+            (newCfg.secciones || []).forEach(sec => { 
+                let tsNew = newCfg.timestamps.secciones[sec] || 1; 
+                let tsOld = config.timestamps.secciones[sec] || 0; 
+                let tsDel = config.deleted.secciones[sec] || 0; 
+                if((!config.secciones.includes(sec) || tsNew > tsOld) && tsNew > tsDel) { 
+                    if(!config.secciones.includes(sec)) config.secciones.push(sec); 
+                    if(newCfg.prefijosSeccion && newCfg.prefijosSeccion[sec]) {
+                        config.prefijosSeccion[sec] = newCfg.prefijosSeccion[sec];
+                    } else if(!config.prefijosSeccion[sec]) {
+                        config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
+                    }
+                    config.timestamps.secciones[sec] = Math.max(tsNew, tsOld); 
+                    delete config.deleted.secciones[sec]; 
+                } 
+            });
+            Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { 
+                let tsDelNew = newCfg.deleted.secciones[sec] || 0; 
+                let tsOld = config.timestamps.secciones[sec] || 0; 
+                if(tsDelNew > tsOld) { 
+                    config.secciones = config.secciones.filter(s => s !== sec); 
+                    delete config.prefijosSeccion[sec]; 
+                    config.deleted.secciones[sec] = tsDelNew; 
+                } 
+            });
+
+            // 2. Grupos
+            Object.keys(newCfg.grupos || {}).forEach(nom => { 
+                if(nom === 'Todos') return; 
+                let tsNew = newCfg.timestamps.grupos[nom] || 1; 
+                let tsOld = config.timestamps.grupos[nom] || 0; 
+                let tsDel = config.deleted.grupos[nom] || 0; 
+                if((!config.grupos[nom] || tsNew > tsOld) && tsNew > tsDel) { 
+                    config.grupos[nom] = newCfg.grupos[nom]; 
+                    config.prefijos[nom] = (newCfg.prefijos && newCfg.prefijos[nom]) ? newCfg.prefijos[nom] : ""; 
+                    config.camposGrupo[nom] = (newCfg.camposGrupo && newCfg.camposGrupo[nom]) ? newCfg.camposGrupo[nom] : deducirCamposPorDefecto(nom);
+                    config.timestamps.grupos[nom] = Math.max(tsNew, tsOld); 
+                    delete config.deleted.grupos[nom]; 
+                } 
+            });
+            Object.keys(newCfg.deleted.grupos || {}).forEach(nom => { 
+                let tsDelNew = newCfg.deleted.grupos[nom] || 0; 
+                let tsOld = config.timestamps.grupos[nom] || 0; 
+                if(tsDelNew > tsOld) { 
+                    delete config.grupos[nom]; 
+                    delete config.prefijos[nom]; 
+                    delete config.camposGrupo[nom]; 
+                    config.deleted.grupos[nom] = tsDelNew; 
+                } 
+            });
+
+            // 3. Equipos
+            Object.keys(newCfg.equipos || {}).forEach(id => { 
+                let tsNew = newCfg.timestamps.equipos[id] || 1; 
+                let tsOld = config.timestamps.equipos[id] || 0; 
+                let tsDel = config.deleted.equipos[id] || 0; 
+                if((!config.equipos[id] || tsNew > tsOld) && tsNew > tsDel) { 
+                    config.equipos[id] = newCfg.equipos[id]; 
+                    config.timestamps.equipos[id] = Math.max(tsNew, tsOld); 
+                    delete config.deleted.equipos[id]; 
+                } 
+            });
+            Object.keys(newCfg.deleted.equipos || {}).forEach(id => { 
+                let tsDelNew = newCfg.deleted.equipos[id] || 0; 
+                let tsOld = config.timestamps.equipos[id] || 0; 
+                if(tsDelNew > tsOld) { 
+                    delete config.equipos[id]; 
+                    config.deleted.equipos[id] = tsDelNew; 
+                } 
+            });
+
+            // 4. Usuarios
+            (newCfg.usuarios || []).forEach(uNew => { 
+                let tsNew = newCfg.timestamps.usuarios[uNew.id] || 1; 
+                let tsOld = config.timestamps.usuarios[uNew.id] || 0; 
+                let tsDel = config.deleted.usuarios[uNew.id] || 0; 
+                let existeLocal = config.usuarios.some(u => u.id === uNew.id);
+                if((!existeLocal || tsNew > tsOld) && tsNew > tsDel) { 
+                    config.usuarios = config.usuarios.filter(u => u.id !== uNew.id); 
+                    config.usuarios.push(uNew); 
+                    config.timestamps.usuarios[uNew.id] = Math.max(tsNew, tsOld); 
+                    delete config.deleted.usuarios[uNew.id]; 
+                } 
+            });
+            Object.keys(newCfg.deleted.usuarios || {}).forEach(id => { 
+                let tsDelNew = newCfg.deleted.usuarios[id] || 0; 
+                let tsOld = config.timestamps.usuarios[id] || 0; 
+                if(tsDelNew > tsOld) { 
+                    config.usuarios = config.usuarios.filter(u => u.id !== parseInt(id)); 
+                    config.deleted.usuarios[id] = tsDelNew; 
+                } 
+            });
+
+            // 5. Fallas activas
+            if(newCfg.fallas) {
+                Object.keys(newCfg.fallas).forEach(id => {
+                    if(config.equipos[id] && !config.fallas[id]) {
+                        config.fallas[id] = newCfg.fallas[id];
+                    }
+                });
+            }
+
+            migrarEquiposAPrefijoCompuesto();
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
+        }
+
+        async function sincronizarDesdeNube(mostrarAlertaManual = false) {
+            if(sincronizandoNube) return;
+            sincronizandoNube = true;
+            actualizarBadgeNube('🔄 Sincronizando Nube...', '#ffc107');
+
+            try {
+                const res = await fetch(CLOUD_DB_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
+                if(!res.ok) throw new Error('HTTP ' + res.status);
+                const cloudCfg = await res.json();
+
+                if(cloudCfg && cloudCfg.usuarios && cloudCfg.usuarios.length > 0) {
+                    const teniaUsuariosLocales = config.usuarios && config.usuarios.length > 0;
+                    const cantEqAntes = Object.keys(config.equipos || {}).length;
+                    const cantEqNube = Object.keys(cloudCfg.equipos || {}).length;
+
+                    fusionarConfiguracionesEnMemoria(cloudCfg);
+                    const cantEqDespues = Object.keys(config.equipos || {}).length;
+
+                    // Si el dispositivo local tenía datos nuevos que no estaban en la nube, subir la fusión a la nube
+                    if(teniaUsuariosLocales && cantEqDespues > cantEqNube) {
+                        await fetch(CLOUD_DB_URL, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(config)
+                        });
+                    }
+
+                    actualizarBadgeNube(`☁️ Nube OK (${cantEqDespues} Eq.)`, '#00e676');
+
+                    // Si el dispositivo estaba en la pantalla de "Vinculación Automática", llevarlo directo al Login
+                    if(document.getElementById('view-init').classList.contains('active')) {
+                        prepararLogin();
+                        iniciarCandadoTurno();
+                    } else if(usuarioActual && usuarioActual.rol === 'Admin') {
+                        poblarAdmin();
+                    }
+
+                    if(mostrarAlertaManual) {
+                        alert(`✅ Sincronización con la Nube completada.\n\nEquipos activos: ${cantEqDespues}\nUsuarios activos: ${config.usuarios.length}`);
+                    }
+                } else {
+                    // La nube está vacía en este primer arranque: si este celular ya tiene la base maestra, subirla automáticamente
+                    if(config.usuarios && config.usuarios.length > 0) {
+                        await fetch(CLOUD_DB_URL, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(config)
+                        });
+                        const totalEq = Object.keys(config.equipos || {}).length;
+                        actualizarBadgeNube(`☁️ Base Subida (${totalEq} Eq.)`, '#00e676');
+                        if(mostrarAlertaManual) alert(`✅ Base Maestra subida a la Nube con éxito (${totalEq} equipos).`);
+                    } else {
+                        actualizarBadgeNube('⚠️ Nube esperando inicialización', '#ffc107');
+                        const lbl = document.getElementById('lblEstadoInitNube');
+                        if(lbl) lbl.innerText = 'La nube aún no tiene datos. Abra primero la App desde el celular del Administrador Principal para que suba la base automáticamente.';
+                    }
+                }
+            } catch(err) {
+                console.warn('Modo Offline:', err);
+                actualizarBadgeNube('⚡ Modo Offline (Memoria Local)', '#ffc107');
+                const lbl = document.getElementById('lblEstadoInitNube');
+                if(lbl) lbl.innerText = 'Sin conexión a internet en este momento.Verifique sus datos móviles o Wi-Fi y presione el botón azul para conectar.';
+                if(mostrarAlertaManual) alert('⚠️ No se pudo conectar con la nube en este momento. Verifique su conexión a internet.');
+            } finally {
+                sincronizandoNube = false;
+            }
+        }
+
+        async function guardarYSubirANube() {
+            localStorage.setItem(CFG_KEY, JSON.stringify(config));
+            actualizarBadgeNube('🔄 Guardando en Nube...', '#ffc107');
+            try {
+                // Primero consultar la nube para no pisar cambios hechos hace segundos por otro Administrador
+                const res = await fetch(CLOUD_DB_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
+                if(res.ok) {
+                    const cloudCfg = await res.json();
+                    if(cloudCfg && cloudCfg.usuarios) {
+                        fusionarConfiguracionesEnMemoria(cloudCfg);
+                    }
+                }
+                const putRes = await fetch(CLOUD_DB_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                if(putRes.ok) {
+                    const totalEq = Object.keys(config.equipos || {}).length;
+                    actualizarBadgeNube(`☁️ Nube OK (${totalEq} Eq.)`, '#00e676');
+                } else {
+                    throw new Error('Error PUT');
+                }
+            } catch(e) {
+                actualizarBadgeNube('⚡ Guardado Local (Pendiente Nube)', '#ffc107');
+            }
         }
 
         // --- MOTOR BIOMÉTRICO (PASSKEYS RESIDENTES Y EXTRACCIÓN DE RAW-ID) ---
@@ -849,90 +1070,6 @@
             window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
         }
 
-        function procesarTokenAduana(str) {
-            if(!str) return alert("Pegue un código o enlace.");
-            
-            let rawStr = str.trim();
-            let token = rawStr;
-            const match = rawStr.match(/t=([^ \n\r]+)/);
-            if(match) { token = match[1]; }
-            token = token.replace(/[\r\n]/g, '');
-            token = token.replace(/ /g, '+');
-
-            try {
-                let newCfg;
-                try {
-                    let decoded = LZString.decompressFromEncodedURIComponent(token);
-                    if(!decoded) throw new Error("Not LZ-String");
-                    newCfg = JSON.parse(decoded);
-                } catch(e1) {
-                    let decodedLegacy = decodeURIComponent(atob(token));
-                    newCfg = JSON.parse(decodedLegacy);
-                }
-                
-                if(!newCfg || !newCfg.usuarios) throw new Error();
-                tokenPendiente = newCfg;
-                
-                let curEq = Object.keys(config.equipos||{}).length; let newEq = Object.keys(newCfg.equipos||{}).length; let curUsr = (config.usuarios||[]).length; let newUsr = (newCfg.usuarios||[]).length;
-                let html = `<p><b>Datos en tu Celular:</b> ${curEq} Equipos | ${curUsr} Usuarios</p><p><b>Datos en el Token:</b> ${newEq} Equipos | ${newUsr} Usuarios</p><hr style="margin:10px 0; border:0; border-top:1px solid var(--border);"><p style="color:var(--text-muted); font-size:12px;">Al pulsar <b>Fusionar</b>, el sistema unificará ambas bases respetando la última fecha de modificación de cada ítem.</p>`;
-                document.getElementById('aduanaStats').innerHTML = html; document.getElementById('modalAduana').classList.remove('hidden');
-                document.getElementById('initToken').value = ''; 
-                if(document.getElementById('tokenLogin')) document.getElementById('tokenLogin').value = '';
-            } catch(e) { 
-                alert("Formato Inválido. Asegúrese de copiar el mensaje o el token correctamente."); 
-            }
-        }
-
-        function cerrarAduana() { document.getElementById('modalAduana').classList.add('hidden'); tokenPendiente = null; }
-        function ejecutarSobrescritura() { if(!confirm("⚠️ ATENCIÓN: Esto borrará tu base actual y la reemplazará por la del Token. ¿Estás seguro?")) return; localStorage.setItem(CFG_KEY, JSON.stringify(tokenPendiente)); alert("Sobrescritura completada."); location.reload(); }
-
-        function ejecutarFusion() {
-            if(!tokenPendiente) return; let newCfg = tokenPendiente;
-            if(!config.timestamps) config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!config.deleted) config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
-            if(!newCfg.timestamps) newCfg.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; if(!newCfg.deleted) newCfg.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} };
-            if(!config.camposGrupo) config.camposGrupo = {};
-            if(!config.prefijosSeccion) config.prefijosSeccion = {};
-
-            (newCfg.secciones || []).forEach(sec => { 
-                let tsNew = newCfg.timestamps.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; let tsDel = config.deleted.secciones[sec] || 0; 
-                if(tsNew > tsOld && tsNew > tsDel) { 
-                    if(!config.secciones.includes(sec)) config.secciones.push(sec); 
-                    if(newCfg.prefijosSeccion && newCfg.prefijosSeccion[sec]) {
-                        config.prefijosSeccion[sec] = newCfg.prefijosSeccion[sec];
-                    } else if(!config.prefijosSeccion[sec]) {
-                        config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
-                    }
-                    config.timestamps.secciones[sec] = tsNew; 
-                    delete config.deleted.secciones[sec]; 
-                } 
-            });
-            Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { let tsDelNew = newCfg.deleted.secciones[sec] || 0; let tsOld = config.timestamps.secciones[sec] || 0; if(tsDelNew > tsOld) { config.secciones = config.secciones.filter(s => s !== sec); delete config.prefijosSeccion[sec]; config.deleted.secciones[sec] = tsDelNew; } });
-
-            Object.keys(newCfg.grupos || {}).forEach(nom => { 
-                if(nom === 'Todos') return; 
-                let tsNew = newCfg.timestamps.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; let tsDel = config.deleted.grupos[nom] || 0; 
-                if(tsNew > tsOld && tsNew > tsDel) { 
-                    config.grupos[nom] = newCfg.grupos[nom]; 
-                    config.prefijos[nom] = (newCfg.prefijos && newCfg.prefijos[nom]) ? newCfg.prefijos[nom] : ""; 
-                    config.camposGrupo[nom] = (newCfg.camposGrupo && newCfg.camposGrupo[nom]) ? newCfg.camposGrupo[nom] : deducirCamposPorDefecto(nom);
-                    config.timestamps.grupos[nom] = tsNew; 
-                    delete config.deleted.grupos[nom]; 
-                } 
-            });
-            Object.keys(newCfg.deleted.grupos || {}).forEach(nom => { let tsDelNew = newCfg.deleted.grupos[nom] || 0; let tsOld = config.timestamps.grupos[nom] || 0; if(tsDelNew > tsOld) { delete config.grupos[nom]; delete config.prefijos[nom]; delete config.camposGrupo[nom]; config.deleted.grupos[nom] = tsDelNew; } });
-
-            Object.keys(newCfg.equipos || {}).forEach(id => { let tsNew = newCfg.timestamps.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; let tsDel = config.deleted.equipos[id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.equipos[id] = newCfg.equipos[id]; config.timestamps.equipos[id] = tsNew; delete config.deleted.equipos[id]; } });
-            Object.keys(newCfg.deleted.equipos || {}).forEach(id => { let tsDelNew = newCfg.deleted.equipos[id] || 0; let tsOld = config.timestamps.equipos[id] || 0; if(tsDelNew > tsOld) { delete config.equipos[id]; config.deleted.equipos[id] = tsDelNew; } });
-
-            (newCfg.usuarios || []).forEach(uNew => { let tsNew = newCfg.timestamps.usuarios[uNew.id] || 0; let tsOld = config.timestamps.usuarios[uNew.id] || 0; let tsDel = config.deleted.usuarios[uNew.id] || 0; if(tsNew > tsOld && tsNew > tsDel) { config.usuarios = config.usuarios.filter(u => u.id !== uNew.id); config.usuarios.push(uNew); config.timestamps.usuarios[uNew.id] = tsNew; delete config.deleted.usuarios[uNew.id]; } });
-            Object.keys(newCfg.deleted.usuarios || {}).forEach(id => { let tsDelNew = newCfg.deleted.usuarios[id] || 0; let tsOld = config.timestamps.usuarios[id] || 0; if(tsDelNew > tsOld) { config.usuarios = config.usuarios.filter(u => u.id !== parseInt(id)); config.deleted.usuarios[id] = tsDelNew; } });
-
-            // Asegurar que cualquier equipo recibido sin prefijo de sección sea normalizado
-            migrarEquiposAPrefijoCompuesto();
-
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); alert("✅ Fusión Inteligente completada. Datos unificados."); location.reload();
-        }
-
         function migrarDatosLegados() { if (!localStorage.getItem(CFG_KEY)) { let oldCfg = localStorage.getItem('SySO_V5_Config') || localStorage.getItem('SySO_V6_Config'); let oldData = localStorage.getItem('SySO_V5_Data') || localStorage.getItem('SySO_V6_Data'); let oldPhotos = localStorage.getItem('SySO_V5_Photos') || localStorage.getItem('SySO_V6_Photos'); if (oldCfg) localStorage.setItem(CFG_KEY, oldCfg); if (oldData) localStorage.setItem(DB_KEY, oldData); if (oldPhotos) localStorage.setItem(PHOTO_KEY, oldPhotos); } }
         function iniciarCandadoTurno() { localStorage.setItem(ACTIVITY_KEY, Date.now()); document.addEventListener('touchstart', () => localStorage.setItem(ACTIVITY_KEY, Date.now())); document.addEventListener('click', () => localStorage.setItem(ACTIVITY_KEY, Date.now())); setInterval(() => { let lastAct = parseInt(localStorage.getItem(ACTIVITY_KEY) || 0); if(usuarioActual && (Date.now() - lastAct) > 12 * 60 * 60 * 1000) { alert("⛔ Sesión expirada por inactividad (>12hs). Por favor, ingrese su PIN nuevamente."); cerrarSesion(false); } }, 60000); }
         function toggleDarkMode() { const body = document.body; body.classList.toggle('dark-mode'); const isDark = body.classList.contains('dark-mode'); localStorage.setItem('SySO_DarkMode', isDark); document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche'; }
@@ -941,11 +1078,12 @@
         function filtrarUsuarios() { const input = document.getElementById('loginInputUsuario').value.toLowerCase(); const dropdown = document.getElementById('dropdownUsuarios'); dropdown.innerHTML = ''; const filtrados = config.usuarios.filter(u => u.nombre.toLowerCase().includes(input)); if (filtrados.length === 0) { dropdown.style.display = 'none'; return; } filtrados.forEach(u => { const div = document.createElement('div'); div.className = 'dropdown-item'; div.innerText = u.nombre; div.onclick = function() { document.getElementById('loginInputUsuario').value = u.nombre; dropdown.style.display = 'none'; }; dropdown.appendChild(div); }); dropdown.style.display = 'block'; }
         document.addEventListener('click', function(e) { if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; } });
 
-        function inicializarSistema() { 
+        async function inicializarSistema() { 
             const nom = document.getElementById('initAdminName').value.trim(); 
             const pin = document.getElementById('initAdminPin').value.trim(); 
             if(!nom || !pin) return alert("Faltan datos."); 
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); 
+            const uId = Date.now();
+            config.usuarios.push({ id: uId, nombre: nom, pin: pin, rol: 'Admin', grupo: ['Todos'] }); 
             config.secciones = ["Agrochaco", "LabFil", "Balanceados", "Balanceados Viejo"]; 
             config.prefijosSeccion = { "Agrochaco": "AGR", "LabFil": "LAB", "Balanceados": "BAL", "Balanceados Viejo": "BAV" };
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; 
@@ -954,22 +1092,10 @@
                 "Combate Hidrantes": ['capacidad', 'serie', 'vencimientoPH']
             };
             config.fallas = {}; 
-            config.timestamps = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; 
+            config.timestamps = { equipos:{}, usuarios:{ [uId]: uId }, grupos:{}, secciones:{} }; 
             config.deleted = { equipos:{}, usuarios:{}, grupos:{}, secciones:{} }; 
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            await guardarYSubirANube();
             window.location.href = window.location.href.split('?')[0]; 
-        }
-        
-        function generarEnlaceMaestro(silent = true) { 
-            const str = LZString.compressToEncodedURIComponent(JSON.stringify(config)); 
-            const link = window.location.href.split('?')[0] + '?v=' + Date.now() + '&t=' + str; 
-            return link;
-        }
-
-        function generarYEnviarEnlaceMaestro() {
-            const link = generarEnlaceMaestro(true);
-            const mensaje = encodeURIComponent(`*Actualización SySO Industrial*\n\n⚠️ Si el enlace está ROTO (no es todo azul), cópielo completo de forma manual y péguelo en la caja blanca de la App.\n\nHaga clic aquí:\n${link}`);
-            window.location.href = `whatsapp://send?text=${mensaje}`;
         }
         
         async function generarEstructuraExcel() { 
@@ -1027,6 +1153,7 @@
             usuarioActual = null; 
             document.getElementById('menuNavegacion').classList.add('hidden'); 
             prepararLogin(); 
+            sincronizarDesdeNube(false);
         }
 
         function nav(vista, btn) { 
@@ -1086,7 +1213,6 @@
             renderListas(); 
         }
 
-        // --- V6.22: CORRELATIVO INDEPENDIENTE POR SECCIÓN + GRUPO ---
         function calcularSiguienteCorrelativo(grupo, seccion) {
             let maxNum = 0;
             let padLen = 3;
@@ -1248,7 +1374,7 @@
             config.timestamps.grupos[nom] = nowTs; 
 
             migrarEquiposAPrefijoCompuesto();
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            guardarYSubirANube();
             cancelarEdicionGrupo(); 
             poblarAdmin(); 
         }
@@ -1260,7 +1386,7 @@
                 delete config.prefijos[grp]; 
                 if(config.camposGrupo) delete config.camposGrupo[grp];
                 config.deleted.grupos[grp] = Date.now(); 
-                localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+                guardarYSubirANube();
                 poblarAdmin(); 
             } 
         }
@@ -1314,12 +1440,19 @@
                 config.usuarios.push({ id: uId, nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, grupo: gruposSeleccionados }); 
             } 
             config.timestamps.usuarios[uId] = Date.now(); 
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            guardarYSubirANube();
             cancelarEdicionUsu(); 
             poblarAdmin(); 
         }
         
-        function borrarUsuario(id) { if(config.usuarios.length>1 && confirm("¿Borrar?")) { config.usuarios = config.usuarios.filter(u=>u.id!==id); config.deleted.usuarios[id] = Date.now(); localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarUsuario(id) { 
+            if(config.usuarios.length>1 && confirm("¿Borrar?")) { 
+                config.usuarios = config.usuarios.filter(u=>u.id!==id); 
+                config.deleted.usuarios[id] = Date.now(); 
+                guardarYSubirANube();
+                poblarAdmin(); 
+            } 
+        }
         
         function cargarEdicionSec(sec) { 
             document.getElementById('nuevaSeccion').value = sec; 
@@ -1370,10 +1503,8 @@
             config.prefijosSeccion[sec] = sigla;
             config.timestamps.secciones[sec] = nowTs; 
 
-            // Actualizar prefijos de equipos si cambió la sigla de la sección
             migrarEquiposAPrefijoCompuesto();
-
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            guardarYSubirANube();
             cancelarEdicionSec(); 
             poblarAdmin(); 
         }
@@ -1383,12 +1514,11 @@
                 config.secciones = config.secciones.filter(s=>s!==sec); 
                 if(config.prefijosSeccion) delete config.prefijosSeccion[sec];
                 config.deleted.secciones[sec] = Date.now(); 
-                localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+                guardarYSubirANube();
                 poblarAdmin(); 
             } 
         }
 
-        // --- PLANTILLA Y CARGA MASIVA DE LA LISTA MAESTRA CON PREFIJO COMPUESTO ---
         function descargarPlantillaBulk() {
             const grp = document.getElementById('qrGrupo').value || "Combate Extintores";
             const secEj = document.getElementById('qrSeccion').value || config.secciones[0] || "Balanceados";
@@ -1464,8 +1594,8 @@
             });
 
             if(agregados > 0) { 
-                localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
-                alert(`✅ Lote importado con éxito: ${agregados} equipos registrados en ${grp}.`); 
+                guardarYSubirANube();
+                alert(`✅ Lote importado con éxito: ${agregados} equipos registrados en ${grp} y sincronizados con la nube.`); 
                 document.getElementById('txtBulkData').value = ''; 
                 document.getElementById('divBulk').classList.add('hidden'); 
                 poblarAdmin(); 
@@ -1521,7 +1651,6 @@
             alCambiarGrupoOSeccionQR(); 
         }
         
-        // --- GUARDADO EN FICHA MAESTRA CON PREFIJO COMPUESTO SEC-GRP-NUM ---
         function guardarQR() { 
             const sec = document.getElementById('qrSeccion').value; 
             const grupoElegido = document.getElementById('qrGrupo').value;
@@ -1560,7 +1689,7 @@
                 responsable: responsable
             }; 
             config.timestamps.equipos[id] = Date.now();
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            guardarYSubirANube();
             
             if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' }); 
             qriousObj.value = id; 
@@ -1570,16 +1699,13 @@
             editQRId = null; 
             let nextNumStr = String(parseInt(numero, 10) + 1).padStart(numero.length, '0');
             
-            // 1. Refrescar listas
             poblarAdmin(); 
             
-            // 2. Re-inyectar datos memorizados (Sección, Grupo y Correlativo +1 de esa sección)
             document.getElementById('qrSeccion').value = sec;
             document.getElementById('qrGrupo').value = grupoElegido;
             actualizarPrefijoUI();
             document.getElementById('qrNumero').value = nextNumStr; 
             
-            // 3. Limpiar campos variables para el siguiente ítem
             document.getElementById('qrTipo').value = ''; 
             document.getElementById('qrUbicacion').value = ''; 
             document.getElementById('qrCapacidad').value = '';
@@ -1595,7 +1721,14 @@
             document.getElementById('qrUbicacion').focus();
         }
         
-        function borrarQR(id) { if(confirm(`¿Borrar equipo ${id}?`)) { config.deleted.equipos[id] = Date.now(); delete config.equipos[id]; localStorage.setItem(CFG_KEY, JSON.stringify(config)); poblarAdmin(); } }
+        function borrarQR(id) { 
+            if(confirm(`¿Borrar equipo ${id}?`)) { 
+                config.deleted.equipos[id] = Date.now(); 
+                delete config.equipos[id]; 
+                guardarYSubirANube();
+                poblarAdmin(); 
+            } 
+        }
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
         function descargarInventarioCSV() {
@@ -1778,7 +1911,6 @@
 
         function agregarTag(texto) { let obs = document.getElementById('observaciones'); if(obs.value.trim() === '') obs.value = texto; else obs.value += ", " + texto; guardarBorrador(); obs.focus(); }
         
-        // --- EMBUDO DE 3 PASOS EN CONTINGENCIA ---
         function abrirModalContingencia() {
             esCargaManual = true;
             const selSec = document.getElementById('contingenciaSec');
@@ -1942,11 +2074,9 @@
             container.innerHTML = warningHTML + html;
         }
 
-        // --- V6.22: LECTOR CON RESOLUCIÓN INTELIGENTE DE ETIQUETAS QR ANTIGUAS ---
         function procesarEscaneo(id) {
             id = id.trim().toUpperCase(); 
 
-            // Si escanean una etiqueta vieja (ej. EXT-001 en vez de BAL-EXT-001), buscar coincidencia
             if(!config.equipos[id]) {
                 const posibles = Object.keys(config.equipos).filter(k => k.endsWith('-' + id));
                 if(posibles.length === 1) {
@@ -2050,7 +2180,7 @@
             } else { 
                 delete config.fallas[id]; 
             } 
-            localStorage.setItem(CFG_KEY, JSON.stringify(config)); 
+            guardarYSubirANube();
             
             const timestampLocal = new Date().toLocaleString('es-PY'); 
             const nowTime = Date.now(); 
