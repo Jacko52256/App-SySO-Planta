@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.25 - Industrial Cloud</title>
+    <title>Gestión SySO V6.26 - Industrial Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -32,7 +32,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background: var(--bg); color: var(--text); padding-bottom: 90px; transition: background 0.3s, color 0.3s; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 135px; transition: background 0.3s, color 0.3s; }
         
         .app-shell { width: 100%; max-width: 960px; margin: 0 auto; }
 
@@ -41,8 +41,11 @@
         .cloud-badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(0,0,0,0.25); color: #fff; margin-top: 4px; font-weight: bold; cursor: pointer; }
         body.dark-mode .cloud-badge { background: rgba(0,0,0,0.75); color: #00e676; }
 
-        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; margin: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: background 0.3s; border: 1px solid rgba(0,0,0,0.04); }
+        .card { background: var(--card-bg); padding: 16px; border-radius: 10px; margin: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: background 0.3s; border: 1px solid rgba(0,0,0,0.04); }
         
+        .card-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .card-top-bar h3 { color: var(--primary); font-size: 17px; white-space: nowrap; }
+
         .form-group { margin-bottom: 14px; position: relative; transition: opacity 0.25s ease; }
         .form-group.campo-bloqueado { opacity: 0.38; pointer-events: none; }
         label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 13.5px; transition: color 0.3s;}
@@ -50,6 +53,23 @@
         input:disabled, select:disabled, input[readonly] { background: var(--input-bg); opacity:0.75; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
         
         .badge-lock { font-size: 10px; background: var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal; }
+
+        /* V6.26: INSIGNIA DE VENCIDOS INDIVISIBLE (NUNCA SE CORTA EN DOS RENGLONES) */
+        .badge-vencido { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 4px; 
+            background: #dc3545; 
+            color: #ffffff !important; 
+            padding: 3px 8px; 
+            border-radius: 12px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            white-space: nowrap; 
+            flex-shrink: 0; 
+            line-height: 1.2;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
 
         .btn { width: 100%; padding: 13px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 10px; display: block; text-align: center; transition: opacity 0.2s, transform 0.1s;}
         .btn:active { transform: scale(0.99); }
@@ -69,8 +89,8 @@
         
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.65; } 100% { opacity: 1; } }
 
-        .action-btns { display: flex; gap: 5px; align-items: center; }
-        .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 5px; border: none; cursor: pointer; color: white; font-weight: bold; }
+        .action-btns { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+        .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; color: white; font-weight: bold; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; }
         .btn-s-edit { background: var(--edit); }
         .btn-s-del { background: var(--danger); }
         
@@ -101,13 +121,14 @@
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); gap: 10px; }
 
         .accordion { margin-bottom: 10px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-        .accordion-header { padding: 13px 15px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+        .accordion-header { padding: 12px 14px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14.5px; }
         body.dark-mode .accordion-header { color: #000; }
+        .acc-title-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
         .accordion-content { display: none; padding: 14px; background: var(--card-bg); }
         .accordion.active > .accordion-content { display: block; }
 
         .sub-accordion { margin-bottom: 5px; border-bottom: 1px solid var(--border); }
-        .sub-grupo-header { background: var(--edit); color: white; padding: 10px 12px; border-radius: 4px; margin: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
+        .sub-grupo-header { background: var(--edit); color: white; padding: 10px 12px; border-radius: 6px; margin: 5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; }
         body.dark-mode .sub-grupo-header { color: #000; }
         .sub-accordion-content { display: none; padding: 0 5px; }
         .sub-accordion.active > .sub-accordion-content { display: block; }
@@ -125,7 +146,7 @@
         .chk-container label { display: flex; align-items: center; gap: 10px; font-weight: normal; margin-bottom: 8px; color:var(--text); font-size:14px; }
         .chk-container input[type="checkbox"] { width: auto; transform: scale(1.3); }
         
-        .btn-sos { position: fixed; bottom: 80px; right: 18px; background: #dc3545; color: white; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
+        .btn-sos { position: fixed; bottom: 72px; right: 14px; background: #dc3545; color: white; border-radius: 50%; width: 52px; height: 52px; font-size: 22px; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; cursor: pointer; }
         
         .sos-live-banner { background: #dc3545; color: #fff; padding: 15px; text-align: center; font-weight: bold; border-bottom: 4px solid #ffc107; animation: pulse 0.8s infinite; position: sticky; top: 0; z-index: 1900; }
 
@@ -141,14 +162,14 @@
 
         /* ADAPTACIÓN AUTOMÁTICA PARA MONITORES DE PC (ESCRITORIO) */
         @media (min-width: 768px) {
-            body { padding-top: 10px; padding-bottom: 100px; }
+            body { padding-top: 10px; padding-bottom: 110px; }
             .header { max-width: 940px; margin: 0 auto 10px auto; border-radius: 12px; padding: 18px 24px; }
             .card { padding: 24px; margin: 15px auto; }
             .form-grid-pc { grid-template-columns: 1fr 1fr; }
             .filter-grid-pc { grid-template-columns: repeat(4, 1fr); gap: 12px; }
             .tab-bar { border-radius: 12px 12px 0 0; padding: 10px 0; }
             .tab-btn { font-size: 13.5px; flex-direction: row; justify-content: center; gap: 8px; }
-            .btn-sos { right: calc(50% - 460px); bottom: 85px; width: 62px; height: 62px; font-size: 26px; }
+            .btn-sos { right: calc(50% - 460px); bottom: 85px; width: 60px; height: 60px; font-size: 26px; }
             #view-login .card { max-width: 480px; margin: 18px auto; }
         }
     </style>
@@ -162,7 +183,7 @@
     </div>
 
     <div class="header">
-        <h2>Gestión SySO <span class="version-badge">V6.25</span></h2>
+        <h2>Gestión SySO <span class="version-badge">V6.26</span></h2>
         <p id="headerInfo" style="font-weight:bold; font-size:13px;">Sistema Industrial en Nube</p>
         <div id="cloudStatusBadge" class="cloud-badge" onclick="sincronizarTodoConNube(false)" title="Sincronización automática activa">☁️ Conectando a la Nube...</div>
     </div>
@@ -213,8 +234,8 @@
         <!-- MÓDULO 1: CONTROL -->
         <div id="view-control" class="view">
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h3 style="color:var(--primary);">📋 Realizar Control</h3>
+                <div class="card-top-bar">
+                    <h3>📋 Realizar Control</h3>
                     <button class="btn-small btn-dark" onclick="abrirModalContingencia()">⌨️ Elegir de Lista</button>
                 </div>
 
@@ -222,7 +243,7 @@
                     <label>Código del Equipo:</label>
                     <div style="display: flex; gap: 8px;">
                         <input type="text" id="idEquipo" placeholder="Presione Escanear QR ->" disabled style="flex:1;" data-overwrite="false">
-                        <button class="btn btn-warning" style="width:auto; padding:0 18px; margin-bottom:0;" onclick="activarQR()">📷 Escanear QR</button>
+                        <button class="btn btn-warning" style="width:auto; padding:0 18px; margin-bottom:0; white-space:nowrap;" onclick="activarQR()">📷 Escanear QR</button>
                     </div>
                 </div>
                 
@@ -316,9 +337,9 @@
         <!-- MÓDULO 3: EQUIPOS E INVENTARIO (SOLO ADMIN) -->
         <div id="view-equipos" class="view">
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="color:var(--primary);">📦 Inventario de Equipos</h3>
-                    <button class="btn-small btn-success" onclick="descargarInventarioCSV()">📥 Exportar Excel</button>
+                <div class="card-top-bar">
+                    <h3>📦 Inventario de Equipos</h3>
+                    <button class="btn-small btn-success" style="padding:8px 12px;" onclick="descargarInventarioCSV()">📥 Exportar Excel</button>
                 </div>
                 <input type="text" id="buscadorEquipos" placeholder="🔎 Buscar por código (Ej. BAL-EXT), sección o tipo..." onkeyup="renderListas()" style="margin-bottom: 12px; border:2px solid var(--primary);">
                 <div id="listaEquipos" style="font-size:12.5px;"></div>
@@ -328,8 +349,8 @@
             <div class="card" style="padding:0; overflow:hidden;">
                 <div class="accordion" id="accFormAltaQR" style="margin:0; border:none;">
                     <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                        <span id="tituloAcordeonAlta">➕ Registrar Nuevo Equipo / Generar QR</span>
-                        <span>▼</span>
+                        <span id="tituloAcordeonAlta" class="acc-title-wrap">➕ Registrar Nuevo Equipo / Generar QR</span>
+                        <span style="flex-shrink:0;">▼</span>
                     </div>
                     <div class="accordion-content">
                         <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y guarda los datos e imagen de referencia en la nube.</p>
@@ -389,7 +410,7 @@
                             </div>
                         </div>
 
-                        <!-- V6.25: FOTO DE REFERENCIA DEL EQUIPO AL REGISTRAR -->
+                        <!-- FOTO DE REFERENCIA DEL EQUIPO AL REGISTRAR -->
                         <div class="form-group" style="margin-top:8px; border-top:1px dashed var(--border); padding-top:12px;">
                             <label>11. 📸 Imagen de Referencia del Equipo (Opcional - Guardada en Nube):</label>
                             <input type="file" id="inputFotoRefEquipo" accept="image/*" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
@@ -419,8 +440,8 @@
             <div class="card" style="padding:0; overflow:hidden;">
                 <div class="accordion" style="margin:0; border:none;">
                     <div class="accordion-header" style="background:var(--edit);" onclick="this.parentElement.classList.toggle('active')">
-                        <span>⚡ Importar Lote desde Excel</span>
-                        <span>▼</span>
+                        <span class="acc-title-wrap">⚡ Importar Lote desde Excel</span>
+                        <span style="flex-shrink:0;">▼</span>
                     </div>
                     <div class="accordion-content">
                         <p class="text-muted" style="font-size: 12px; margin-bottom: 10px;">Pegue las columnas de Excel para cargar varios equipos de una sola vez al grupo seleccionado arriba.</p>
@@ -450,8 +471,8 @@
                 <div class="card" style="padding:0; overflow:hidden;">
                     <div class="accordion" style="margin:0; border:none;">
                         <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                            <span>👥 Gestión de Personal y Permisos</span>
-                            <span>▼</span>
+                            <span class="acc-title-wrap">👥 Gestión de Personal y Permisos</span>
+                            <span style="flex-shrink:0;">▼</span>
                         </div>
                         <div class="accordion-content">
                             <div style="display:flex; gap:5px;">
@@ -478,8 +499,8 @@
                 <div class="card" style="padding:0; overflow:hidden;">
                     <div class="accordion" style="margin:0; border:none;">
                         <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                            <span>🏢 Secciones de Planta y Siglas</span>
-                            <span>▼</span>
+                            <span class="acc-title-wrap">🏢 Secciones de Planta y Siglas</span>
+                            <span style="flex-shrink:0;">▼</span>
                         </div>
                         <div class="accordion-content">
                             <p class="text-muted" style="font-size:11px; margin-bottom:10px;">Cada sección lleva una sigla (Ej. <b>BAL</b>, <b>BAV</b>, <b>AGR</b>) para numerar sus propios equipos desde el 001.</p>
@@ -499,8 +520,8 @@
                 <div class="card" style="padding:0; overflow:hidden;">
                     <div class="accordion" style="margin:0; border:none;">
                         <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
-                            <span>📑 Grupos y Puntos de Chequeo</span>
-                            <span>▼</span>
+                            <span class="acc-title-wrap">📑 Grupos y Puntos de Chequeo</span>
+                            <span style="flex-shrink:0;">▼</span>
                         </div>
                         <div class="accordion-content">
                             <input type="text" id="nuevoGrupoNom" placeholder="Nombre Grupo (Ej. Combate Extintores)" class="form-group">
@@ -839,10 +860,10 @@
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
         }
 
+        // V6.26: Conserva el timestamp original del equipo al migrar su prefijo para no revivir equipos borrados
         function migrarEquiposAPrefijoCompuesto() {
             if(!config.equipos) return;
             const idsActuales = Object.keys(config.equipos);
-            const nowTs = Date.now();
 
             idsActuales.forEach(oldId => {
                 const eq = config.equipos[oldId];
@@ -862,12 +883,14 @@
                     const newId = prefCompuesto + numStr;
 
                     if(newId !== oldId) {
+                        const tsOriginal = (config.timestamps && config.timestamps.equipos && config.timestamps.equipos[oldId]) ? config.timestamps.equipos[oldId] : 1;
                         if(!config.equipos[newId]) {
                             config.equipos[newId] = eq;
+                            config.timestamps.equipos[newId] = tsOriginal;
                         }
                         delete config.equipos[oldId];
-                        config.timestamps.equipos[newId] = nowTs + 1;
-                        config.deleted.equipos[oldId] = nowTs;
+                        delete config.timestamps.equipos[oldId];
+                        config.deleted.equipos[oldId] = Date.now();
 
                         if(config.fallas && config.fallas[oldId]) {
                             config.fallas[newId] = config.fallas[oldId];
@@ -878,16 +901,17 @@
             });
         }
 
-        // --- SINCRONIZACIÓN DE CONFIGURACIÓN E INVENTARIO EN NUBE ---
+        // --- V6.26: SINCRONIZACIÓN UNIFICADA CON NUBE (EVITA DIFERENCIAS 71 VS 70 ENTRE DISPOSITIVOS) ---
         function fusionarConfiguracionesEnMemoria(newCfg) {
             normalizarObjetoConfig(config);
             normalizarObjetoConfig(newCfg);
 
+            // 1. Secciones
             (newCfg.secciones || []).forEach(sec => { 
                 let tsNew = newCfg.timestamps.secciones[sec] || 1; 
                 let tsOld = config.timestamps.secciones[sec] || 0; 
                 let tsDel = config.deleted.secciones[sec] || 0; 
-                if((!config.secciones.includes(sec) || tsNew > tsOld) && tsNew > tsDel) { 
+                if((!config.secciones.includes(sec) || tsNew >= tsOld) && tsNew >= tsDel) { 
                     if(!config.secciones.includes(sec)) config.secciones.push(sec); 
                     if(newCfg.prefijosSeccion && newCfg.prefijosSeccion[sec]) {
                         config.prefijosSeccion[sec] = newCfg.prefijosSeccion[sec];
@@ -901,19 +925,21 @@
             Object.keys(newCfg.deleted.secciones || {}).forEach(sec => { 
                 let tsDelNew = newCfg.deleted.secciones[sec] || 0; 
                 let tsOld = config.timestamps.secciones[sec] || 0; 
-                if(tsDelNew > tsOld) { 
+                if(tsDelNew >= tsOld) { 
                     config.secciones = config.secciones.filter(s => s !== sec); 
                     delete config.prefijosSeccion[sec]; 
+                    delete config.timestamps.secciones[sec];
                     config.deleted.secciones[sec] = tsDelNew; 
                 } 
             });
 
+            // 2. Grupos
             Object.keys(newCfg.grupos || {}).forEach(nom => { 
                 if(nom === 'Todos') return; 
                 let tsNew = newCfg.timestamps.grupos[nom] || 1; 
                 let tsOld = config.timestamps.grupos[nom] || 0; 
                 let tsDel = config.deleted.grupos[nom] || 0; 
-                if((!config.grupos[nom] || tsNew > tsOld) && tsNew > tsDel) { 
+                if((!config.grupos[nom] || tsNew >= tsOld) && tsNew >= tsDel) { 
                     config.grupos[nom] = newCfg.grupos[nom]; 
                     config.prefijos[nom] = (newCfg.prefijos && newCfg.prefijos[nom]) ? newCfg.prefijos[nom] : ""; 
                     config.camposGrupo[nom] = (newCfg.camposGrupo && newCfg.camposGrupo[nom]) ? newCfg.camposGrupo[nom] : deducirCamposPorDefecto(nom);
@@ -924,19 +950,21 @@
             Object.keys(newCfg.deleted.grupos || {}).forEach(nom => { 
                 let tsDelNew = newCfg.deleted.grupos[nom] || 0; 
                 let tsOld = config.timestamps.grupos[nom] || 0; 
-                if(tsDelNew > tsOld) { 
+                if(tsDelNew >= tsOld) { 
                     delete config.grupos[nom]; 
                     delete config.prefijos[nom]; 
                     delete config.camposGrupo[nom]; 
+                    delete config.timestamps.grupos[nom];
                     config.deleted.grupos[nom] = tsDelNew; 
                 } 
             });
 
+            // 3. Equipos
             Object.keys(newCfg.equipos || {}).forEach(id => { 
                 let tsNew = newCfg.timestamps.equipos[id] || 1; 
                 let tsOld = config.timestamps.equipos[id] || 0; 
                 let tsDel = config.deleted.equipos[id] || 0; 
-                if((!config.equipos[id] || tsNew > tsOld) && tsNew > tsDel) { 
+                if((!config.equipos[id] || tsNew >= tsOld) && tsNew >= tsDel) { 
                     config.equipos[id] = newCfg.equipos[id]; 
                     config.timestamps.equipos[id] = Math.max(tsNew, tsOld); 
                     delete config.deleted.equipos[id]; 
@@ -945,18 +973,20 @@
             Object.keys(newCfg.deleted.equipos || {}).forEach(id => { 
                 let tsDelNew = newCfg.deleted.equipos[id] || 0; 
                 let tsOld = config.timestamps.equipos[id] || 0; 
-                if(tsDelNew > tsOld) { 
+                if(tsDelNew >= tsOld) { 
                     delete config.equipos[id]; 
+                    delete config.timestamps.equipos[id];
                     config.deleted.equipos[id] = tsDelNew; 
                 } 
             });
 
+            // 4. Usuarios
             (newCfg.usuarios || []).forEach(uNew => { 
                 let tsNew = newCfg.timestamps.usuarios[uNew.id] || 1; 
                 let tsOld = config.timestamps.usuarios[uNew.id] || 0; 
                 let tsDel = config.deleted.usuarios[uNew.id] || 0; 
                 let existeLocal = config.usuarios.some(u => u.id === uNew.id);
-                if((!existeLocal || tsNew > tsOld) && tsNew > tsDel) { 
+                if((!existeLocal || tsNew >= tsOld) && tsNew >= tsDel) { 
                     config.usuarios = config.usuarios.filter(u => u.id !== uNew.id); 
                     config.usuarios.push(uNew); 
                     config.timestamps.usuarios[uNew.id] = Math.max(tsNew, tsOld); 
@@ -966,8 +996,9 @@
             Object.keys(newCfg.deleted.usuarios || {}).forEach(id => { 
                 let tsDelNew = newCfg.deleted.usuarios[id] || 0; 
                 let tsOld = config.timestamps.usuarios[id] || 0; 
-                if(tsDelNew > tsOld) { 
+                if(tsDelNew >= tsOld) { 
                     config.usuarios = config.usuarios.filter(u => u.id !== parseInt(id)); 
+                    delete config.timestamps.usuarios[id];
                     config.deleted.usuarios[id] = tsDelNew; 
                 } 
             });
@@ -996,12 +1027,14 @@
 
                 if(cloudCfg && cloudCfg.usuarios && cloudCfg.usuarios.length > 0) {
                     const teniaUsuariosLocales = config.usuarios && config.usuarios.length > 0;
-                    const cantEqNube = Object.keys(cloudCfg.equipos || {}).length;
+                    const jsonNubeAntes = JSON.stringify(cloudCfg.equipos || {});
 
                     fusionarConfiguracionesEnMemoria(cloudCfg);
                     const cantEqDespues = Object.keys(config.equipos || {}).length;
+                    const jsonLocalDespues = JSON.stringify(config.equipos || {});
 
-                    if(teniaUsuariosLocales && cantEqDespues > cantEqNube) {
+                    // Si hubo alguna diferencia entre este dispositivo y la nube (como el equipo 71 vs 70), subir la base unificada para que todos vean exactamente lo mismo
+                    if(teniaUsuariosLocales && jsonLocalDespues !== jsonNubeAntes) {
                         await fetch(CLOUD_CFG_URL, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
@@ -1067,7 +1100,7 @@
             }
         }
 
-        // --- V6.25: FOTOS DE REFERENCIA DE EQUIPOS EN NUBE ---
+        // --- FOTOS DE REFERENCIA DE EQUIPOS EN NUBE ---
         function procesarFotoReferenciaEquipo(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -1261,7 +1294,7 @@
             }
         }
 
-        // --- V6.25: SISTEMA S.O.S. CON APAGADO INDIVIDUAL POR DISPOSITIVO ---
+        // --- SISTEMA S.O.S. CON APAGADO INDIVIDUAL POR DISPOSITIVO ---
         function sonarSirenaWebAudio() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1283,7 +1316,6 @@
         }
 
         function activarAlarmaVisualYSonora(sosData) {
-            // Si este usuario ya apagó esta alarma específica en su dispositivo, no volver a mostrársela
             if(ultimoSOSDescartadoId === String(sosData.id)) {
                 document.getElementById('sosLiveBanner').classList.add('hidden');
                 return;
@@ -1310,7 +1342,6 @@
             }
         }
 
-        // Apaga la alarma y oculta el cartel SOLO en este dispositivo
         function apagarMiAlarmaSOS() {
             if(intervaloSirena) {
                 clearInterval(intervaloSirena);
@@ -1338,7 +1369,6 @@
                 const res = await fetch(CLOUD_SOS_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
                 if(!res.ok) return;
                 const sosData = await res.json();
-                // Vigencia de 30 minutos para cada alerta S.O.S.
                 if(sosData && sosData.active && (Date.now() - (sosData.id || 0)) < 30 * 60 * 1000) {
                     window.sosActivoActualId = String(sosData.id);
                     if(usuarioDebeRecibirSOS(sosData)) {
@@ -1573,6 +1603,10 @@
                 poblarFiltrosHistorial();
                 sincronizarInspeccionesNube(false);
             }
+            if(vista === 'equipos' || vista === 'ajustes') {
+                // Sincronizar automáticamente al abrir Equipos o Ajustes para evitar diferencias de conteo entre compañeros
+                sincronizarTodoConNube(false);
+            }
             if(vista === 'control') {
                 const currentId = document.getElementById('idEquipo').value;
                 if(currentId && config.equipos[currentId]) {
@@ -1744,11 +1778,11 @@
             const selQ = document.getElementById('qrGrupo'); 
             const prevGrp = selQ ? selQ.value : '';
             selQ.innerHTML = ''; 
-            grpKeys.filter(g=>g!=='Todos').forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`); 
+            grpKeys.filter(g=>g!=='Todos').sort(sortNatural).forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`); 
             if(prevGrp && config.grupos[prevGrp]) selQ.value = prevGrp;
 
             let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo"> Acceso Total (Todos)</label>`; 
-            grpKeys.forEach(g => { if(g!=='Todos') chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; }); 
+            grpKeys.filter(g=>g!=='Todos').sort(sortNatural).forEach(g => { chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; }); 
             document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml; 
             
             actualizarPrefijoUI(); 
@@ -1903,6 +1937,7 @@
                     delete config.grupos[editGrupoNom]; 
                     delete config.prefijos[editGrupoNom]; 
                     delete config.camposGrupo[editGrupoNom];
+                    delete config.timestamps.grupos[editGrupoNom];
                     config.deleted.grupos[editGrupoNom] = nowTs; 
                 } 
             } else { 
@@ -1927,6 +1962,7 @@
                 delete config.grupos[grp]; 
                 delete config.prefijos[grp]; 
                 if(config.camposGrupo) delete config.camposGrupo[grp];
+                delete config.timestamps.grupos[grp];
                 config.deleted.grupos[grp] = Date.now(); 
                 guardarYSubirANube();
                 poblarAdmin(); 
@@ -1989,6 +2025,7 @@
         function borrarUsuario(id) { 
             if(config.usuarios.length>1 && confirm("¿Borrar usuario?")) { 
                 config.usuarios = config.usuarios.filter(u=>u.id!==id); 
+                delete config.timestamps.usuarios[id];
                 config.deleted.usuarios[id] = Date.now(); 
                 guardarYSubirANube();
                 poblarAdmin(); 
@@ -2035,6 +2072,7 @@
                 config.secciones = config.secciones.map(s => s === editSecNom ? sec : s); 
                 if(sec !== editSecNom) {
                     delete config.prefijosSeccion[editSecNom];
+                    delete config.timestamps.secciones[editSecNom];
                     config.deleted.secciones[editSecNom] = nowTs; 
                 }
             } else { 
@@ -2054,6 +2092,7 @@
             if(confirm(`¿Borrar sección ${sec}?`)) { 
                 config.secciones = config.secciones.filter(s=>s!==sec); 
                 if(config.prefijosSeccion) delete config.prefijosSeccion[sec];
+                delete config.timestamps.secciones[sec];
                 config.deleted.secciones[sec] = Date.now(); 
                 guardarYSubirANube();
                 poblarAdmin(); 
@@ -2130,6 +2169,7 @@
                             tieneFotoRef: false
                         }; 
                         config.timestamps.equipos[finalId] = nowTs; 
+                        delete config.deleted.equipos[finalId];
                         agregados++; 
                     }
                 }
@@ -2172,7 +2212,6 @@
             document.getElementById('qrVencimientoPH').value = eq.vencimientoPH || '';
             document.getElementById('qrResponsable').value = eq.responsable || '';
 
-            // Cargar foto de referencia si el equipo la tiene
             quitarFotoReferenciaEquipo();
             fotoRefEquipoEliminada = false;
             if(eq.tieneFotoRef) {
@@ -2230,8 +2269,9 @@
             if(!numeroRaw || !tipo || !ubi || !sec) return alert("⛔ Complete los campos obligatorios (*): Sección, Número, Ubicación y Tipo."); 
             if(editQRId && id !== editQRId) { 
                 if(config.equipos[id]) return alert(`El código ${id} ya está en uso en la sección ${sec}.`); 
-                config.deleted.equipos[editQRId] = Date.now(); 
                 delete config.equipos[editQRId]; 
+                delete config.timestamps.equipos[editQRId];
+                config.deleted.equipos[editQRId] = Date.now(); 
             } 
             if(!editQRId && config.equipos[id]) {
                 if(!confirm(`⚠️ El equipo ${id} ya existe en ${sec}. ¿Desea sobrescribirlo?`)) return;
@@ -2253,6 +2293,7 @@
                 tieneFotoRef: tendraFoto
             }; 
             config.timestamps.equipos[id] = Date.now();
+            delete config.deleted.equipos[id];
 
             if(fotoRefEquipoActualBase64) {
                 await guardarFotoReferenciaEnNube(id, fotoRefEquipoActualBase64);
@@ -2295,10 +2336,13 @@
             document.getElementById('qrUbicacion').focus();
         }
         
+        // V6.26: Limpieza completa de timestamp al borrar para que ningún otro dispositivo reviva el ítem
         function borrarQR(id) { 
-            if(confirm(`¿Borrar equipo ${id}?`)) { 
-                config.deleted.equipos[id] = Date.now(); 
+            if(confirm(`¿Borrar equipo ${id} de toda la planta?`)) { 
                 delete config.equipos[id]; 
+                delete config.timestamps.equipos[id];
+                config.deleted.equipos[id] = Date.now(); 
+                if(config.fallas) delete config.fallas[id];
                 guardarFotoReferenciaEnNube(id, null);
                 guardarYSubirANube();
                 poblarAdmin(); 
@@ -2322,7 +2366,7 @@
 
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; 
-            Object.keys(config.grupos).forEach(g => { 
+            Object.keys(config.grupos).sort(sortNatural).forEach(g => { 
                 if(g!=='Todos') {
                     const camposAct = obtenerCamposActivosGrupo(g);
                     lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Sigla: ${obtenerSiglaGrupo(g)}]<br><small class="text-muted"><b>Chequeo:</b> ${config.grupos[g].join(', ')}</small><br><small class="text-muted" style="font-size:11px;"><b>Ficha:</b> ${camposAct.length ? camposAct.join(', ') : 'Básica'}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; 
@@ -2351,7 +2395,8 @@
                     } 
                 });
                 
-                Object.keys(eqPorGrupo).forEach(g => {
+                // V6.26: Orden alfabético fijo de Grupos para que todos los teléfonos vean exactamente el mismo orden
+                Object.keys(eqPorGrupo).sort(sortNatural).forEach(g => {
                     let totalVencidos = 0; 
                     let equiposDelGrupo = eqPorGrupo[g];
                     let eqPorSeccion = {};
@@ -2388,13 +2433,17 @@
                             itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${strExtra}${expInfo}</div><div class="action-btns">${btnFotoRef}<button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
                         });
 
-                        let secBadge = secVencidosCount > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; margin-left:5px;">⚠️ ${secVencidosCount} Vencidos</span>` : '';
+                        let txtSecVenc = secVencidosCount === 1 ? '1 Vencido' : `${secVencidosCount} Vencidos`;
+                        let secBadge = secVencidosCount > 0 ? `<span class="badge-vencido">⚠️ ${txtSecVenc}</span>` : '';
 
                         let activeSecClass = filtro !== '' ? 'active' : '';
                         accordionContentHTML += `
                             <div class="sub-accordion ${activeSecClass}">
                                 <div class="sub-grupo-header" onclick="this.parentElement.classList.toggle('active')">
-                                    <span>📍 ${sec} [${obtenerSiglaSeccion(sec)}] (${eqPorSeccion[sec].length})${secBadge}</span>
+                                    <div class="acc-title-wrap">
+                                        <span>📍 ${sec} [${obtenerSiglaSeccion(sec)}] (${eqPorSeccion[sec].length})</span>
+                                        ${secBadge}
+                                    </div>
                                     <button class="btn-small btn-warning" onclick="event.stopPropagation(); descargarLoteQRs('${g}', '${sec}')">🖨️ QRs</button>
                                 </div>
                                 <div class="sub-accordion-content">
@@ -2404,13 +2453,17 @@
                         `;
                     });
                     
-                    let badgeTotal = totalVencidos > 0 ? `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:10px; vertical-align:middle;">⚠️ ${totalVencidos} Vencidos</span>` : '';
+                    let txtTotalVenc = totalVencidos === 1 ? '1 Vencido' : `${totalVencidos} Vencidos`;
+                    let badgeTotal = totalVencidos > 0 ? `<span class="badge-vencido">⚠️ ${txtTotalVenc}</span>` : '';
                     let activeClass = filtro !== '' ? 'active' : '';
 
                     lQ.innerHTML += `<div class="accordion ${activeClass}"> 
                         <div class="grupo-header accordion-header" onclick="this.parentElement.classList.toggle('active')"> 
-                            <span>${g} (${equiposDelGrupo.length})${badgeTotal}</span> 
-                            <button class="btn-small btn-outline" style="border-color:#fff; color:#fff;" onclick="event.stopPropagation(); descargarLoteQRs('${g}', 'ALL')">🖨️ Todos</button> 
+                            <div class="acc-title-wrap">
+                                <span>${g} (${equiposDelGrupo.length})</span>
+                                ${badgeTotal}
+                            </div>
+                            <button class="btn-small btn-outline" style="border:1.5px solid currentColor; color:inherit;" onclick="event.stopPropagation(); descargarLoteQRs('${g}', 'ALL')">🖨️ Todos</button> 
                         </div> 
                         <div class="accordion-content" style="padding:0;"> 
                             ${accordionContentHTML} 
@@ -2609,7 +2662,6 @@
             document.getElementById('seccionEquipo').value = fichaResumen;
             document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
 
-            // Mostrar botón de Foto de Referencia si el equipo tiene una cargada
             const divBtnFotoRef = document.getElementById('zonaVerFotoReferenciaControl');
             if(eq.tieneFotoRef) {
                 divBtnFotoRef.classList.remove('hidden');
