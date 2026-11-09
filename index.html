@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.27 - Industrial Cloud</title>
+    <title>Gestión SySO V6.28 - Industrial Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -36,7 +36,7 @@
         
         .app-shell { width: 100%; max-width: 960px; margin: 0 auto; }
 
-        /* CABECERA CON BOTÓN S.O.S. INTEGRADO (CERO SUPERPOSICIÓN EN PANTALLA) */
+        /* CABECERA CON BOTÓN S.O.S. INTEGRADO */
         .header { 
             background: var(--primary); color: white; padding: 12px 14px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.12); transition: background 0.3s; 
@@ -62,15 +62,105 @@
         .card-top-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: nowrap; }
         .card-top-bar h3 { color: var(--primary); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .form-group { margin-bottom: 14px; position: relative; transition: opacity 0.25s ease; }
+        .form-group { margin-bottom: 12px; position: relative; transition: opacity 0.25s ease; }
         .form-group.campo-bloqueado { opacity: 0.38; pointer-events: none; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 13.5px; transition: color 0.3s;}
+        label { display: block; font-weight: bold; margin-bottom: 4px; color: var(--primary); font-size: 13px; transition: color 0.3s;}
         input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14.5px; background: var(--input-bg); color: var(--text); }
-        input:disabled, select:disabled, input[readonly] { background: var(--input-bg); opacity:0.75; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
+        input:disabled, select:disabled, input[readonly] { background: var(--input-bg); opacity:0.8; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
         
         .badge-lock { font-size: 10px; background: var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal; }
 
-        /* INSIGNIA DE VENCIDOS COMPACTA E INDIVISIBLE */
+        /* V6.28: FICHA ESTILO PUNTO DE VENTA (POS) CON MINIATURA AL LADO */
+        .pos-ficha-card {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .pos-ficha-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+        .pos-ficha-info .form-group { margin-bottom: 0; }
+        .pos-ficha-info input { padding: 8px 10px; font-size: 13.5px; }
+        
+        .pos-thumb-box {
+            width: 92px;
+            min-height: 92px;
+            border-radius: 8px;
+            border: 2px dashed var(--border);
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+        }
+        .pos-thumb-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+            display: none;
+        }
+        .pos-thumb-box.has-img {
+            border: 2px solid var(--primary);
+            padding: 0;
+        }
+        .pos-thumb-box.has-img img { display: block; }
+        .pos-thumb-box.has-img .pos-thumb-placeholder { display: none; }
+        .pos-thumb-placeholder {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            line-height: 1.2;
+        }
+        .pos-thumb-placeholder span { font-size: 22px; display: block; margin-bottom: 2px; opacity: 0.6; }
+        .pos-zoom-hint {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.65);
+            color: #fff;
+            font-size: 9.5px;
+            padding: 2px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .pos-thumb-box.has-img .pos-zoom-hint { display: block; }
+
+        /* Miniatura compacta en el formulario de Alta QR para no alargar la pantalla */
+        .alta-ref-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alta-ref-thumb {
+            width: 52px;
+            height: 52px;
+            border-radius: 6px;
+            border: 2px solid var(--primary);
+            object-fit: cover;
+            flex-shrink: 0;
+            display: none;
+            background: #000;
+            cursor: pointer;
+        }
+
         .badge-vencido { 
             display: inline-flex; 
             align-items: center; 
@@ -100,7 +190,7 @@
         body.dark-mode .btn-info { color: #000; }
         .btn-dark { background: #343a40; color: #fff;}
         .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        .btn-camera { background: #64748b; display:flex; align-items:center; justify-content:center; gap:10px; color:#fff; transition: background 0.3s;}
+        .btn-camera { background: #64748b; display:flex; align-items:center; justify-content:center; gap:8px; color:#fff; transition: background 0.3s;}
         .btn-camera.urgent { background: var(--danger); animation: pulse 1s infinite; border: 2px solid #fff; }
         
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.65; } 100% { opacity: 1; } }
@@ -111,20 +201,19 @@
         .btn-s-del { background: var(--danger); }
         
         .text-muted { color: var(--text-muted) !important; }
-        .alert-warning { background: var(--warn-bg); color: var(--warn-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; }
-        .alert-danger { background: var(--danger-bg); color: var(--danger-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 14px; }
-        .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 15px; }
-        .radar-box { background: var(--input-bg); padding: 15px; border-radius: 8px; border: 2px solid var(--primary); }
+        .alert-warning { background: var(--warn-bg); color: var(--warn-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 13px; }
+        .alert-danger { background: var(--danger-bg); color: var(--danger-text); border-left: 4px solid var(--accent); padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 13.5px; }
+        .alert-info { background: var(--info-bg); color: var(--info-text); padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 14px; }
+        .radar-box { background: var(--input-bg); padding: 12px; border-radius: 8px; border: 2px solid var(--primary); text-align: left; }
 
         .progress-bar-container { width: 100%; background: var(--border); border-radius: 8px; overflow: hidden; margin-top: 6px; height: 10px; display: flex; }
         .progress-bar-fill { height: 100%; background: var(--success); transition: width 0.4s ease; }
-        .progress-bar-fill-danger { height: 100%; background: var(--danger); transition: width 0.4s ease; }
 
         #qr-reader { width: 100%; max-width: 450px; margin: 0 auto 15px auto; border-radius: 8px; overflow: hidden; display: none; position:relative;}
         .btn-flashlight { position:absolute; top:10px; right:10px; z-index:10; background:rgba(0,0,0,0.7); color:#fff; border:2px solid #fff; border-radius:50px; width:45px; height:45px; font-size:20px; cursor:pointer; }
         
         #qrGenerado, #qrCompartirApp { display: block; margin: 12px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border-radius: 6px; }
-        .img-preview { width: 100%; max-height: 220px; object-fit: contain; border-radius: 8px; margin-top: 10px; border: 2px dashed var(--border); display: none; background: #000; }
+        .img-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; margin-top: 8px; border: 2px dashed var(--border); display: none; background: #000; }
         
         .view { display: none; }
         .view.active { display: block; }
@@ -137,7 +226,6 @@
         
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); gap: 8px; }
 
-        /* ACORDEONES DE 1 SOLA LÍNEA GARANTIZADA */
         .accordion { margin-bottom: 10px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
         .accordion-header { padding: 11px 12px; background: var(--primary); color: white; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13.5px; flex-wrap: nowrap; }
         body.dark-mode .accordion-header { color: #000; }
@@ -153,7 +241,7 @@
         .sub-accordion.active > .sub-accordion-content { display: block; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
-        .modal-content { background: var(--card-bg); width: 100%; max-width: 520px; padding: 22px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); animation: popIn 0.25s ease-out; max-height: 92vh; overflow-y: auto; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 520px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); animation: popIn 0.25s ease-out; max-height: 92vh; overflow-y: auto; }
         #canvasFirma { border: 2px dashed var(--border); border-radius: 8px; width: 100%; height: 180px; background: #fff; touch-action: none; margin-bottom: 12px;}
         
         @keyframes popIn { from { transform: scale(0.92); opacity:0; } to { transform: scale(1); opacity:1; } }
@@ -192,6 +280,7 @@
             .filter-grid-pc { grid-template-columns: repeat(4, 1fr); gap: 12px; }
             .tab-bar { border-radius: 12px 12px 0 0; padding: 10px 0; }
             .tab-btn { font-size: 13.5px; flex-direction: row; justify-content: center; gap: 8px; }
+            .pos-thumb-box { width: 110px; min-height: 110px; }
             #view-login .card { max-width: 480px; margin: 18px auto; }
         }
     </style>
@@ -207,7 +296,7 @@
     <!-- CABECERA CON BOTÓN S.O.S. INTEGRADO ARRIBA A LA DERECHA -->
     <div class="header">
         <div class="header-left">
-            <h2>Gestión SySO <span class="version-badge">V6.27</span></h2>
+            <h2>Gestión SySO <span class="version-badge">V6.28</span></h2>
             <p id="headerInfo" style="font-weight:bold; font-size:12.5px; margin-top:2px;">Sistema Industrial en Nube</p>
             <div id="cloudStatusBadge" class="cloud-badge" onclick="sincronizarDesdeNube(true)" title="Toque para refrescar desde la nube">☁️ Conectando a la Nube...</div>
         </div>
@@ -257,7 +346,7 @@
             </div>
         </div>
 
-        <!-- MÓDULO 1: CONTROL -->
+        <!-- MÓDULO 1: CONTROL (CON FICHA Y MINIATURA ESTILO PUNTO DE VENTA) -->
         <div id="view-control" class="view">
             <div class="card">
                 <div class="card-top-bar">
@@ -277,36 +366,47 @@
                     <button class="btn-flashlight" onclick="toggleLinterna()" title="Encender Linterna">🔦</button>
                 </div>
                 
-                <div class="form-grid-pc">
-                    <div class="form-group"><label>Sección y Equipo:</label><input type="text" id="seccionEquipo" disabled></div>
-                    <div class="form-group"><label>Ubicación Exacta:</label><input type="text" id="ubicacionEquipo" disabled style="color:var(--primary);"></div>
+                <!-- FICHA COMPACTA ESTILO POS: DATOS A LA IZQUIERDA + MINIATURA DE REFERENCIA A LA DERECHA -->
+                <div class="pos-ficha-card">
+                    <div class="pos-ficha-info">
+                        <div class="form-group">
+                            <label style="font-size:11.5px;">Sección y Equipo:</label>
+                            <input type="text" id="seccionEquipo" placeholder="Sin escanear" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:11.5px;">Ubicación Exacta:</label>
+                            <input type="text" id="ubicacionEquipo" placeholder="—" disabled style="color:var(--primary);">
+                        </div>
+                    </div>
+                    <div id="boxThumbControl" class="pos-thumb-box" onclick="ampliarMiniaturaControl()" title="Toque para ampliar la foto de referencia">
+                        <div class="pos-thumb-placeholder">
+                            <span>🖼️</span>
+                            <div id="lblThumbControlStatus">Ref. Equipo</div>
+                        </div>
+                        <img id="imgThumbControl" src="" alt="Referencia">
+                        <div class="pos-zoom-hint">🔍 Ampliar</div>
+                    </div>
                 </div>
 
-                <div id="zonaVerFotoReferenciaControl" class="hidden" style="margin-bottom:12px;">
-                    <button type="button" class="btn btn-info" style="padding:10px; font-size:14px; margin-bottom:0;" onclick="verFotoReferenciaEquipo(document.getElementById('idEquipo').value)">🖼️ Ver Foto de Referencia del Equipo</button>
-                </div>
-
-                <hr style="margin:15px 0; border:0; border-top:1px solid var(--border);">
-                
                 <div id="moduloDinamico" class="hidden"></div>
                 
-                <div class="form-group" style="margin-top:15px;" id="zonaObservaciones">
+                <div class="form-group" style="margin-top:12px;" id="zonaObservaciones">
                     <label>Observaciones:</label>
                     <div id="smartTagsContainer"></div>
-                    <textarea id="observaciones" placeholder="Opcional si está OK. Si hay falla, descríbala o toque un botón arriba..." oninput="guardarBorrador()"></textarea>
+                    <textarea id="observaciones" placeholder="Opcional si está OK. Si hay falla, descríbala o toque un botón arriba..." oninput="guardarBorrador()" style="height:70px;"></textarea>
                     <small class="text-muted" style="font-size:10px;" id="lblBorrador"></small>
                 </div>
                 
-                <div class="form-group" style="margin-top:15px; border-top:1px dashed var(--border); padding-top:15px;">
+                <div class="form-group" style="margin-top:12px; border-top:1px dashed var(--border); padding-top:12px;">
                     <label style="color:var(--danger);">📸 Foto de Evidencia del Control</label>
-                    <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Obligatoria únicamente si marca Falla o si eligió el equipo sin QR.</p>
+                    <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Obligatoria únicamente si marca Falla o si eligió el equipo sin QR.</p>
                     <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
-                    <button id="btnAdjuntarFoto" class="btn btn-camera" onclick="document.getElementById('inputFoto').click()">📷 Tomar Foto de Evidencia</button>
+                    <button id="btnAdjuntarFoto" class="btn btn-camera" style="padding:11px; margin-bottom:0;" onclick="document.getElementById('inputFoto').click()">📷 Tomar Foto de Evidencia</button>
                     <canvas id="canvasWatermark" style="display:none;"></canvas>
                     <img id="previewBox" class="img-preview" src="" alt="Previsualización">
                 </div>
 
-                <button id="btnGuardarControl" class="btn btn-success" style="margin-top:15px; font-size:17px;" onclick="guardarRegistro()">✅ Guardar Control</button>
+                <button id="btnGuardarControl" class="btn btn-success" style="margin-top:12px; font-size:17px; margin-bottom:0;" onclick="guardarRegistro()">✅ Guardar Control</button>
             </div>
         </div>
 
@@ -322,7 +422,6 @@
                     <div class="kpi-box"><span id="dashVencidos" class="kpi-num" style="color:var(--warn-text)">0</span><span class="kpi-lbl">⏱️ Vencidos</span></div>
                 </div>
 
-                <!-- V6.27: PANEL GRÁFICO DE COBERTURA Y AVANCE POR SECCIÓN -->
                 <div id="panelGraficosHistorial" class="chart-card"></div>
 
                 <div class="filter-grid-pc">
@@ -373,7 +472,7 @@
                 <div id="listaEquipos" style="font-size:12.5px;"></div>
             </div>
 
-            <!-- Desplegable para Registrar o Editar Equipo + Foto de Referencia en Nube -->
+            <!-- Desplegable para Registrar o Editar Equipo + Cámara Directa para Foto de Referencia -->
             <div class="card" style="padding:0; overflow:hidden;">
                 <div class="accordion" id="accFormAltaQR" style="margin:0; border:none;">
                     <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
@@ -381,7 +480,7 @@
                         <span style="flex-shrink:0;">▼</span>
                     </div>
                     <div class="accordion-content">
-                        <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y guarda los datos e imagen de referencia en la nube.</p>
+                        <p class="text-muted" style="font-size: 12px; margin-bottom: 12px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y guarda los datos en la nube.</p>
                         
                         <div class="form-grid-pc">
                             <div class="form-group">
@@ -397,7 +496,7 @@
                             <div class="form-group">
                                 <label>3. ID Único (Sección + Grupo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
                                 <div style="display: flex; gap: 5px;">
-                                    <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:15px;">
+                                    <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:14.5px;">
                                     <input type="number" id="qrNumero" placeholder="Ej. 001" style="flex:1.8;">
                                 </div>
                             </div>
@@ -438,27 +537,32 @@
                             </div>
                         </div>
 
-                        <!-- FOTO DE REFERENCIA DEL EQUIPO AL REGISTRAR -->
-                        <div class="form-group" style="margin-top:8px; border-top:1px dashed var(--border); padding-top:12px;">
-                            <label>11. 📸 Imagen de Referencia del Equipo (Opcional - Guardada en Nube):</label>
-                            <input type="file" id="inputFotoRefEquipo" accept="image/*" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
-                            <div style="display:flex; gap:8px;">
-                                <button type="button" class="btn btn-camera" style="flex:2; margin-bottom:0; padding:11px;" onclick="document.getElementById('inputFotoRefEquipo').click()">📷 Subir / Tomar Foto del Equipo</button>
-                                <button type="button" id="btnQuitarFotoRef" class="btn btn-danger hidden" style="flex:1; margin-bottom:0; padding:11px;" onclick="quitarFotoReferenciaEquipo()">🗑️ Quitar</button>
+                        <!-- V6.28: CÁMARA DIRECTA + GALERÍA EN UNA SOLA FILA COMPACTA CON MINIATURA AL COSTADO -->
+                        <div class="form-group" style="margin-top:4px; border-top:1px dashed var(--border); padding-top:10px;">
+                            <label>11. 📸 Foto de Referencia del Equipo (Opcional):</label>
+                            <!-- Input con capture="environment" que abre la CÁMARA DIRECTA en celulares -->
+                            <input type="file" id="inputFotoRefCamara" accept="image/*" capture="environment" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
+                            <!-- Input secundario por si se desea elegir archivo desde PC o Galería -->
+                            <input type="file" id="inputFotoRefArchivo" accept="image/*" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
+                            
+                            <div class="alta-ref-bar">
+                                <button type="button" class="btn btn-camera" style="flex:1.4; margin-bottom:0; padding:10px; font-size:13.5px;" onclick="document.getElementById('inputFotoRefCamara').click()">📷 Tomar Foto</button>
+                                <button type="button" class="btn btn-outline" style="flex:1; margin-bottom:0; padding:9px; font-size:13px;" onclick="document.getElementById('inputFotoRefArchivo').click()">📁 Galería</button>
+                                <img id="previewFotoRefEquipo" class="alta-ref-thumb" src="" alt="Ref" onclick="ampliarVistaPreviaAlta()" title="Toque para ver grande">
+                                <button type="button" id="btnQuitarFotoRef" class="btn-small btn-s-del hidden" style="padding:10px;" onclick="quitarFotoReferenciaEquipo()" title="Quitar foto">🗑️</button>
                             </div>
                             <canvas id="canvasRefEquipo" style="display:none;"></canvas>
-                            <img id="previewFotoRefEquipo" class="img-preview" src="" alt="Foto de Referencia">
                         </div>
                         
-                        <div style="display:flex; gap:10px; margin-top:15px;">
+                        <div style="display:flex; gap:10px; margin-top:12px;">
                             <button id="btnGuardarQR" class="btn btn-warning" style="flex:2; margin-bottom:0;" onclick="guardarQR()">Guardar Equipo</button>
                             <button class="btn btn-outline" style="flex:1; margin-bottom:0;" onclick="cancelarEdicionQR()">Cancelar</button>
                         </div>
 
-                        <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 20px; padding-top:15px; border-top:1px solid var(--border);">
+                        <div id="zonaQR" class="hidden" style="text-align: center; margin-top: 18px; padding-top:15px; border-top:1px solid var(--border);">
                             <canvas id="qrGenerado"></canvas>
                             <p style="font-weight: bold; margin-bottom: 10px;" id="lblQR"></p>
-                            <button class="btn btn-outline" onclick="descargarUnicoQR()">Descargar Etiqueta QR</button>
+                            <button class="btn btn-outline" style="margin-bottom:0;" onclick="descargarUnicoQR()">Descargar Etiqueta QR</button>
                         </div>
                     </div>
                 </div>
@@ -583,7 +687,7 @@
         </div>
     </div>
 
-    <!-- MODAL VER FOTO DE REFERENCIA DEL EQUIPO -->
+    <!-- MODAL VER FOTO DE REFERENCIA DEL EQUIPO EN GRANDE -->
     <div id="modalFotoRef" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <h3 id="tituloModalFotoRef" style="color:var(--primary); margin-bottom:10px;">🖼️ Foto de Referencia</h3>
@@ -653,11 +757,11 @@
         </div>
     </div>
 
-    <!-- MODAL RADAR POST-GUARDADO -->
+    <!-- MODAL RADAR POST-GUARDADO (CON MINIATURA DEL PRÓXIMO EQUIPO) -->
     <div id="modalRadar" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <div id="radarBody"></div>
-            <button class="btn btn-primary" style="margin-top:20px; font-size:18px; padding:14px; margin-bottom:0;" onclick="cerrarRadar()">✅ Continuar</button>
+            <button class="btn btn-primary" style="margin-top:16px; font-size:17px; padding:13px; margin-bottom:0;" onclick="cerrarRadar()">✅ Continuar</button>
         </div>
     </div>
 
@@ -846,7 +950,6 @@
                 sincronizarDesdeNube(false);
             }
 
-            // Ciclo en vivo: verifica alertas S.O.S. cada 10s y refresca inventario desde la nube cada 20s
             setInterval(verificarSOSActivoEnNube, 10000);
             setInterval(() => {
                 if(!editQRId && !editGrupoNom && !editUsuId && !editSecNom) {
@@ -874,15 +977,13 @@
             cfg.usuarios.forEach(u => { if(!Array.isArray(u.grupo)) u.grupo = [u.grupo]; });
         }
 
-        // --- V6.27: ARQUITECTURA DE NUBE UNIFICADA (LA NUBE ES LA ÚNICA FUENTE DE LA VERDAD) ---
-        // Al abrir o navegar, el dispositivo DESCARGA la verdad de la nube (nunca pisa la nube con memoria local vieja)
+        // --- ARQUITECTURA DE NUBE UNIFICADA ---
         async function sincronizarDesdeNube(mostrarFeedbackManual = false) {
             if(sincronizandoNube) return;
             sincronizandoNube = true;
             if(mostrarFeedbackManual) actualizarBadgeNube('🔄 Sincronizando...', '#ffc107');
 
             try {
-                // Si este teléfono tenía un cambio administrativo hecho sin internet, subirlo primero
                 if(localStorage.getItem('SySO_Pending_Admin_Push') === 'true') {
                     await fetch(CLOUD_CFG_URL, {
                         method: 'PUT',
@@ -901,7 +1002,6 @@
                     const prevJson = JSON.stringify(config.equipos || {});
                     const newJson = JSON.stringify(cloudCfg.equipos || {});
                     
-                    // Reemplazar memoria local exactamente con la base oficial de la nube
                     config = cloudCfg;
                     localStorage.setItem(CFG_KEY, JSON.stringify(config));
 
@@ -924,7 +1024,6 @@
                         alert(`✅ Sincronizado con la Nube.\nEquipos en planta: ${totalEq}`);
                     }
                 } else if(config.usuarios && config.usuarios.length > 0) {
-                    // Solo si la nube estuviera completamente en blanco, inicializarla con la base local
                     await fetch(CLOUD_CFG_URL, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -941,7 +1040,6 @@
             }
         }
 
-        // Se ejecuta ÚNICAMENTE cuando un Administrador guarda o borra un dato explícitamente
         async function guardarYSubirANube() {
             normalizarObjetoConfig(config);
             localStorage.setItem(CFG_KEY, JSON.stringify(config));
@@ -965,7 +1063,7 @@
             }
         }
 
-        // --- FOTOS DE REFERENCIA DE EQUIPOS EN NUBE ---
+        // --- V6.28: FOTOS DE REFERENCIA DE EQUIPOS (CÁMARA DIRECTA + MINIATURA POS EN CONTROL Y SEGUIMIENTO) ---
         function procesarFotoReferenciaEquipo(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -996,11 +1094,19 @@
         function quitarFotoReferenciaEquipo() {
             fotoRefEquipoActualBase64 = null;
             fotoRefEquipoEliminada = true;
-            document.getElementById('inputFotoRefEquipo').value = '';
+            if(document.getElementById('inputFotoRefCamara')) document.getElementById('inputFotoRefCamara').value = '';
+            if(document.getElementById('inputFotoRefArchivo')) document.getElementById('inputFotoRefArchivo').value = '';
             const prev = document.getElementById('previewFotoRefEquipo');
             prev.src = '';
             prev.style.display = 'none';
             document.getElementById('btnQuitarFotoRef').classList.add('hidden');
+        }
+
+        function ampliarVistaPreviaAlta() {
+            if(!fotoRefEquipoActualBase64) return;
+            document.getElementById('tituloModalFotoRef').innerText = '🖼️ Vista Previa del Equipo';
+            document.getElementById('imgModalFotoRef').src = fotoRefEquipoActualBase64;
+            document.getElementById('modalFotoRef').classList.remove('hidden');
         }
 
         async function guardarFotoReferenciaEnNube(idEquipo, base64Img) {
@@ -1025,6 +1131,7 @@
         }
 
         async function obtenerFotoReferenciaEquipo(idEquipo) {
+            if(!idEquipo) return null;
             const cacheLocal = JSON.parse(localStorage.getItem(EQ_REF_PHOTO_KEY) || '{}');
             if(cacheLocal[idEquipo]) return cacheLocal[idEquipo];
             try {
@@ -1041,6 +1148,44 @@
             return null;
         }
 
+        // Actualiza automáticamente la miniatura tipo POS en la pantalla de Control
+        async function actualizarMiniaturaPOSControl(idEquipo) {
+            const box = document.getElementById('boxThumbControl');
+            const img = document.getElementById('imgThumbControl');
+            const lbl = document.getElementById('lblThumbControlStatus');
+            if(!box || !img || !lbl) return;
+
+            box.classList.remove('has-img');
+            img.src = '';
+
+            if(!idEquipo || !config.equipos[idEquipo]) {
+                lbl.innerText = 'Ref. Equipo';
+                return;
+            }
+
+            const eq = config.equipos[idEquipo];
+            if(!eq.tieneFotoRef) {
+                lbl.innerText = 'Sin foto ref.';
+                return;
+            }
+
+            lbl.innerText = 'Cargando...';
+            const base64 = await obtenerFotoReferenciaEquipo(idEquipo);
+            // Verificar que el usuario siga con el mismo equipo en pantalla
+            if(document.getElementById('idEquipo').value === idEquipo && base64) {
+                img.src = base64;
+                box.classList.add('has-img');
+            } else {
+                lbl.innerText = 'Sin foto ref.';
+            }
+        }
+
+        function ampliarMiniaturaControl() {
+            const id = document.getElementById('idEquipo').value;
+            if(!id || !config.equipos[id] || !config.equipos[id].tieneFotoRef) return;
+            verFotoReferenciaEquipo(id);
+        }
+
         window.verFotoReferenciaEquipo = async function(idEquipo) {
             if(!idEquipo) return;
             const eq = config.equipos[idEquipo];
@@ -1054,7 +1199,7 @@
                 imgEl.src = base64;
             } else {
                 document.getElementById('modalFotoRef').classList.add('hidden');
-                alert("No se encontró la imagen de referencia en la nube.");
+                alert("Este equipo aún no tiene foto de referencia cargada.");
             }
         }
 
@@ -1541,7 +1686,6 @@
             const fSec = document.getElementById('filtroHistSec') ? document.getElementById('filtroHistSec').value : 'ALL';
             const fGrp = document.getElementById('filtroHistGrp') ? document.getElementById('filtroHistGrp').value : 'ALL';
 
-            // Filtrar universo de equipos según sección/grupo seleccionado
             const idsUniverso = Object.keys(config.equipos || {}).filter(id => {
                 const eq = config.equipos[id];
                 if(fSec !== 'ALL' && eq.seccion !== fSec) return false;
@@ -2573,12 +2717,8 @@
             document.getElementById('seccionEquipo').value = fichaResumen;
             document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
 
-            const divBtnFotoRef = document.getElementById('zonaVerFotoReferenciaControl');
-            if(eq.tieneFotoRef) {
-                divBtnFotoRef.classList.remove('hidden');
-            } else {
-                divBtnFotoRef.classList.add('hidden');
-            }
+            // Cargar automáticamente la miniatura POS del equipo al costado
+            actualizarMiniaturaPOSControl(id);
             
             const container = document.getElementById('moduloDinamico'); 
             container.classList.remove('hidden'); 
@@ -2651,6 +2791,7 @@
                     alert(`No tienes permiso asignado para el grupo ${eq.grupo}.`); 
                     document.getElementById('idEquipo').value = ''; 
                     document.getElementById('moduloDinamico').classList.add('hidden');
+                    actualizarMiniaturaPOSControl(null);
                     return; 
                 }
                 
@@ -2661,6 +2802,7 @@
                     if(!confirm(`⚠️ Este equipo ya fue controlado hoy (${inspeccionPrevia.Fecha.split(', ')[1]} por ${inspeccionPrevia.Inspector}).\n\n¿Desea actualizar el control de hoy?`)) { 
                         document.getElementById('idEquipo').value = ''; 
                         document.getElementById('moduloDinamico').classList.add('hidden');
+                        actualizarMiniaturaPOSControl(null);
                         return; 
                     } 
                     document.getElementById('idEquipo').dataset.overwrite = "true"; 
@@ -2681,6 +2823,7 @@
                 alert("El equipo escaneado no figura en el inventario."); 
                 document.getElementById('idEquipo').value = ''; 
                 document.getElementById('moduloDinamico').classList.add('hidden'); 
+                actualizarMiniaturaPOSControl(null);
             }
         }
 
@@ -2773,26 +2916,56 @@
             localStorage.setItem(DB_KEY, JSON.stringify(db));
 
             const match = id.match(/^(.*?)(\d+)$/); 
-            let modalHTML = `<h2 style="color:var(--success); font-size:26px; margin-bottom:8px;">✅ ¡Control Guardado!</h2>`;
-            modalHTML += `<p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">${subidoOk ? '☁️ Sincronizado en la nube' : '⚡ Guardado en el teléfono (subirá al recuperar señal)'}</p>`;
+            let modalHTML = `<h2 style="color:var(--success); font-size:24px; margin-bottom:4px;">✅ ¡Control Guardado!</h2>`;
+            modalHTML += `<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${subidoOk ? '☁️ Sincronizado en la nube' : '⚡ Guardado en el teléfono'}</p>`;
 
             const totalSec = Object.values(config.equipos).filter(e => e.seccion === eq.seccion).length; 
             const hoy = timestampLocal.split(',')[0]; 
             const escaneadosSec = db.filter(r => r.Seccion === eq.seccion && r.Fecha.startsWith(hoy)).length; 
             const progPercent = Math.min(100, Math.round((escaneadosSec / totalSec) * 100)) || 0;
-            modalHTML += `<div style="text-align:left; margin-bottom:15px;"><span style="font-size:13px; color:var(--text); font-weight:bold;">📍 Avance hoy en ${eq.seccion}: ${escaneadosSec} de ${totalSec}</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
+            modalHTML += `<div style="text-align:left; margin-bottom:14px;"><span style="font-size:12.5px; color:var(--text); font-weight:bold;">📍 Avance hoy en ${eq.seccion}: ${escaneadosSec} de ${totalSec}</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
 
+            let proximoIdParaFoto = null;
             if(match) {
                 const prefijo = match[1]; const numeroActual = parseInt(match[2], 10); const padding = match[2].length; let proximoId = null; let proximoEq = null;
                 for(let i = 1; i <= 50; i++) { const nextNumStr = String(numeroActual + i).padStart(padding, '0'); const testId = prefijo + nextNumStr; if(config.equipos[testId]) { proximoId = testId; proximoEq = config.equipos[testId]; break; } }
                 if(proximoEq) {
-                    modalHTML += `<div class="radar-box"><h3 style="color:var(--primary); margin-top:0;">Siguiente Equipo Sugerido</h3><p style="font-size:28px; font-weight:bold; margin:8px 0; color:var(--text);">${proximoId}</p><p style="font-size:16px; margin:4px 0; color:var(--text);"><b>Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</p></div>`;
-                } else { modalHTML += `<p class="text-muted" style="font-size:16px; margin-top:15px;">🏁 Sección completada para el bloque <b>${prefijo}</b>.</p>`; }
+                    proximoIdParaFoto = proximoId;
+                    modalHTML += `
+                        <div class="radar-box">
+                            <div style="font-size:12px; font-weight:bold; color:var(--primary); margin-bottom:6px;">🎯 SIGUIENTE EQUIPO EN RUTA:</div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:24px; font-weight:bold; color:var(--text);">${proximoId}</div>
+                                    <div style="font-size:13.5px; color:var(--text); margin-top:2px;"><b>Tipo:</b> ${proximoEq.tipo}${proximoEq.capacidad ? ' ('+proximoEq.capacidad+')' : ''}</div>
+                                    <div style="font-size:13.5px; color:var(--text); margin-top:2px;"><b>📍 Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</div>
+                                </div>
+                                <div id="radarNextThumbBox" class="pos-thumb-box" style="width:82px; min-height:82px;" onclick="verFotoReferenciaEquipo('${proximoId}')">
+                                    <div class="pos-thumb-placeholder"><span>🖼️</span><div id="radarNextThumbLbl">${proximoEq.tieneFotoRef ? 'Cargando...' : 'Sin foto'}</div></div>
+                                    <img id="radarNextThumbImg" src="" alt="Próximo">
+                                    <div class="pos-zoom-hint">🔍 Ver</div>
+                                </div>
+                            </div>
+                        </div>`;
+                } else { modalHTML += `<p class="text-muted" style="font-size:15px; margin-top:12px;">🏁 Sección completada para el bloque <b>${prefijo}</b>.</p>`; }
             }
             
-            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('zonaVerFotoReferenciaControl').classList.add('hidden'); document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+            actualizarMiniaturaPOSControl(null);
             btnSave.disabled = false;
             mostrarRadar(modalHTML);
+
+            // Si el siguiente equipo sugerido tiene foto de referencia, mostrarla en miniatura dentro del cartel de seguimiento
+            if(proximoIdParaFoto && config.equipos[proximoIdParaFoto] && config.equipos[proximoIdParaFoto].tieneFotoRef) {
+                obtenerFotoReferenciaEquipo(proximoIdParaFoto).then(b64 => {
+                    const rBox = document.getElementById('radarNextThumbBox');
+                    const rImg = document.getElementById('radarNextThumbImg');
+                    if(b64 && rBox && rImg) {
+                        rImg.src = b64;
+                        rBox.classList.add('has-img');
+                    }
+                });
+            }
         }
 
         function mostrarRadar(htmlBody) { document.getElementById('radarBody').innerHTML = htmlBody; document.getElementById('modalRadar').classList.remove('hidden'); }
