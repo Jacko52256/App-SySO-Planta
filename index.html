@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.28 - Industrial Cloud</title>
+    <title>Gestión SySO V6.29 - Industrial Cloud</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -36,7 +36,6 @@
         
         .app-shell { width: 100%; max-width: 960px; margin: 0 auto; }
 
-        /* CABECERA CON BOTÓN S.O.S. INTEGRADO */
         .header { 
             background: var(--primary); color: white; padding: 12px 14px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.12); transition: background 0.3s; 
@@ -63,14 +62,12 @@
         .card-top-bar h3 { color: var(--primary); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .form-group { margin-bottom: 12px; position: relative; transition: opacity 0.25s ease; }
-        .form-group.campo-bloqueado { opacity: 0.38; pointer-events: none; }
+        .form-group.campo-oculto { display: none !important; }
         label { display: block; font-weight: bold; margin-bottom: 4px; color: var(--primary); font-size: 13px; transition: color 0.3s;}
         input[type="text"], input[type="number"], input[type="password"], input[type="month"], select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14.5px; background: var(--input-bg); color: var(--text); }
         input:disabled, select:disabled, input[readonly] { background: var(--input-bg); opacity:0.8; font-weight: bold; color: var(--primary); border: 1px solid var(--border); }
-        
-        .badge-lock { font-size: 10px; background: var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal; }
 
-        /* V6.28: FICHA ESTILO PUNTO DE VENTA (POS) CON MINIATURA AL LADO */
+        /* FICHA ESTILO PUNTO DE VENTA (POS) CON MINIATURA AL LADO */
         .pos-ficha-card {
             display: flex;
             align-items: stretch;
@@ -143,37 +140,51 @@
         }
         .pos-thumb-box.has-img .pos-zoom-hint { display: block; }
 
-        /* Miniatura compacta en el formulario de Alta QR para no alargar la pantalla */
-        .alta-ref-bar {
+        .alta-ref-bar { display: flex; align-items: center; gap: 8px; }
+        .alta-ref-thumb {
+            width: 52px; height: 52px; border-radius: 6px; border: 2px solid var(--primary);
+            object-fit: cover; flex-shrink: 0; display: none; background: #000; cursor: pointer;
+        }
+
+        /* CHIPS DE SELECCIÓN RÁPIDA DE FALLAS EN EL MODAL ASISTENTE */
+        .chip-falla-opt {
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text);
+            font-size: 13.5px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
         }
-        .alta-ref-thumb {
-            width: 52px;
-            height: 52px;
-            border-radius: 6px;
-            border: 2px solid var(--primary);
-            object-fit: cover;
-            flex-shrink: 0;
-            display: none;
-            background: #000;
-            cursor: pointer;
+        .chip-falla-opt.selected {
+            border-color: var(--danger);
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+        }
+        body.dark-mode .chip-falla-opt.selected {
+            background: rgba(220, 53, 69, 0.35);
+            color: #ffaaaa;
+        }
+
+        .fallas-resumen-box {
+            background: rgba(220, 53, 69, 0.1);
+            border: 2px solid var(--danger);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 10px;
+            font-size: 13px;
         }
 
         .badge-vencido { 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 3px; 
-            background: #dc3545; 
-            color: #ffffff !important; 
-            padding: 2px 7px; 
-            border-radius: 10px; 
-            font-size: 11px; 
-            font-weight: bold; 
-            white-space: nowrap; 
-            flex-shrink: 0; 
-            line-height: 1.2;
+            display: inline-flex; align-items: center; gap: 3px; background: #dc3545; 
+            color: #ffffff !important; padding: 2px 7px; border-radius: 10px; font-size: 11px; 
+            font-weight: bold; white-space: nowrap; flex-shrink: 0; line-height: 1.2;
             box-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
 
@@ -213,7 +224,7 @@
         .btn-flashlight { position:absolute; top:10px; right:10px; z-index:10; background:rgba(0,0,0,0.7); color:#fff; border:2px solid #fff; border-radius:50px; width:45px; height:45px; font-size:20px; cursor:pointer; }
         
         #qrGenerado, #qrCompartirApp { display: block; margin: 12px auto; border: 5px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border-radius: 6px; }
-        .img-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; margin-top: 8px; border: 2px dashed var(--border); display: none; background: #000; }
+        .img-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 8px; margin-top: 8px; border: 2px solid var(--success); display: none; background: #000; }
         
         .view { display: none; }
         .view.active { display: block; }
@@ -240,8 +251,8 @@
         .sub-accordion-content { display: none; padding: 0 5px; }
         .sub-accordion.active > .sub-accordion-content { display: block; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:20px; }
-        .modal-content { background: var(--card-bg); width: 100%; max-width: 520px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); animation: popIn 0.25s ease-out; max-height: 92vh; overflow-y: auto; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 2000; display: flex; align-items: center; justify-content: center; padding:16px; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 500px; padding: 18px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.35); animation: popIn 0.22s ease-out; max-height: 92vh; overflow-y: auto; }
         #canvasFirma { border: 2px dashed var(--border); border-radius: 8px; width: 100%; height: 180px; background: #fff; touch-action: none; margin-bottom: 12px;}
         
         @keyframes popIn { from { transform: scale(0.92); opacity:0; } to { transform: scale(1); opacity:1; } }
@@ -270,7 +281,6 @@
 
         .version-badge { font-size: 11px; background: var(--accent); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold;}
 
-        /* ADAPTACIÓN AUTOMÁTICA PARA MONITORES DE PC (ESCRITORIO) */
         @media (min-width: 768px) {
             body { padding-top: 10px; padding-bottom: 105px; }
             .header { max-width: 936px; margin: 0 auto 10px auto; border-radius: 12px; padding: 16px 22px; }
@@ -296,7 +306,7 @@
     <!-- CABECERA CON BOTÓN S.O.S. INTEGRADO ARRIBA A LA DERECHA -->
     <div class="header">
         <div class="header-left">
-            <h2>Gestión SySO <span class="version-badge">V6.28</span></h2>
+            <h2>Gestión SySO <span class="version-badge">V6.29</span></h2>
             <p id="headerInfo" style="font-weight:bold; font-size:12.5px; margin-top:2px;">Sistema Industrial en Nube</p>
             <div id="cloudStatusBadge" class="cloud-badge" onclick="sincronizarDesdeNube(true)" title="Toque para refrescar desde la nube">☁️ Conectando a la Nube...</div>
         </div>
@@ -346,7 +356,7 @@
             </div>
         </div>
 
-        <!-- MÓDULO 1: CONTROL (CON FICHA Y MINIATURA ESTILO PUNTO DE VENTA) -->
+        <!-- MÓDULO 1: CONTROL (CON FICHA POS, ASISTENTE DE FALLA Y CÁMARA AUTOMÁTICA) -->
         <div id="view-control" class="view">
             <div class="card">
                 <div class="card-top-bar">
@@ -388,25 +398,40 @@
                     </div>
                 </div>
 
+                <!-- PUNTOS DE CHEQUEO ADAPTADOS AL GRUPO -->
                 <div id="moduloDinamico" class="hidden"></div>
+
+                <!-- RESUMEN DE FALLAS DETECTADAS (SEPARADO DE OBSERVACIONES GENERALES) -->
+                <div id="boxResumenFallasDetectadas" class="fallas-resumen-box hidden">
+                    <div style="font-weight:bold; color:var(--danger); margin-bottom:4px;">🚨 Hallazgos de Falla Registrados:</div>
+                    <div id="listaResumenFallasTexto" style="font-size:12.5px; line-height:1.4;"></div>
+                </div>
                 
+                <!-- OBSERVACIONES ADICIONALES (NO FALLAS) -->
                 <div class="form-group" style="margin-top:12px;" id="zonaObservaciones">
-                    <label>Observaciones:</label>
+                    <label>📝 Otras Observaciones / Notas Preventivas (Opcional):</label>
                     <div id="smartTagsContainer"></div>
-                    <textarea id="observaciones" placeholder="Opcional si está OK. Si hay falla, descríbala o toque un botón arriba..." oninput="guardarBorrador()" style="height:70px;"></textarea>
+                    <textarea id="observaciones" placeholder="Escriba aquí observaciones adicionales que no sean fallas (ej. limpieza, sugerencias, acceso)..." oninput="guardarBorrador()" style="height:64px;"></textarea>
                     <small class="text-muted" style="font-size:10px;" id="lblBorrador"></small>
                 </div>
                 
+                <!-- SECCIÓN DE EVIDENCIA FOTOGRÁFICA CON BOTÓN PARA QUITAR/CANCELAR -->
                 <div class="form-group" style="margin-top:12px; border-top:1px dashed var(--border); padding-top:12px;">
-                    <label style="color:var(--danger);">📸 Foto de Evidencia del Control</label>
-                    <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Obligatoria únicamente si marca Falla o si eligió el equipo sin QR.</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="color:var(--danger); margin-bottom:0;">📸 Foto de Evidencia del Hallazgo</label>
+                        <span id="badgeEstadoFotoControl" style="font-size:11px; font-weight:bold; color:var(--text-muted);">Opcional si está OK</span>
+                    </div>
                     <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none;" onchange="procesarFoto(event)">
-                    <button id="btnAdjuntarFoto" class="btn btn-camera" style="padding:11px; margin-bottom:0;" onclick="document.getElementById('inputFoto').click()">📷 Tomar Foto de Evidencia</button>
+                    
+                    <div style="display:flex; gap:8px; margin-top:6px;">
+                        <button type="button" id="btnAdjuntarFoto" class="btn btn-camera" style="flex:2; padding:11px; margin-bottom:0;" onclick="document.getElementById('inputFoto').click()">📷 Tomar / Cambiar Foto</button>
+                        <button type="button" id="btnQuitarFotoControl" class="btn btn-danger hidden" style="flex:1; padding:11px; margin-bottom:0;" onclick="quitarFotoEvidenciaControl()">🗑️ Quitar Foto</button>
+                    </div>
                     <canvas id="canvasWatermark" style="display:none;"></canvas>
                     <img id="previewBox" class="img-preview" src="" alt="Previsualización">
                 </div>
 
-                <button id="btnGuardarControl" class="btn btn-success" style="margin-top:12px; font-size:17px; margin-bottom:0;" onclick="guardarRegistro()">✅ Guardar Control</button>
+                <button id="btnGuardarControl" class="btn btn-success" style="margin-top:14px; font-size:17px; margin-bottom:0;" onclick="guardarRegistro()">✅ Guardar Control</button>
             </div>
         </div>
 
@@ -414,7 +439,7 @@
         <div id="view-historial" class="view">
             <div class="card">
                 <h3 style="color:var(--primary); margin-bottom:4px;">📊 Historial y Avance de Planta</h3>
-                <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Sincronizado en tiempo real. Filtre por período o sección y descargue en Excel o PDF.</p>
+                <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Sincronizado en tiempo real. El Excel descargado incluye filas en rojo para fallas, autofiltros y botón para abrir la foto.</p>
 
                 <div class="kpi-grid">
                     <div class="kpi-box"><span id="dashOk" class="kpi-num" style="color:var(--success)">0</span><span class="kpi-lbl">✅ En Regla</span></div>
@@ -453,7 +478,7 @@
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom:14px;">
-                    <button class="btn btn-success" style="flex:1; padding:12px; font-size:13.5px; margin-bottom:0;" onclick="descargarHistorialCSV()">📥 Descargar Excel (CSV)</button>
+                    <button class="btn btn-success" style="flex:1; padding:12px; font-size:13.5px; margin-bottom:0;" onclick="descargarHistorialExcelProfesional()">📥 Descargar Excel Profesional</button>
                     <button class="btn btn-primary" style="flex:1; padding:12px; font-size:13.5px; margin-bottom:0;" onclick="abrirModalCierre()">📄 Descargar PDF con Fotos</button>
                 </div>
 
@@ -466,13 +491,13 @@
             <div class="card">
                 <div class="card-top-bar">
                     <h3>📦 Inventario de Equipos</h3>
-                    <button class="btn-small btn-success" style="padding:7px 11px;" onclick="descargarInventarioCSV()">📥 Exportar Excel</button>
+                    <button class="btn-small btn-success" style="padding:7px 11px;" onclick="descargarInventarioExcelProfesional()">📥 Exportar Excel</button>
                 </div>
                 <input type="text" id="buscadorEquipos" placeholder="🔎 Buscar por código, sección o tipo..." onkeyup="renderListas()" style="margin-bottom: 12px; border:2px solid var(--primary);">
                 <div id="listaEquipos" style="font-size:12.5px;"></div>
             </div>
 
-            <!-- Desplegable para Registrar o Editar Equipo + Cámara Directa para Foto de Referencia -->
+            <!-- Desplegable para Registrar o Editar Equipo (SE ADAPTA OCULTANDO CAMPOS INNECESARIOS SEGÚN GRUPO) -->
             <div class="card" style="padding:0; overflow:hidden;">
                 <div class="accordion" id="accFormAltaQR" style="margin:0; border:none;">
                     <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
@@ -480,21 +505,21 @@
                         <span style="flex-shrink:0;">▼</span>
                     </div>
                     <div class="accordion-content">
-                        <p class="text-muted" style="font-size: 12px; margin-bottom: 12px;">El código une automáticamente <b>Sección + Grupo + Número</b> (Ej. <code>BAL-EXT-001</code>) y guarda los datos en la nube.</p>
+                        <p class="text-muted" style="font-size: 12px; margin-bottom: 12px;">El formulario muestra únicamente los datos necesarios para el grupo seleccionado.</p>
                         
                         <div class="form-grid-pc">
                             <div class="form-group">
-                                <label>1. Sección de Planta <span style="color:var(--danger)">*</span>:</label>
+                                <label>Sección de Planta <span style="color:var(--danger)">*</span>:</label>
                                 <select id="qrSeccion" onchange="alCambiarGrupoOSeccionQR()"></select>
                             </div>
 
                             <div class="form-group">
-                                <label>2. Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
+                                <label>Grupo de Equipo <span style="color:var(--danger)">*</span>:</label>
                                 <select id="qrGrupo" onchange="alCambiarGrupoOSeccionQR()"></select>
                             </div>
 
                             <div class="form-group">
-                                <label>3. ID Único (Sección + Grupo + Correlativo) <span style="color:var(--danger)">*</span>:</label>
+                                <label>ID Único (Sección + Grupo + Número) <span style="color:var(--danger)">*</span>:</label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="text" id="qrPrefijo" readonly style="flex:1.2; text-align:right; font-size:14.5px;">
                                     <input type="number" id="qrNumero" placeholder="Ej. 001" style="flex:1.8;">
@@ -502,47 +527,45 @@
                             </div>
 
                             <div class="form-group">
-                                <label>4. Ubicación Exacta <span style="color:var(--danger)">*</span>:</label>
+                                <label>Ubicación Exacta <span style="color:var(--danger)">*</span>:</label>
                                 <input type="text" id="qrUbicacion" placeholder="Ej. Entrada oficina / Centro comando">
                             </div>
 
                             <div class="form-group">
-                                <label><span id="lblQrTipo">5. Tipo / Agente / Descripción</span> <span style="color:var(--danger)">*</span>:</label>
+                                <label><span id="lblQrTipo">Tipo / Agente / Descripción</span> <span style="color:var(--danger)">*</span>:</label>
                                 <input type="text" id="qrTipo" placeholder="Ej. PQS ABC / CO2 / Botiquín">
                             </div>
 
                             <div class="form-group" id="wrapQrCapacidad">
-                                <label><span id="lblQrCapacidad">6. Capacidad / Medida / Alcance</span> <span id="lockCapacidad" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <label id="lblQrCapacidad">Capacidad / Medida / Alcance:</label>
                                 <input type="text" id="qrCapacidad" placeholder="Ej. 5 kg / 10 kg / 25 metros">
                             </div>
 
                             <div class="form-group" id="wrapQrSerie">
-                                <label><span id="lblQrSerie">7. Marca / N° de Serie / Código Fábrica</span> <span id="lockSerie" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <label id="lblQrSerie">Marca / N° de Serie / Código Fábrica:</label>
                                 <input type="text" id="qrSerie" placeholder="Ej. Melisam - N° 94820">
                             </div>
 
                             <div class="form-group" id="wrapQrVencimiento">
-                                <label><span id="lblQrVencimiento">8. Vencimiento Principal (Carga / Insumos)</span> <span id="lockVencimiento" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <label id="lblQrVencimiento">Vencimiento Principal (Carga / Insumos):</label>
                                 <input type="month" id="qrVencimiento">
                             </div>
 
                             <div class="form-group" id="wrapQrVencimientoPH">
-                                <label><span id="lblQrVencimientoPH">9. Vencimiento Prueba Hidráulica (PH) / Certif.</span> <span id="lockVencimientoPH" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <label id="lblQrVencimientoPH">Vencimiento Prueba Hidráulica (PH) / Certif.:</label>
                                 <input type="month" id="qrVencimientoPH">
                             </div>
 
                             <div class="form-group" id="wrapQrResponsable">
-                                <label><span id="lblQrResponsable">10. Responsable / Dato Adicional</span> <span id="lockResponsable" class="badge-lock hidden">🔒 No aplica</span>:</label>
+                                <label id="lblQrResponsable">Responsable / Dato Adicional:</label>
                                 <input type="text" id="qrResponsable" placeholder="Ej. Encargado Sector / Observación fija">
                             </div>
                         </div>
 
-                        <!-- V6.28: CÁMARA DIRECTA + GALERÍA EN UNA SOLA FILA COMPACTA CON MINIATURA AL COSTADO -->
+                        <!-- CÁMARA DIRECTA + GALERÍA EN UNA SOLA FILA COMPACTA CON MINIATURA AL COSTADO -->
                         <div class="form-group" style="margin-top:4px; border-top:1px dashed var(--border); padding-top:10px;">
-                            <label>11. 📸 Foto de Referencia del Equipo (Opcional):</label>
-                            <!-- Input con capture="environment" que abre la CÁMARA DIRECTA en celulares -->
+                            <label>📸 Foto de Referencia del Equipo (Opcional):</label>
                             <input type="file" id="inputFotoRefCamara" accept="image/*" capture="environment" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
-                            <!-- Input secundario por si se desea elegir archivo desde PC o Galería -->
                             <input type="file" id="inputFotoRefArchivo" accept="image/*" style="display:none;" onchange="procesarFotoReferenciaEquipo(event)">
                             
                             <div class="alta-ref-bar">
@@ -661,13 +684,13 @@
                             <input type="text" id="nuevoGrupoParams" placeholder="Puntos a controlar (Ej. Manómetro, Sello, Boquilla)" class="form-group">
                             
                             <div class="form-group">
-                                <label>Campos Habilitados al Registrar Equipo:</label>
+                                <label>Campos Visibles al Registrar un Equipo de este Grupo:</label>
                                 <div class="chk-container" id="chkCamposInventarioGrupo">
-                                    <label><input type="checkbox" class="chk-campo-inv" value="capacidad" checked> 6. Capacidad / Medida / Alcance</label>
-                                    <label><input type="checkbox" class="chk-campo-inv" value="serie" checked> 7. Marca / N° de Serie</label>
-                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimiento" checked> 8. Vencimiento Principal (Carga / Insumos)</label>
-                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimientoPH"> 9. Vencimiento Prueba Hidráulica (PH) / Certif.</label>
-                                    <label><input type="checkbox" class="chk-campo-inv" value="responsable"> 10. Responsable / Dato Adicional</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="capacidad" checked> Capacidad / Medida / Amperaje</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="serie" checked> Marca / N° de Serie / Código</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimiento" checked> Vencimiento Principal (Carga / Insumos)</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="vencimientoPH"> Vencimiento Prueba Hidráulica (PH) / Certif.</label>
+                                    <label><input type="checkbox" class="chk-campo-inv" value="responsable"> Responsable / Dato Adicional</label>
                                 </div>
                             </div>
 
@@ -687,16 +710,35 @@
         </div>
     </div>
 
-    <!-- MODAL VER FOTO DE REFERENCIA DEL EQUIPO EN GRANDE -->
+    <!-- V6.29: MODAL ASISTENTE AUTOMÁTICO DE FALLA Y DISPARO DE CÁMARA -->
+    <div id="modalAsistenteFalla" class="modal-overlay hidden">
+        <div class="modal-content" style="border: 3px solid var(--danger);">
+            <h3 style="color:var(--danger); margin-bottom:4px;">🚨 Indicar Tipo de Falla</h3>
+            <p id="subtituloAsistenteFalla" class="text-muted" style="font-size:12.5px; margin-bottom:12px;"></p>
+            
+            <label style="font-size:12.5px; margin-bottom:6px;">Seleccione qué falla encontró (puede marcar una o varias):</label>
+            <div id="contenedorChipsFalla" style="display:flex; flex-direction:column; gap:7px; margin-bottom:12px;"></div>
+
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:12px;">Otro detalle específico de esta falla (opcional):</label>
+                <input type="text" id="inputDetalleFallaCustom" placeholder="Escriba si desea agregar más detalle...">
+            </div>
+
+            <button type="button" class="btn btn-danger" style="font-size:15.5px; padding:13px;" onclick="confirmarMotivoFallaYAbrirCamara()">📸 Confirmar Falla y Tomar Foto</button>
+            <button type="button" class="btn btn-outline" style="margin-bottom:0; padding:11px; font-size:13.5px;" onclick="cancelarFallaYVolverAOk()">↩️ Fue un error / Volver a OK (Cerrar)</button>
+        </div>
+    </div>
+
+    <!-- MODAL VER FOTO EN GRANDE (REFERENCIA O EVIDENCIA DE FALLA) -->
     <div id="modalFotoRef" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
-            <h3 id="tituloModalFotoRef" style="color:var(--primary); margin-bottom:10px;">🖼️ Foto de Referencia</h3>
-            <img id="imgModalFotoRef" src="" alt="Referencia del Equipo" style="width:100%; max-height:65vh; object-fit:contain; border-radius:8px; border:1px solid var(--border); background:#000;">
+            <h3 id="tituloModalFotoRef" style="color:var(--primary); margin-bottom:10px;">🖼️ Vista de Imagen</h3>
+            <img id="imgModalFotoRef" src="" alt="Imagen" style="width:100%; max-height:65vh; object-fit:contain; border-radius:8px; border:1px solid var(--border); background:#000;">
             <button class="btn btn-primary" style="margin-top:15px; margin-bottom:0;" onclick="document.getElementById('modalFotoRef').classList.add('hidden')">Cerrar</button>
         </div>
     </div>
 
-    <!-- MODAL COMPARTIR APLICACIÓN (DESDE PANTALLA INICIAL) -->
+    <!-- MODAL COMPARTIR APLICACIÓN -->
     <div id="modalCompartirApp" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <h3 style="color:var(--primary); margin-bottom:5px;">📲 Compartir Aplicación</h3>
@@ -731,7 +773,7 @@
     <div id="modalContingencia" class="modal-overlay hidden">
         <div class="modal-content">
             <h3 style="color:var(--primary); margin-bottom:8px;">⌨️ Seleccionar Equipo de la Lista</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Filtre por Sección y Grupo para elegir el equipo en orden numérico. <b>Se pedirá foto como comprobante.</b></p>
+            <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Filtre por Sección y Grupo para elegir el equipo en orden numérico. <b>Se abrirá la cámara para tomar foto como comprobante.</b></p>
             
             <div class="form-group">
                 <label>1° Sección:</label>
@@ -757,7 +799,7 @@
         </div>
     </div>
 
-    <!-- MODAL RADAR POST-GUARDADO (CON MINIATURA DEL PRÓXIMO EQUIPO) -->
+    <!-- MODAL RADAR POST-GUARDADO -->
     <div id="modalRadar" class="modal-overlay hidden">
         <div class="modal-content" style="text-align:center;">
             <div id="radarBody"></div>
@@ -816,13 +858,9 @@
             } 
         };
         
-        const smartTagsMap = {
-            "Combate Extintores": ["Presión Baja", "Sin Precinto", "Manguera Rota", "Vencido", "Despintado", "Obstruido", "Válvula Dañada"],
-            "Combate Hidrantes": ["Falta Llave", "Manguera Rota", "Pico Dañado", "Fuga de Agua", "Vidrio Roto", "Obstruido"],
-            "Botiquines": ["Insumo Vencido", "Falta Insumo", "Desordenado", "Caja Rota"],
-            "PA Botiquines": ["Insumo Vencido", "Falta Insumo", "Desordenado", "Caja Rota"],
-            "Tableros Eléctricos": ["Cables Expuestos", "Falta Señalización", "Humedad", "Puerta Rota", "Falta Termomagnética"],
-            "default": ["Vencido", "Dañado", "Inaccesible", "Sucio", "Falta Señalización"]
+        // Etiquetas rápidas para OTRAS OBSERVACIONES GENERALES (No fallas)
+        const notasPreventivasPorGrupo = {
+            "default": ["Revisión en orden", "Limpieza exterior realizada", "Pintura con desgaste leve", "Acceso despejado", "Próximo a mantenimiento mensual", "Señalética visible"]
         };
 
         let usuarioActual = null; let html5QrcodeScanner; let qriousObj; let qrAppShareObj; let canvas, ctx, firmaVacia = true; 
@@ -832,6 +870,10 @@
         let sincronizandoNube = false;
         let ultimoSOSDescartadoId = localStorage.getItem('SySO_LastSOS_Dismissed') || '';
         let intervaloSirena = null;
+
+        // Estado del Asistente de Falla por cada punto del control actual
+        let motivosFallaPorIndex = {}; 
+        let indexFallaActivaModal = null;
 
         function sortNatural(a, b) {
             return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
@@ -903,12 +945,14 @@
             document.getElementById('nuevaSeccionPrefijo').value = generarPrefijoSeccionAuto(nom);
         }
 
+        // Deducción inteligente de qué campos de registro necesita cada tipo de equipo
         function deducirCamposPorDefecto(nomGrupo) {
             const g = nomGrupo.toLowerCase();
             if(g.includes('extintor')) return ['capacidad', 'serie', 'vencimiento', 'vencimientoPH'];
-            if(g.includes('hidrante') || g.includes('manguera')) return ['capacidad', 'serie', 'vencimientoPH'];
-            if(g.includes('botiqu')) return ['capacidad', 'vencimiento', 'responsable'];
-            if(g.includes('evacua') || g.includes('energia') || g.includes('energía') || g.includes('comunica') || g.includes('brigada')) return ['capacidad', 'responsable'];
+            if(g.includes('hidrante') || g.includes('manguera')) return ['capacidad', 'vencimientoPH'];
+            if(g.includes('botiqu') || g.includes('pa ') || g.includes('auxilio')) return ['capacidad', 'vencimiento', 'responsable'];
+            if(g.includes('tablero') || g.includes('electr') || g.includes('eléctr') || g.includes('energia') || g.includes('energía')) return ['capacidad', 'serie', 'responsable'];
+            if(g.includes('evacua') || g.includes('comunica') || g.includes('brigada')) return ['capacidad', 'responsable'];
             return ['capacidad', 'serie', 'vencimiento', 'responsable'];
         }
 
@@ -917,6 +961,45 @@
                 return config.camposGrupo[nomGrupo];
             }
             return deducirCamposPorDefecto(nomGrupo);
+        }
+
+        // --- V6.29: DICCIONARIO INTELIGENTE DE OPCIONES DE FALLA SEGÚN PARÁMETRO Y GRUPO ---
+        function obtenerOpcionesFallaParaParametro(nombreParametro, nombreGrupo) {
+            const p = (nombreParametro || '').toLowerCase();
+            const g = (nombreGrupo || '').toLowerCase();
+
+            if(p.includes('manómetro') || p.includes('manometro') || p.includes('presión') || p.includes('presion')) {
+                return ["Despresurizado / Aguja en rojo", "Sobrecargado", "Manómetro roto o ilegible", "Fuga de presión"];
+            }
+            if(p.includes('sello') || p.includes('precinto') || p.includes('traba') || p.includes('pasador')) {
+                return ["Sin precinto de seguridad", "Precinto roto o violado", "Falta pasador metálico", "Pasador trabado / Doblado"];
+            }
+            if(p.includes('boquilla') || p.includes('manguera') || p.includes('tobera') || p.includes('pico')) {
+                return ["Manguera reseca o fisurada", "Boquilla obstruida / Tapada", "Pico dañado o faltante", "Acople / Rosca dañada", "Sin manguera"];
+            }
+            if(p.includes('cuerpo') || p.includes('cilindro') || p.includes('gabinete') || p.includes('caja')) {
+                return ["Cuerpo abollado o golpeado", "Óxido / Corrosión severa", "Pintura deteriorada", "Soporte flojo o caído", "Vidrio o puerta rota", "Obstruido / Inaccesible"];
+            }
+            if(p.includes('caudal') || p.includes('agua') || p.includes('válvula') || p.includes('valvula') || p.includes('llave')) {
+                return ["Sin caudal de agua", "Pérdida / Fuga en válvula", "Válvula trabada o dura", "Falta llave de ajuste"];
+            }
+            if(p.includes('insumo') || p.includes('dotación') || p.includes('dotacion') || p.includes('elemento') || g.includes('botiqu')) {
+                return ["Insumos vencidos", "Faltan gasas / vendas", "Falta antiséptico / alcohol", "Elementos abiertos o sucios", "Botiquín incompleto"];
+            }
+            if(p.includes('cable') || p.includes('térmica') || p.includes('termica') || p.includes('disyuntor') || p.includes('tablero') || g.includes('electr') || g.includes('eléctr') || g.includes('energ')) {
+                return ["Cables expuestos sin protección", "Sin contratapa / Peligro contacto", "Disyuntor / Térmica averiada", "Falta puesta a tierra", "Falta cartel Riesgo Eléctrico", "Humedad o polvo excesivo"];
+            }
+            if(p.includes('señal') || p.includes('cartel') || p.includes('luz') || p.includes('alarma') || g.includes('evacua')) {
+                return ["No enciende / Sin batería", "Señalización caída o borrosa", "Salida obstruida", "Sirena / Alarma no suena"];
+            }
+            // Opciones universales adaptadas al parámetro
+            return [
+                `${nombreParametro} dañado / roto`,
+                `${nombreParametro} faltante / incompleto`,
+                `${nombreParametro} vencido / fuera de norma`,
+                `${nombreParametro} obstruido o inaccesible`,
+                `Mal estado general de ${nombreParametro}`
+            ];
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1063,7 +1146,7 @@
             }
         }
 
-        // --- V6.28: FOTOS DE REFERENCIA DE EQUIPOS (CÁMARA DIRECTA + MINIATURA POS EN CONTROL Y SEGUIMIENTO) ---
+        // --- FOTOS DE REFERENCIA DE EQUIPOS ---
         function procesarFotoReferenciaEquipo(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -1148,7 +1231,6 @@
             return null;
         }
 
-        // Actualiza automáticamente la miniatura tipo POS en la pantalla de Control
         async function actualizarMiniaturaPOSControl(idEquipo) {
             const box = document.getElementById('boxThumbControl');
             const img = document.getElementById('imgThumbControl');
@@ -1171,7 +1253,6 @@
 
             lbl.innerText = 'Cargando...';
             const base64 = await obtenerFotoReferenciaEquipo(idEquipo);
-            // Verificar que el usuario siga con el mismo equipo en pantalla
             if(document.getElementById('idEquipo').value === idEquipo && base64) {
                 img.src = base64;
                 box.classList.add('has-img');
@@ -1200,6 +1281,31 @@
             } else {
                 document.getElementById('modalFotoRef').classList.add('hidden');
                 alert("Este equipo aún no tiene foto de referencia cargada.");
+            }
+        }
+
+        window.verFotoEvidenciaHistorial = async function(uid, idEquipo, fecha) {
+            const photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
+            let base64 = photoDB[idEquipo + '_' + fecha] || null;
+            document.getElementById('tituloModalFotoRef').innerText = `📸 Evidencia: ${idEquipo} (${fecha})`;
+            const imgEl = document.getElementById('imgModalFotoRef');
+            imgEl.src = '';
+            document.getElementById('modalFotoRef').classList.remove('hidden');
+
+            if(!base64 && uid) {
+                try {
+                    const res = await fetch(`${CLOUD_BASE_URL}/syso_photos/${encodeURIComponent(uid)}.json`);
+                    if(res.ok) {
+                        const data = await res.json();
+                        if(data && data.img) base64 = data.img;
+                    }
+                } catch(e) {}
+            }
+            if(base64) {
+                imgEl.src = base64;
+            } else {
+                document.getElementById('modalFotoRef').classList.add('hidden');
+                alert("Este registro no tiene foto de evidencia adjunta.");
             }
         }
 
@@ -1304,7 +1410,7 @@
             }
         }
 
-        // --- SISTEMA S.O.S. CON APAGADO INDIVIDUAL POR DISPOSITIVO ---
+        // --- SISTEMA S.O.S. ---
         function sonarSirenaWebAudio() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1551,7 +1657,7 @@
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; 
             config.camposGrupo = {
                 "Combate Extintores": ['capacidad', 'serie', 'vencimiento', 'vencimientoPH'],
-                "Combate Hidrantes": ['capacidad', 'serie', 'vencimientoPH']
+                "Combate Hidrantes": ['capacidad', 'vencimientoPH']
             };
             config.fallas = {}; 
             await guardarYSubirANube();
@@ -1626,7 +1732,7 @@
             }
         }
 
-        // --- MÓDULO HISTORIAL, GRÁFICOS VISUALES Y FILTROS ---
+        // --- MÓDULO HISTORIAL, GRÁFICOS Y EXPORTACIÓN EXCEL PROFESIONAL (.XLS CON COLORES, AUTOFILTRO Y LINK A FOTO) ---
         function poblarFiltrosHistorial() {
             const selSec = document.getElementById('filtroHistSec');
             const prevSec = selSec.value || 'ALL';
@@ -1670,7 +1776,7 @@
                 if(fGrp !== 'ALL' && r.Grupo !== fGrp) return false;
 
                 const tieneFalla = Object.values(r.Controles || {}).includes('Falla');
-                const esVencido = r.Observaciones && (r.Observaciones.includes('[VENCIDO]') || r.Observaciones.includes('ALERTA CRÍTICA'));
+                const esVencido = (r.Observaciones && r.Observaciones.includes('[VENCIDO]')) || (r.Detalle_Fallas && r.Detalle_Fallas.includes('VENCIDO'));
 
                 if(fEst === 'FALLA' && !tieneFalla) return false;
                 if(fEst === 'VENCIDO' && !esVencido) return false;
@@ -1757,7 +1863,7 @@
             filtrados.forEach(r => { 
                 let isFalla = Object.values(r.Controles || {}).includes('Falla'); 
                 if(isFalla) fallas++; else ok++; 
-                if(r.Observaciones && (r.Observaciones.includes('[VENCIDO]') || r.Observaciones.includes('ALERTA CRÍTICA'))) vencidos++; 
+                if((r.Observaciones && r.Observaciones.includes('[VENCIDO]')) || (r.Detalle_Fallas && r.Detalle_Fallas.includes('VENCIDO'))) vencidos++; 
             });
 
             document.getElementById('dashOk').innerText = ok; 
@@ -1781,16 +1887,21 @@
                 let isFalla = Object.values(r.Controles || {}).includes('Falla'); 
                 let color = isFalla ? 'var(--danger)' : 'var(--success)'; 
                 let estadoBadge = isFalla ? '🚨 FALLA' : '✅ OK';
+                let btnFotoEv = (isFalla || r.tieneFotoEvidencia) ? `<button class="btn-small btn-s-edit" onclick="verFotoEvidenciaHistorial('${r.uid || ''}', '${r.ID_Equipo}', '${r.Fecha}')" title="Ver Foto de Evidencia">📸 Foto</button>` : '';
                 let btnDel = puedeBorrar ? `<button class="btn-small btn-s-del" onclick="borrarRegistroBitacora('${r.uid || ''}', '${r.ID_Equipo}', '${r.Fecha}')">🗑️</button>` : '';
                 
+                let lineaFalla = r.Detalle_Fallas ? `<br><small style="color:var(--danger); font-weight:bold;">⚠️ Falla: ${r.Detalle_Fallas}</small>` : '';
+                let lineaObs = r.Observaciones ? `<br><small style="color:var(--text);">💬 Nota: ${r.Observaciones}</small>` : '';
+
                 lista.innerHTML += `
                     <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:9px 4px; align-items:center; gap:8px;">
                         <div style="min-width:0; flex:1;">
                             <b style="color:${color}; font-size:14px;">${r.ID_Equipo} (${estadoBadge})</b> — <small>${r.Seccion} (${r.Grupo})</small><br>
                             <small class="text-muted">👷 ${r.Inspector} | 🕒 ${r.Fecha}</small>
-                            ${r.Observaciones ? `<br><small style="color:var(--text);">💬 ${r.Observaciones}</small>` : ''}
+                            ${lineaFalla}
+                            ${lineaObs}
                         </div>
-                        ${btnDel}
+                        <div class="action-btns">${btnFotoEv}${btnDel}</div>
                     </div>`; 
             });
         }
@@ -1806,17 +1917,99 @@
             renderHistorial(); 
         }
 
-        function descargarHistorialCSV() {
+        // --- V6.29: GENERADOR DE VISOR DE FOTO PARA HIPERVÍNCULOS DE EXCEL ---
+        function obtenerUrlVisorFotoNube(tipoNodo, claveId) {
+            const urlBase = obtenerUrlLimpiaApp();
+            return `${urlBase}?verfoto=${encodeURIComponent(tipoNodo)}&id=${encodeURIComponent(claveId)}`;
+        }
+
+        // Si alguien hace clic en "📷 ABRIR FOTO" desde Microsoft Excel en la PC, abrir la imagen automáticamente
+        window.addEventListener('load', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const nodo = params.get('verfoto');
+            const idClave = params.get('id');
+            if(nodo && idClave) {
+                try {
+                    const res = await fetch(`${CLOUD_BASE_URL}/${nodo}/${encodeURIComponent(idClave)}.json`);
+                    if(res.ok) {
+                        const data = await res.json();
+                        if(data && data.img) {
+                            document.getElementById('tituloModalFotoRef').innerText = `📷 Evidencia Fotográfica: ${idClave}`;
+                            document.getElementById('imgModalFotoRef').src = data.img;
+                            document.getElementById('modalFotoRef').classList.remove('hidden');
+                        }
+                    }
+                } catch(e) {}
+            }
+        });
+
+        // --- V6.29: DESCARGA DE EXCEL PROFESIONAL (.XLS) CON FILAS ROJAS, AUTOFILTROS Y BOTÓN PARA ABRIR FOTO ---
+        function descargarHistorialExcelProfesional() {
             const registros = obtenerRegistrosFiltradosHistorial();
             if(registros.length === 0) return alert("No hay controles en el filtro actual para descargar.");
 
-            let head = ["Fecha", "Inspector", "Grupo", "Seccion", "Ubicacion", "ID_Equipo", "Tipo_Equipo", "Capacidad", "Estado_General", "Detalle_Puntos_Controlados", "Observaciones", "Alerta_Fraude"]; 
-            let csv = "\uFEFF" + head.join(";") + "\r\n"; 
+            const mes = document.getElementById('filtroHistMes').value || 'Global';
 
-            registros.forEach(r => { 
+            let htmlExcel = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Controles_${mes}</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; font-family: Segoe UI, Arial, sans-serif; font-size: 11pt; }
+                    th { background-color: #1F4E78; color: #FFFFFF; font-weight: bold; border: 1px solid #8ea9db; padding: 8px 10px; text-align: center; }
+                    td { border: 1px solid #d9d9d9; padding: 6px 8px; vertical-align: middle; }
+                    .row-ok { background-color: #ffffff; color: #1f2937; }
+                    .State-ok { background-color: #e2efda; color: #375623; font-weight: bold; text-align: center; }
+                    .row-falla { background-color: #fce4d6; color: #c00000; font-weight: bold; }
+                    .state-falla { background-color: #ff0000; color: #ffffff; font-weight: bold; text-align: center; }
+                    .btn-link { color: #0563c1; font-weight: bold; text-decoration: underline; }
+                </style>
+            </head>
+            <body>
+                <h2 style="font-family:Segoe UI,Arial,sans-serif; color:#1F4E78;">Reporte de Controles de Seguridad Industrial (SySO) - Período: ${mes}</h2>
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th x:autofilter="all">Fecha y Hora</th>
+                            <th x:autofilter="all">Sección</th>
+                            <th x:autofilter="all">Grupo</th>
+                            <th x:autofilter="all">ID Equipo</th>
+                            <th x:autofilter="all">Tipo / Capacidad</th>
+                            <th x:autofilter="all">Ubicación Exacta</th>
+                            <th x:autofilter="all">Estado General</th>
+                            <th x:autofilter="all">Motivo de Falla / Hallazgo</th>
+                            <th x:autofilter="all">Puntos Evaluados</th>
+                            <th x:autofilter="all">Otras Observaciones</th>
+                            <th x:autofilter="all">Inspector</th>
+                            <th x:autofilter="all">Foto Evidencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            registros.forEach(r => {
                 const eq = config.equipos[r.ID_Equipo] || {};
                 const tieneFalla = Object.values(r.Controles || {}).includes('Falla');
-                const estadoGral = tieneFalla ? "FALLA" : "OK";
+                const esVencido = (r.Observaciones && r.Observaciones.includes('[VENCIDO]')) || (r.Detalle_Fallas && r.Detalle_Fallas.includes('VENCIDO'));
+                const alertaRoja = tieneFalla || esVencido;
+
+                const estadoGral = tieneFalla ? "🚨 FALLA" : (esVencido ? "⏱️ VENCIDO" : "✅ OK");
+                const claseFila = alertaRoja ? "row-falla" : "row-ok";
+                const claseEstado = alertaRoja ? "state-falla" : "State-ok";
 
                 let detallesArr = [];
                 let idx = 0;
@@ -1826,28 +2019,124 @@
                     idx++;
                 });
 
-                let row = [
-                    r.Fecha, 
-                    r.Inspector, 
-                    r.Grupo, 
-                    r.Seccion, 
-                    r.Ubicacion, 
-                    r.ID_Equipo,
-                    eq.tipo || "",
-                    eq.capacidad || "",
-                    estadoGral,
-                    detallesArr.join(" | "),
-                    (r.Observaciones || "").replace(/;/g, ","), 
-                    r.Alerta_Fraude || "NO"
-                ]; 
-                csv += row.join(";") + "\r\n"; 
+                const tipoCap = `${eq.tipo || ''}${eq.capacidad ? ' ('+eq.capacidad+')' : ''}`;
+                const motivoFallaTexto = r.Detalle_Fallas || (tieneFalla ? r.Observaciones || "Falla registrada" : "Sin fallas");
+
+                let celdaFoto = "—";
+                if((tieneFalla || r.tieneFotoEvidencia) && r.uid) {
+                    const urlVisor = obtenerUrlVisorFotoNube('syso_photos', r.uid);
+                    celdaFoto = `<a class="btn-link" href="${urlVisor}" target="_blank">📷 ABRIR FOTO DE FALLA</a>`;
+                }
+
+                htmlExcel += `
+                    <tr class="${claseFila}">
+                        <td>${r.Fecha || ''}</td>
+                        <td>${r.Seccion || ''}</td>
+                        <td>${r.Grupo || ''}</td>
+                        <td style="text-align:center; font-weight:bold;">${r.ID_Equipo || ''}</td>
+                        <td>${tipoCap}</td>
+                        <td>${r.Ubicacion || ''}</td>
+                        <td class="${claseEstado}">${estadoGral}</td>
+                        <td style="${alertaRoja ? 'color:#c00000; font-weight:bold;' : ''}">${motivoFallaTexto}</td>
+                        <td>${detallesArr.join(" | ")}</td>
+                        <td>${r.Observaciones || ''}</td>
+                        <td>${r.Inspector || ''}</td>
+                        <td style="text-align:center;">${celdaFoto}</td>
+                    </tr>
+                `;
             });
 
-            const mes = document.getElementById('filtroHistMes').value || 'Global';
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            htmlExcel += `</tbody></table></body></html>`;
+
+            const blob = new Blob(['\uFEFF', htmlExcel], { type: 'application/vnd.ms-excel;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `Controles_SySO_${mes}.csv`;
+            a.download = `Reporte_Controles_SySO_${mes}.xls`;
+            a.click();
+        }
+
+        function descargarInventarioExcelProfesional() {
+            if(Object.keys(config.equipos).length === 0) return alert("El inventario está vacío.");
+            const today = new Date(); 
+            const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`; 
+
+            let htmlExcel = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Inventario_Equipos</x:Name>
+                                <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; font-family: Segoe UI, Arial, sans-serif; font-size: 11pt; }
+                    th { background-color: #1F4E78; color: #FFFFFF; font-weight: bold; border: 1px solid #8ea9db; padding: 8px 10px; }
+                    td { border: 1px solid #d9d9d9; padding: 6px 8px; }
+                    .venc-si { background-color: #fce4d6; color: #c00000; font-weight: bold; }
+                    .venc-no { background-color: #ffffff; color: #1f2937; }
+                </style>
+            </head>
+            <body>
+                <h2 style="font-family:Segoe UI,Arial,sans-serif; color:#1F4E78;">Inventario Maestro de Equipos SySO</h2>
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th x:autofilter="all">ID Equipo</th>
+                            <th x:autofilter="all">Sección</th>
+                            <th x:autofilter="all">Grupo</th>
+                            <th x:autofilter="all">Ubicación Exacta</th>
+                            <th x:autofilter="all">Tipo / Descripción</th>
+                            <th x:autofilter="all">Capacidad / Medida</th>
+                            <th x:autofilter="all">Marca / Serie</th>
+                            <th x:autofilter="all">Vencimiento Carga</th>
+                            <th x:autofilter="all">Vencimiento PH</th>
+                            <th x:autofilter="all">Estado Vigencia</th>
+                            <th x:autofilter="all">Falla Activa</th>
+                            <th x:autofilter="all">Foto Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            Object.keys(config.equipos).sort(sortNatural).forEach(id => { 
+                const eq = config.equipos[id]; 
+                const vencido = (eq.vencimiento && eq.vencimiento <= currMonth) || (eq.vencimientoPH && eq.vencimientoPH <= currMonth);
+                const tieneFallaActiva = config.fallas && config.fallas[id];
+                const alertaFila = vencido || tieneFallaActiva;
+                const estVigencia = vencido ? "⏱️ VENCIDO" : "✅ VIGENTE";
+                const linkFoto = eq.tieneFotoRef ? `<a href="${obtenerUrlVisorFotoNube('syso_eq_photos', id)}" target="_blank">🖼️ VER FOTO EQUIPO</a>` : "Sin foto";
+
+                htmlExcel += `
+                    <tr class="${alertaFila ? 'venc-si' : 'venc-no'}">
+                        <td style="font-weight:bold;">${id}</td>
+                        <td>${eq.seccion || ""}</td>
+                        <td>${eq.grupo || ""}</td>
+                        <td>${eq.ubicacion || ""}</td>
+                        <td>${eq.tipo || ""}</td>
+                        <td>${eq.capacidad || ""}</td>
+                        <td>${eq.serie || ""}</td>
+                        <td>${eq.vencimiento || "N/A"}</td>
+                        <td>${eq.vencimientoPH || "N/A"}</td>
+                        <td style="${vencido ? 'background:#ff0000; color:#fff; text-align:center;' : 'text-align:center;'}">${estVigencia}</td>
+                        <td style="${tieneFallaActiva ? 'color:#c00000; font-weight:bold;' : ''}">${tieneFallaActiva || "OK"}</td>
+                        <td style="text-align:center;">${linkFoto}</td>
+                    </tr>
+                `;
+            });
+
+            htmlExcel += `</tbody></table></body></html>`;
+            const blob = new Blob(['\uFEFF', htmlExcel], { type: 'application/vnd.ms-excel;charset=utf-8;' }); 
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `Inventario_Profesional_SySO_${Date.now()}.xls`; 
             a.click();
         }
 
@@ -1903,6 +2192,7 @@
             }
         }
 
+        // --- V6.29: ADAPTACIÓN TOTAL DEL REGISTRO DE EQUIPOS (OCULTA LO QUE NO CORRESPONDE AL GRUPO) ---
         function actualizarPrefijoUI() { 
             const grpSelect = document.getElementById('qrGrupo'); 
             const secSelect = document.getElementById('qrSeccion');
@@ -1918,43 +2208,72 @@
 
             const lblTipo = document.getElementById('lblQrTipo');
             const inpTipo = document.getElementById('qrTipo');
+            const lblCap = document.getElementById('lblQrCapacidad');
+            const inpCap = document.getElementById('qrCapacidad');
+            const lblSer = document.getElementById('lblQrSerie');
+            const inpSer = document.getElementById('qrSerie');
+            const lblVenc = document.getElementById('lblQrVencimiento');
+            const lblVencPH = document.getElementById('lblQrVencimientoPH');
+
             if(gLower.includes('extintor')) {
-                lblTipo.innerText = '5. Tipo / Agente Extintor';
+                lblTipo.innerText = 'Agente Extintor / Tipo';
                 inpTipo.placeholder = 'Ej. PQS ABC / CO2 / HCFC';
-            } else if(gLower.includes('botiqu')) {
-                lblTipo.innerText = '5. Tipo / Clasificación de Botiquín';
-                inpTipo.placeholder = 'Ej. Botiquín Mural / Portátil Primeros Auxilios';
-            } else if(gLower.includes('hidrante')) {
-                lblTipo.innerText = '5. Tipo de Hidrante / Boca';
-                inpTipo.placeholder = 'Ej. Gabinete Simple / Columna Exterior';
+                lblCap.innerText = 'Capacidad Nominal:';
+                inpCap.placeholder = 'Ej. 5 kg / 10 kg / 25 kg';
+                lblSer.innerText = 'Marca / N° de Cilindro:';
+                inpSer.placeholder = 'Ej. Melisam - N° 94820';
+                lblVenc.innerText = 'Vencimiento de Carga:';
+                lblVencPH.innerText = 'Vencimiento Prueba Hidráulica (PH):';
+            } else if(gLower.includes('botiqu') || gLower.includes('pa ') || gLower.includes('auxilio')) {
+                lblTipo.innerText = 'Tipo / Clasificación de Botiquín';
+                inpTipo.placeholder = 'Ej. Botiquín Primeros Auxilios Mural / Portátil';
+                lblCap.innerText = 'Dotación / Capacidad:';
+                inpCap.placeholder = 'Ej. Completo 20 personas / Kit Trauma';
+                lblVenc.innerText = 'Próximo Vencimiento de Insumos:';
+            } else if(gLower.includes('hidrante') || gLower.includes('manguera')) {
+                lblTipo.innerText = 'Tipo de Hidrante / Gabinete';
+                inpTipo.placeholder = 'Ej. Boca de Incendio Equipada (BIE) / Columna';
+                lblCap.innerText = 'Diámetro y Largo de Manguera:';
+                inpCap.placeholder = 'Ej. 1.5 pulg x 25 metros';
+                lblVencPH.innerText = 'Vencimiento Prueba Hidráulica Manguera:';
+            } else if(gLower.includes('tablero') || gLower.includes('electr') || gLower.includes('eléctr') || gLower.includes('energ')) {
+                lblTipo.innerText = 'Tipo de Tablero / Tensión';
+                inpTipo.placeholder = 'Ej. Tablero Seccional 380V / Corte General';
+                lblCap.innerText = 'Capacidad / Amperaje Térmica:';
+                inpCap.placeholder = 'Ej. 63A + Disyuntor Diferencial';
+                lblSer.innerText = 'Identificación Técnica / Circuito:';
+                inpSer.placeholder = 'Ej. TS-BAL-01';
             } else {
-                lblTipo.innerText = '5. Tipo / Descripción del Ítem';
-                inpTipo.placeholder = 'Ej. Descripción principal del equipo o punto';
+                lblTipo.innerText = 'Tipo / Descripción del Equipo';
+                inpTipo.placeholder = 'Ej. Descripción principal del equipo';
+                lblCap.innerText = 'Capacidad / Medida / Alcance:';
+                inpCap.placeholder = 'Ej. Medida o alcance';
+                lblSer.innerText = 'Marca / N° de Serie:';
+                lblVenc.innerText = 'Fecha de Vencimiento:';
+                lblVencPH.innerText = 'Vencimiento Certificación / PH:';
             }
 
             const mapaCampos = [
-                { key: 'capacidad', wrap: 'wrapQrCapacidad', input: 'qrCapacidad', lock: 'lockCapacidad' },
-                { key: 'serie', wrap: 'wrapQrSerie', input: 'qrSerie', lock: 'lockSerie' },
-                { key: 'vencimiento', wrap: 'wrapQrVencimiento', input: 'qrVencimiento', lock: 'lockVencimiento' },
-                { key: 'vencimientoPH', wrap: 'wrapQrVencimientoPH', input: 'qrVencimientoPH', lock: 'lockVencimientoPH' },
-                { key: 'responsable', wrap: 'wrapQrResponsable', input: 'qrResponsable', lock: 'lockResponsable' }
+                { key: 'capacidad', wrap: 'wrapQrCapacidad', input: 'qrCapacidad' },
+                { key: 'serie', wrap: 'wrapQrSerie', input: 'qrSerie' },
+                { key: 'vencimiento', wrap: 'wrapQrVencimiento', input: 'qrVencimiento' },
+                { key: 'vencimientoPH', wrap: 'wrapQrVencimientoPH', input: 'qrVencimientoPH' },
+                { key: 'responsable', wrap: 'wrapQrResponsable', input: 'qrResponsable' }
             ];
 
+            // Ocultar limpiamente los campos que no corresponden al grupo seleccionado
             mapaCampos.forEach(c => {
                 const isActivo = activos.includes(c.key);
                 const wrapEl = document.getElementById(c.wrap);
                 const inpEl = document.getElementById(c.input);
-                const lockEl = document.getElementById(c.lock);
 
                 if(isActivo) {
-                    wrapEl.classList.remove('campo-bloqueado');
+                    wrapEl.classList.remove('campo-oculto');
                     inpEl.disabled = false;
-                    lockEl.classList.add('hidden');
                 } else {
-                    wrapEl.classList.add('campo-bloqueado');
+                    wrapEl.classList.add('campo-oculto');
                     inpEl.disabled = true;
                     if(!editQRId) inpEl.value = '';
-                    lockEl.classList.remove('hidden');
                 }
             });
 
@@ -2403,25 +2722,6 @@
         }
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
-        function descargarInventarioCSV() {
-            if(Object.keys(config.equipos).length === 0) return alert("El inventario está vacío.");
-            const today = new Date(); 
-            const currMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}`; 
-
-            let csv = "\uFEFFID_Equipo;Grupo;Seccion;Ubicacion;Tipo_Descripcion;Capacidad_Medida;Marca_Serie;Vencimiento;Vencimiento_PH;Estado_Vigencia;Responsable_Notas;Tiene_Foto_Ref\r\n";
-            Object.keys(config.equipos).sort(sortNatural).forEach(id => { 
-                const eq = config.equipos[id]; 
-                const vencido = (eq.vencimiento && eq.vencimiento <= currMonth) || (eq.vencimientoPH && eq.vencimientoPH <= currMonth);
-                const estVigencia = vencido ? "VENCIDO" : "VIGENTE";
-                csv += `${id};${eq.grupo || ""};${eq.seccion || ""};${(eq.ubicacion || "").replace(/;/g, ",")};${(eq.tipo || "").replace(/;/g, ",")};${eq.capacidad || ""};${eq.serie || ""};${eq.vencimiento || ""};${eq.vencimientoPH || ""};${estVigencia};${(eq.responsable || "").replace(/;/g, ",")};${eq.tieneFotoRef ? "SI" : "NO"}\r\n`; 
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); 
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = `Inventario_Maestro_SySO_${Date.now()}.csv`; 
-            a.click();
-        }
-
         function renderListas() {
             const lG = document.getElementById('listaGrupos'); lG.innerHTML = ''; 
             Object.keys(config.grupos).sort(sortNatural).forEach(g => { 
@@ -2560,6 +2860,7 @@
             a.click();
         }
 
+        // --- V6.29: GESTIÓN DE FOTO DE EVIDENCIA CON OPCIÓN DE QUITAR / CANCELAR ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -2580,19 +2881,65 @@
                     const idEq = document.getElementById('idEquipo').value || "M/N"; 
                     const sello = `ID: ${idEq} | Insp: ${usuarioActual ? usuarioActual.nombre : 'N/A'} | ${new Date().toLocaleString('es-PY')}`; 
                     ctxW.fillText(sello, 10, canvasW.height - 16);
-                    fotoActualBase64 = canvasW.toDataURL('image/jpeg', 0.6); 
+                    fotoActualBase64 = canvasW.toDataURL('image/jpeg', 0.62); 
                     const preview = document.getElementById('previewBox'); 
                     preview.src = fotoActualBase64; 
                     preview.style.display = 'block';
                     
                     document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+                    document.getElementById('btnQuitarFotoControl').classList.remove('hidden');
+                    actualizarEstadoRequisitoFoto();
                 }
                 img.src = e.target.result;
             }
             reader.readAsDataURL(file);
         }
 
-        function guardarBorrador() { let obs = document.getElementById('observaciones').value; localStorage.setItem(DRAFT_KEY, obs); document.getElementById('lblBorrador').innerText = "📝 Borrador guardado."; }
+        function quitarFotoEvidenciaControl() {
+            fotoActualBase64 = null;
+            document.getElementById('inputFoto').value = '';
+            const preview = document.getElementById('previewBox');
+            preview.src = '';
+            preview.style.display = 'none';
+            document.getElementById('btnQuitarFotoControl').classList.add('hidden');
+            actualizarEstadoRequisitoFoto();
+        }
+
+        function actualizarEstadoRequisitoFoto() {
+            const id = document.getElementById('idEquipo').value;
+            const badge = document.getElementById('badgeEstadoFotoControl');
+            const btnCam = document.getElementById('btnAdjuntarFoto');
+            if(!id || !config.equipos[id]) {
+                badge.innerText = 'Opcional si está OK';
+                badge.style.color = 'var(--text-muted)';
+                btnCam.classList.remove('urgent');
+                return;
+            }
+            const params = config.grupos[config.equipos[id].grupo] || [];
+            let hayFalla = false;
+            params.forEach((p, idx) => {
+                const el = document.getElementById(`dynChk_${idx}`);
+                if(el && el.value === 'Falla') hayFalla = true;
+            });
+
+            if(hayFalla || esCargaManual) {
+                if(fotoActualBase64) {
+                    badge.innerText = '✅ Evidencia adjunta';
+                    badge.style.color = 'var(--success)';
+                    btnCam.classList.remove('urgent');
+                } else {
+                    badge.innerText = '🚨 OBLIGATORIA (Falta foto)';
+                    badge.style.color = 'var(--danger)';
+                    btnCam.classList.add('urgent');
+                }
+            } else {
+                badge.innerText = fotoActualBase64 ? '✅ Foto adjunta' : 'Opcional si está OK';
+                badge.style.color = fotoActualBase64 ? 'var(--success)' : 'var(--text-muted)';
+                btnCam.classList.remove('urgent');
+            }
+        }
+
+        function guardarBorrador() { let obs = document.getElementById('observaciones').value; localStorage.setItem(DRAFT_KEY, obs); document.getElementById('lblBorrador').innerText = "📝 Nota guardada."; }
 
         function agregarTag(texto) { let obs = document.getElementById('observaciones'); if(obs.value.trim() === '') obs.value = texto; else obs.value += ", " + texto; guardarBorrador(); obs.focus(); }
         
@@ -2691,8 +3038,7 @@
             if(!id) return alert("Seleccione un equipo válido.");
             cerrarModalContingencia();
             procesarEscaneo(id);
-            document.getElementById('btnAdjuntarFoto').classList.add('urgent');
-            document.getElementById('zonaObservaciones').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            actualizarEstadoRequisitoFoto();
         }
 
         window.cerrarModalContingencia = function() { document.getElementById('modalContingencia').classList.add('hidden'); }
@@ -2701,14 +3047,117 @@
 
         function activarQR() {
             esCargaManual = false; 
-            document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
             document.getElementById('qr-reader').style.display = 'block'; html5QrcodeScanner = new Html5Qrcode("qr-reader");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById('qr-reader').style.display = 'none'; if(navigator.vibrate) navigator.vibrate(200); procesarEscaneo(txt); }).catch(err => alert("Habilite el permiso de cámara."));
         }
         
+        // --- V6.29: ASISTENTE AUTOMÁTICO DE FALLA Y SELECCIÓN DE MOTIVO PREESTABLECIDO ---
+        window.alCambiarEstadoPuntoControl = function(index, valor) {
+            if(valor === 'Falla') {
+                abrirAsistenteFallaPunto(index);
+            } else {
+                delete motivosFallaPorIndex[index];
+                actualizarCajaResumenFallas();
+                actualizarEstadoRequisitoFoto();
+            }
+        }
+
+        function abrirAsistenteFallaPunto(index) {
+            const id = document.getElementById('idEquipo').value;
+            const eq = config.equipos[id];
+            if(!eq) return;
+
+            const params = config.grupos[eq.grupo] || [];
+            const nombreParam = params[index] || `Punto ${index+1}`;
+            indexFallaActivaModal = index;
+
+            document.getElementById('subtituloAsistenteFalla').innerHTML = `Equipo: <b>${id}</b> (${eq.grupo})<br>Punto con falla: <b style="color:var(--danger);">${nombreParam}</b>`;
+            document.getElementById('inputDetalleFallaCustom').value = '';
+
+            const opciones = obtenerOpcionesFallaParaParametro(nombreParam, eq.grupo);
+            const seleccionadosPrevios = motivosFallaPorIndex[index] ? motivosFallaPorIndex[index].split(', ') : [];
+
+            const cont = document.getElementById('contenedorChipsFalla');
+            cont.innerHTML = '';
+            opciones.forEach(op => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'chip-falla-opt' + (seleccionadosPrevios.includes(op) ? ' selected' : '');
+                btn.innerHTML = `<span>⚠️ ${op}</span><span>✓</span>`;
+                btn.onclick = () => btn.classList.toggle('selected');
+                btn.dataset.val = op;
+                cont.appendChild(btn);
+            });
+
+            document.getElementById('modalAsistenteFalla').classList.remove('hidden');
+        }
+
+        window.confirmarMotivoFallaYAbrirCamara = function() {
+            if(indexFallaActivaModal === null) return;
+            const seleccionados = Array.from(document.querySelectorAll('#contenedorChipsFalla .chip-falla-opt.selected')).map(b => b.dataset.val);
+            const custom = document.getElementById('inputDetalleFallaCustom').value.trim();
+            if(custom) seleccionados.push(custom);
+
+            if(seleccionados.length === 0) {
+                return alert("⚠️ Seleccione al menos una opción de falla de la lista (o escriba el motivo) antes de tomar la foto.");
+            }
+
+            motivosFallaPorIndex[indexFallaActivaModal] = seleccionados.join(', ');
+            document.getElementById('modalAsistenteFalla').classList.add('hidden');
+            indexFallaActivaModal = null;
+
+            actualizarCajaResumenFallas();
+            actualizarEstadoRequisitoFoto();
+
+            // Si aún no tomó la foto de evidencia de este hallazgo, abrir la cámara automáticamente
+            if(!fotoActualBase64) {
+                document.getElementById('inputFoto').click();
+            }
+        }
+
+        // Si marcó Falla por equivocación, regresa a OK y cierra sin pedir foto
+        window.cancelarFallaYVolverAOk = function() {
+            if(indexFallaActivaModal !== null) {
+                const selectEl = document.getElementById(`dynChk_${indexFallaActivaModal}`);
+                if(selectEl) selectEl.value = 'OK';
+                delete motivosFallaPorIndex[indexFallaActivaModal];
+            }
+            document.getElementById('modalAsistenteFalla').classList.add('hidden');
+            indexFallaActivaModal = null;
+            actualizarCajaResumenFallas();
+            actualizarEstadoRequisitoFoto();
+        }
+
+        function actualizarCajaResumenFallas() {
+            const id = document.getElementById('idEquipo').value;
+            const box = document.getElementById('boxResumenFallasDetectadas');
+            const txt = document.getElementById('listaResumenFallasTexto');
+            if(!id || !config.equipos[id]) {
+                box.classList.add('hidden');
+                return;
+            }
+            const params = config.grupos[config.equipos[id].grupo] || [];
+            const lineas = [];
+            Object.keys(motivosFallaPorIndex).forEach(idx => {
+                const nomP = params[idx] || `Punto ${parseInt(idx)+1}`;
+                lineas.push(`• <b>${nomP}:</b> ${motivosFallaPorIndex[idx]} <button type="button" class="btn-small btn-s-edit" style="padding:2px 6px; font-size:10px; margin-left:4px;" onclick="abrirAsistenteFallaPunto(${idx})">✏️ Cambiar</button>`);
+            });
+
+            if(lineas.length > 0) {
+                txt.innerHTML = lineas.join('<br>');
+                box.classList.remove('hidden');
+            } else {
+                txt.innerHTML = '';
+                box.classList.add('hidden');
+            }
+        }
+
         function renderFormularioControlInspeccion(id) {
             const eq = config.equipos[id];
             if(!eq) return;
+
+            motivosFallaPorIndex = {};
+            actualizarCajaResumenFallas();
 
             let fichaResumen = `${eq.seccion} | ${eq.tipo}`;
             if(eq.capacidad) fichaResumen += ` (${eq.capacidad})`;
@@ -2717,7 +3166,6 @@
             document.getElementById('seccionEquipo').value = fichaResumen;
             document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
 
-            // Cargar automáticamente la miniatura POS del equipo al costado
             actualizarMiniaturaPOSControl(id);
             
             const container = document.getElementById('moduloDinamico'); 
@@ -2725,13 +3173,11 @@
             
             const params = config.grupos[eq.grupo] || [];
 
-            let baseTags = smartTagsMap[eq.grupo] || [];
-            if(baseTags.length === 0) {
-                baseTags = params.map(p => `Falla ${p}`).concat(smartTagsMap['default']);
-            }
-            let tagsHTML = `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;">`; 
-            baseTags.forEach(t => { 
-                tagsHTML += `<button type="button" class="btn-small" style="background:var(--edit); color:#fff; border:none; padding:6px 10px; font-weight:bold;" onclick="agregarTag('${t}')">+ ${t}</button>`; 
+            // Etiquetas rápidas para OTRAS OBSERVACIONES GENERALES (No fallas)
+            const notasSugeridas = notasPreventivasPorGrupo['default'];
+            let tagsHTML = `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">`; 
+            notasSugeridas.forEach(t => { 
+                tagsHTML += `<button type="button" class="btn-small" style="background:var(--edit); color:#fff; border:none; padding:5px 9px; font-weight:bold;" onclick="agregarTag('${t}')">+ ${t}</button>`; 
             }); 
             tagsHTML += `</div>`; 
             document.getElementById('smartTagsContainer').innerHTML = tagsHTML;
@@ -2753,13 +3199,14 @@
             let html = '<div class="form-grid-pc">'; 
             if(params.length > 0) { 
                 params.forEach((p, index) => { 
-                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="revisarFallas(this.value)"><option value="OK">✅ OK</option><option value="Falla">🚨 Falla</option></select></div>`; 
+                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="alCambiarEstadoPuntoControl(${index}, this.value)"><option value="OK">✅ OK</option><option value="Falla">🚨 Falla (Elegir motivo + Foto)</option></select></div>`; 
                 }); 
             } else {
                 html += `<div class="alert-warning">Sin puntos específicos. Registre el estado en Observaciones.</div>`;
             }
             html += '</div>';
             container.innerHTML = warningHTML + html;
+            actualizarEstadoRequisitoFoto();
         }
 
         function procesarEscaneo(id) {
@@ -2815,20 +3262,14 @@
                 let draft = localStorage.getItem(DRAFT_KEY); 
                 if(draft) { 
                     document.getElementById('observaciones').value = draft; 
-                    document.getElementById('lblBorrador').innerText = "📝 Borrador recuperado."; 
+                    document.getElementById('lblBorrador').innerText = "📝 Nota recuperada."; 
                 }
-
-                setTimeout(() => { document.getElementById('zonaObservaciones').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
             } else { 
                 alert("El equipo escaneado no figura en el inventario."); 
                 document.getElementById('idEquipo').value = ''; 
                 document.getElementById('moduloDinamico').classList.add('hidden'); 
                 actualizarMiniaturaPOSControl(null);
             }
-        }
-
-        window.revisarFallas = function(val) {
-            if(val === 'Falla') document.getElementById('btnAdjuntarFoto').classList.add('urgent');
         }
         
         async function guardarRegistro() {
@@ -2842,31 +3283,48 @@
             const params = config.grupos[eq.grupo] || []; 
             let resp = {};
             let fallasDetectadas = []; 
+            let indiceSinMotivo = null;
             
             params.forEach((p, index) => { 
                 const el = document.getElementById(`dynChk_${index}`);
                 let val = el ? el.value : 'OK'; 
                 resp[`Control_${index+1}`] = val; 
-                if(val === 'Falla') fallasDetectadas.push(p); 
+                if(val === 'Falla') {
+                    if(!motivosFallaPorIndex[index]) {
+                        if(indiceSinMotivo === null) indiceSinMotivo = index;
+                    }
+                    const detallePunto = motivosFallaPorIndex[index] ? `${p}: ${motivosFallaPorIndex[index]}` : p;
+                    fallasDetectadas.push(detallePunto); 
+                }
             });
+
+            // 1. Validar que toda falla tenga su motivo seleccionado
+            if(indiceSinMotivo !== null) {
+                abrirAsistenteFallaPunto(indiceSinMotivo);
+                return;
+            }
             
+            // 2. Validar candado de foto obligatoria si hay falla o carga manual
             if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) { 
                 document.getElementById('btnAdjuntarFoto').classList.add('urgent'); 
-                return alert(`📸 FOTO OBLIGATORIA:\n${esCargaManual ? "Seleccionó el equipo sin escanear QR." : "Marcó una falla en el equipo."}\n\nTome una foto antes de guardar.`); 
+                alert(`📸 FOTO OBLIGATORIA:\n${esCargaManual ? "Seleccionó el equipo sin escanear QR." : "Registró una falla en el equipo."}\n\nAhora se abrirá la cámara para tomar la foto de evidencia.`);
+                document.getElementById('inputFoto').click();
+                return; 
             }
             
             btnSave.disabled = true;
 
-            let obsText = document.getElementById('observaciones').value; 
+            let obsText = document.getElementById('observaciones').value.trim(); 
             const currMonth = new Date().toISOString().slice(0,7);
             if((eq.vencimiento && eq.vencimiento <= currMonth) || (eq.vencimientoPH && eq.vencimientoPH <= currMonth)) {
-                if(!obsText.includes('[VENCIDO]')) obsText = "[VENCIDO] " + obsText; 
+                fallasDetectadas.push(`VENCIDO (${eq.vencimiento || eq.vencimientoPH})`);
             }
             let obsSanitized = obsText.replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
+            let detalleFallasStr = fallasDetectadas.join(" | ").replace(/;/g, ",");
             
             if(!config.fallas) config.fallas = {}; 
             if(fallasDetectadas.length > 0) { 
-                config.fallas[id] = fallasDetectadas.join(", "); 
+                config.fallas[id] = detalleFallasStr; 
             } else { 
                 delete config.fallas[id]; 
             } 
@@ -2894,8 +3352,10 @@
                 Ubicacion: eq.ubicacion || "N/A", 
                 ID_Equipo: id, 
                 Controles: resp, 
+                Detalle_Fallas: detalleFallasStr,
                 Observaciones: obsSanitized, 
                 Alerta_Fraude: isFraude,
+                tieneFotoEvidencia: !!fotoActualBase64,
                 synced: false
             }; 
             registro.uid = generarClaveUnicaInspeccion(registro);
@@ -2950,12 +3410,22 @@
                 } else { modalHTML += `<p class="text-muted" style="font-size:15px; margin-top:12px;">🏁 Sección completada para el bloque <b>${prefijo}</b>.</p>`; }
             }
             
-            localStorage.removeItem(DRAFT_KEY); document.getElementById('lblBorrador').innerText = ''; esCargaManual = false; document.getElementById('idEquipo').value = ''; document.getElementById('seccionEquipo').value = ''; document.getElementById('ubicacionEquipo').value = ''; document.getElementById('moduloDinamico').classList.add('hidden'); document.getElementById('observaciones').value = ''; document.getElementById('inputFoto').value = ''; document.getElementById('previewBox').style.display = 'none'; document.getElementById('previewBox').src = ''; fotoActualBase64 = null; document.getElementById('idEquipo').dataset.overwrite = "false"; document.getElementById('btnAdjuntarFoto').classList.remove('urgent');
+            localStorage.removeItem(DRAFT_KEY); 
+            document.getElementById('lblBorrador').innerText = ''; 
+            esCargaManual = false; 
+            motivosFallaPorIndex = {};
+            actualizarCajaResumenFallas();
+            document.getElementById('idEquipo').value = ''; 
+            document.getElementById('seccionEquipo').value = ''; 
+            document.getElementById('ubicacionEquipo').value = ''; 
+            document.getElementById('moduloDinamico').classList.add('hidden'); 
+            document.getElementById('observaciones').value = ''; 
+            quitarFotoEvidenciaControl();
+            document.getElementById('idEquipo').dataset.overwrite = "false"; 
             actualizarMiniaturaPOSControl(null);
             btnSave.disabled = false;
             mostrarRadar(modalHTML);
 
-            // Si el siguiente equipo sugerido tiene foto de referencia, mostrarla en miniatura dentro del cartel de seguimiento
             if(proximoIdParaFoto && config.equipos[proximoIdParaFoto] && config.equipos[proximoIdParaFoto].tieneFotoRef) {
                 obtenerFotoReferenciaEquipo(proximoIdParaFoto).then(b64 => {
                     const rBox = document.getElementById('radarNextThumbBox');
@@ -3012,9 +3482,10 @@
                 }
             }
             
-            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background-color:#ffffff !important; color:#000000 !important;} .report-card{border:1px solid #ccc; padding:12px; margin-bottom:12px; border-radius:8px; background-color:#ffffff !important; color:#000000 !important; page-break-inside:avoid;} h2{color:#2F5597 !important;} img.evidencia{max-width:260px; border-radius:4px; margin-top:8px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:360px; text-align:center; margin-top:25px; background-color:#ffffff !important; color:#000000 !important; page-break-inside:avoid;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Controles SySO - Planta Industrial</h2><p><b>Emitido por:</b> ${usuarioActual.nombre} | <b>Total Controles:</b> ${registros.length}</p><hr>`;
+            let html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif; margin:20px; background-color:#ffffff !important; color:#000000 !important;} .report-card{border:1px solid #ccc; padding:12px; margin-bottom:12px; border-radius:8px; background-color:#ffffff !important; color:#000000 !important; page-break-inside:avoid;} .card-falla{border:2px solid #dc3545; background-color:#fff5f5 !important;} h2{color:#2F5597 !important;} img.evidencia{max-width:260px; border-radius:4px; margin-top:8px; border:2px dashed #dc3545;} .firma-box{border:2px dashed #333; padding:10px; width:360px; text-align:center; margin-top:25px; background-color:#ffffff !important; color:#000000 !important; page-break-inside:avoid;} .falla-texto{color:#dc3545; font-weight:bold;}</style></head><body><h2>Reporte de Controles SySO - Planta Industrial</h2><p><b>Emitido por:</b> ${usuarioActual.nombre} | <b>Total Controles:</b> ${registros.length}</p><hr>`;
             
             registros.forEach(r => { 
+                let tieneFalla = Object.values(r.Controles || {}).includes('Falla');
                 let detallesControles = ""; let idx = 0;
                 Object.keys(r.Controles || {}).forEach(k => { 
                     let paramName = (config.grupos[r.Grupo] && config.grupos[r.Grupo][idx]) ? config.grupos[r.Grupo][idx] : k; 
@@ -3025,7 +3496,8 @@
                 }); 
                 const fotoAsociada = photoDB[r.ID_Equipo + '_' + r.Fecha]; 
                 const imgTag = fotoAsociada ? `<br><img src="${fotoAsociada}" class="evidencia">` : ''; 
-                html += `<div class="report-card"><h3 style="margin:0 0 5px 0; color:#2F5597;">ID: ${r.ID_Equipo} | Sección: ${r.Seccion}</h3><p style="margin:3px 0; font-size:13px;"><b>Fecha:</b> ${r.Fecha} | <b>Inspector:</b> ${r.Inspector}</p><p style="margin:3px 0; font-size:13px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:4px 0; font-size:13px; background:#f4f6f9; padding:5px; border-radius:4px;">${detallesControles}</p><p style="margin:3px 0; font-size:13px;"><b>Observaciones:</b> ${r.Observaciones || 'Sin observaciones'}</p>${imgTag}</div>`; 
+                const htmlFalla = r.Detalle_Fallas ? `<p style="margin:3px 0; font-size:13px; color:#dc3545;"><b>🚨 Hallazgos de Falla:</b> ${r.Detalle_Fallas}</p>` : '';
+                html += `<div class="report-card ${tieneFalla ? 'card-falla' : ''}"><h3 style="margin:0 0 5px 0; color:${tieneFalla ? '#dc3545' : '#2F5597'};">ID: ${r.ID_Equipo} | Sección: ${r.Seccion} (${r.Grupo})</h3><p style="margin:3px 0; font-size:13px;"><b>Fecha:</b> ${r.Fecha} | <b>Inspector:</b> ${r.Inspector}</p><p style="margin:3px 0; font-size:13px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:4px 0; font-size:13px; background:#f4f6f9; padding:5px; border-radius:4px;">${detallesControles}</p>${htmlFalla}<p style="margin:3px 0; font-size:13px;"><b>Otras Observaciones:</b> ${r.Observaciones || 'Sin observaciones adicionales'}</p>${imgTag}</div>`; 
             }); 
             html += `<div class="firma-box"><h3>Firma de Conformidad</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>${usuarioActual.nombre} - ${new Date().toLocaleString('es-PY')}</i></p></div></body></html>`;
 
