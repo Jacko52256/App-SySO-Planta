@@ -4726,10 +4726,12 @@ INSTRUCCIÓN ESTRICTA:
             else prompt("Copie este informe:", informe);
         }
 // =========================================================================
-        // ACTUALIZACIÓN V6.34 - PASO 1 DE 2:
-        // LIMPIEZA DE BOTONES DUPLICADOS, DIRECTORIO TEL: EN S.O.S. Y GUARDIA PUSH 24/7
+// =========================================================================
+        // ACTUALIZACIÓN V6.35 - PASO 1 DE 2:
+        // APAGADO S.O.S. DESDE NOTIFICACIÓN EXTERNA, PANTALLA DE BLOQUEO Y CORTE GLOBAL
         // =========================================================================
         const SOS_PUSH_TOPIC = 'syso_alerta_planta_master';
+        let timeoutAutoCorteSirena = null;
 
         function asegurarEstructuraEmergencias() {
             if(!Array.isArray(config.contactosEmergencia) || config.contactosEmergencia.length === 0) {
@@ -4745,8 +4747,14 @@ INSTRUCCIÓN ESTRICTA:
                 if(typeof u.telefono === 'undefined') u.telefono = '';
                 if(typeof u.familiarNombre === 'undefined') u.familiarNombre = '';
                 if(typeof u.familiarTel === 'undefined') u.familiarTel = '';
-                if(typeof u.telVerificadoFecha === 'undefined') u.telVerificadoFecha = 'Sin verificar';
-                if(typeof u.telVerificadoTS === 'undefined') u.telVerificadoTS = 0;
+                // Corrección automática: si no tiene ningún teléfono cargado, jamás puede figurar como Vigente
+                if(!String(u.telefono || '').trim() && !String(u.familiarTel || '').trim()) {
+                    u.telVerificadoFecha = 'Sin verificar';
+                    u.telVerificadoTS = 0;
+                } else {
+                    if(typeof u.telVerificadoFecha === 'undefined') u.telVerificadoFecha = 'Sin verificar';
+                    if(typeof u.telVerificadoTS === 'undefined') u.telVerificadoTS = 0;
+                }
             });
         }
 
@@ -4760,17 +4768,13 @@ INSTRUCCIÓN ESTRICTA:
             return num;
         }
 
-        // 1. Actualizar versión a V6.34 y eliminar los botones duplicados de arriba en Control
-        function aplicarLimpiezaBotonesDuplicadosYV634() {
-            document.title = "Gestión SySO V6.34 - Industrial Cloud IA";
+        // 1. Actualizar versión a V6.35 y mantener limpia la vista de Control sin botones duplicados
+        function aplicarLimpiezaBotonesDuplicadosYV635() {
+            document.title = "Gestión SySO V6.35 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.34';
-
-            // Ocultar botón superior duplicado "⌨️ Elegir de Lista"
+            if(badgeVer) badgeVer.innerText = 'V6.35';
             const btnListaTop = document.querySelector('#view-control .card-top-bar button');
             if(btnListaTop) btnListaTop.classList.add('hidden');
-
-            // Ocultar botón superior duplicado "📷 Escanear QR" (se usa el de abajo en Hilo de Recorrido)
             const btnQRTop = document.getElementById('btnToggleCamaraQR');
             if(btnQRTop) btnQRTop.classList.add('hidden');
         }
@@ -4780,6 +4784,10 @@ INSTRUCCIÓN ESTRICTA:
             await _activarQROrig();
             const btnQRTop = document.getElementById('btnToggleCamaraQR');
             if(btnQRTop) btnQRTop.classList.add('hidden');
+            const wrap = document.getElementById('qr-wrapper');
+            if(wrap && wrap.style.display !== 'none') {
+                wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         };
 
         const _detenerCamaraQROrig = detenerCamaraQR;
@@ -4789,7 +4797,131 @@ INSTRUCCIÓN ESTRICTA:
             if(btnQRTop) btnQRTop.classList.add('hidden');
         };
 
-        // 2. Inyectar Llamadas Directas 1-Toque (tel:) y Contactos Familiares dentro del Modal S.O.S.
+        // 2. Apagado de Alarma Local y Global (Desde Notificación, Pantalla de Bloqueo o Botón Global)
+        window.silenciarSoloSonidoSirena = function() {
+            if(intervaloSirena) { clearInterval(intervaloSirena); intervaloSirena = null; }
+            if(timeoutAutoCorteSirena) { clearTimeout(timeoutAutoCorteSirena); timeoutAutoCorteSirena = null; }
+            try {
+                if('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+            } catch(e){}
+        };
+
+        apagarMiAlarmaSOS = function() {
+            silenciarSoloSonidoSirena();
+            if(window.sosActivoActualId) {
+                ultimoSOSDescartadoId = String(window.sosActivoActualId);
+                localStorage.setItem('SySO_LastSOS_Dismissed', ultimoSOSDescartadoId);
+            }
+            const banner = document.getElementById('sosLiveBanner');
+            if(banner) banner.classList.add('hidden');
+            if(window.ultimaNotificacionSOS && typeof window.ultimaNotificacionSOS.close === 'function') {
+                try { window.ultimaNotificacionSOS.close(); } catch(e){}
+            }
+        };
+
+        // Permite apagar la alerta S.O.S. en Firebase para TODOS los celulares y PCs de la planta
+        window.finalizarAlertaSOSGlobalPlanta = async function() {
+            apagarMiAlarmaSOS();
+            try {
+                await fetch(CLOUD_SOS_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: false, id: 0, finalizadoPor: usuarioActual ? usuarioActual.nombre : 'Operador', ts: Date.now() })
+                });
+                fetch(`https://ntfy.sh/${SOS_PUSH_TOPIC}`, {
+                    method: 'POST',
+                    headers: { 'Title': 'ALARMA S.O.S. FINALIZADA / DESACTIVADA', 'Priority': 'default', 'Tags': 'white_check_mark' },
+                    body: `La alerta S.O.S. fue desactivada por ${usuarioActual ? usuarioActual.nombre : 'Planta'}.`
+                }).catch(()=>{});
+            } catch(e){}
+            cerrarModalSOS();
+            alert("🔕 Alerta S.O.S. finalizada y apagada en todos los dispositivos conectados de la planta.");
+        };
+
+        // Notificación emergente interactiva: Al tocarla en Windows o Android apaga la sirena sin entrar a buscar el botón
+        async function mostrarNotificacionMovilSegura(titulo, cuerpo) {
+            try {
+                if(!('Notification' in window) || Notification.permission !== 'granted') return;
+                const textoConInstruccion = `${cuerpo}\n👉 TOQUE ESTE AVISO PARA APAGAR LA SIRENA`;
+                if(navigator.serviceWorker && navigator.serviceWorker.ready) {
+                    const reg = await navigator.serviceWorker.getRegistration();
+                    if(reg && reg.showNotification) {
+                        await reg.showNotification(titulo, {
+                            body: textoConInstruccion,
+                            tag: 'sos_syso_alert',
+                            renotify: true,
+                            vibrate: [400, 150, 400],
+                            requireInteraction: true
+                        });
+                        return;
+                    }
+                }
+                const notif = new Notification(titulo, {
+                    body: textoConInstruccion,
+                    tag: 'sos_syso_alert',
+                    requireInteraction: true
+                });
+                window.ultimaNotificacionSOS = notif;
+                notif.onclick = function() {
+                    apagarMiAlarmaSOS();
+                    try { this.close(); } catch(e){}
+                };
+                notif.onclose = function() {
+                    silenciarSoloSonidoSirena();
+                };
+            } catch(e) {}
+        }
+
+        activarAlarmaVisualYSonora = function(sosData) {
+            if(ultimoSOSDescartadoId === String(sosData.id)) {
+                document.getElementById('sosLiveBanner').classList.add('hidden');
+                return;
+            }
+            const banner = document.getElementById('sosLiveBanner');
+            if(banner) {
+                banner.innerHTML = `
+                    <div id="sosLiveText" style="font-size:15px; margin-bottom:10px;">
+                        🚨 ¡ALERTA S.O.S.: ${sosData.tipo.toUpperCase()}!<br>
+                        📍 Sector: ${sosData.seccion} | Reporta: ${sosData.reporta} (${sosData.hora})
+                    </div>
+                    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-small" style="background:#000; color:#fff; padding:10px 16px; font-size:13.5px; border:2px solid #fff;" onclick="apagarMiAlarmaSOS()">🔇 Apagar Mi Sirena</button>
+                        <button type="button" class="btn-small" style="background:#ffc107; color:#000; padding:10px 16px; font-size:13.5px; border:2px solid #000;" onclick="finalizarAlertaSOSGlobalPlanta()">🔕 Apagar S.O.S. para Todos</button>
+                    </div>
+                `;
+                banner.classList.remove('hidden');
+            }
+            if(!intervaloSirena) {
+                sonarSirenaWebAudio();
+                intervaloSirena = setInterval(sonarSirenaWebAudio, 2500);
+                // Auto-corte acústico a los 40 segundos para que no suene infinitamente si no hay nadie cerca
+                if(timeoutAutoCorteSirena) clearTimeout(timeoutAutoCorteSirena);
+                timeoutAutoCorteSirena = setTimeout(() => {
+                    silenciarSoloSonidoSirena();
+                }, 40000);
+
+                // Vincular a botones multimedia / pantalla de bloqueo del celular y PC
+                try {
+                    if('mediaSession' in navigator) {
+                        navigator.mediaSession.metadata = new MediaMetadata({
+                            title: `🚨 S.O.S. ${sosData.tipo} - ${sosData.seccion}`,
+                            artist: 'Toca Pausa para apagar la sirena',
+                            album: 'Gestión SySO Industrial'
+                        });
+                        navigator.mediaSession.playbackState = 'playing';
+                        navigator.mediaSession.setActionHandler('pause', () => apagarMiAlarmaSOS());
+                        navigator.mediaSession.setActionHandler('stop', () => apagarMiAlarmaSOS());
+                    }
+                } catch(e){}
+
+                mostrarNotificacionMovilSegura(
+                    `🚨 S.O.S. ${sosData.tipo.toUpperCase()} EN ${sosData.seccion}`,
+                    `Reporta: ${sosData.reporta} (${sosData.hora})`
+                );
+            }
+        };
+
+        // 3. Modal S.O.S. con Botón de Apagado Global y Directorio Telefónico Directo
         window.renderDirectorioEnModalSOS = function() {
             asegurarEstructuraEmergencias();
             const modalContent = document.querySelector('#modalSOS .modal-content');
@@ -4829,6 +4961,9 @@ INSTRUCCIÓN ESTRICTA:
             }).join('');
 
             boxSOS.innerHTML = `
+                <button type="button" class="btn btn-dark" style="margin-bottom:12px; padding:10px; font-size:13.5px; border:2px solid #ffc107; color:#ffc107;" onclick="finalizarAlertaSOSGlobalPlanta()">
+                    🔕 Apagar / Finalizar Alarma S.O.S. Activa (En Toda la Planta)
+                </button>
                 <div style="font-size:13px; font-weight:bold; color:var(--primary); margin-bottom:6px;">📞 LLAMADA TELEFÓNICA DIRECTA (1 TOQUE):</div>
                 ${btnsAcc}
                 ${btnsInc}
@@ -4847,7 +4982,8 @@ INSTRUCCIÓN ESTRICTA:
             _abrirModalSOSOrig();
             renderDirectorioEnModalSOS();
         };
-// 3. Guardia S.O.S. 24/7 Compatible con Android, iPhone y PC (Sin error de constructor móvil)
+
+        // 4. Guardia S.O.S. 24/7 en Segundo Plano
         let keepAliveIntervalSOS = null;
 
         function iniciarPulsoSilenciosoSegundoPlano() {
@@ -4876,26 +5012,9 @@ INSTRUCCIÓN ESTRICTA:
             }
         }
 
-        async function mostrarNotificacionMovilSegura(titulo, cuerpo) {
-            try {
-                if(!('Notification' in window) || Notification.permission !== 'granted') return;
-                if(navigator.serviceWorker && navigator.serviceWorker.ready) {
-                    const reg = await navigator.serviceWorker.getRegistration();
-                    if(reg && reg.showNotification) {
-                        await reg.showNotification(titulo, { body: cuerpo, vibrate: [400, 150, 400], requireInteraction: true });
-                        return;
-                    }
-                }
-                new Notification(titulo, { body: cuerpo });
-            } catch(e) {
-                // En Android sin ServiceWorker no lanza error bloqueante
-            }
-        }
-
         window.activarGuardiaSOS247 = async function() {
             let estadoPermiso = 'default';
             try {
-                // Desbloquear motor de audio y vibración del celular con el toque del usuario
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
                 if(AudioCtx) {
                     if(!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
@@ -4903,51 +5022,23 @@ INSTRUCCIÓN ESTRICTA:
                 }
                 if(navigator.vibrate) navigator.vibrate(120);
             } catch(e){}
-
             try {
                 if('Notification' in window) {
-                    if(Notification.permission === 'granted') {
-                        estadoPermiso = 'granted';
-                    } else if(Notification.permission !== 'denied') {
-                        estadoPermiso = await Notification.requestPermission();
-                    } else {
-                        estadoPermiso = 'denied';
-                    }
+                    if(Notification.permission === 'granted') estadoPermiso = 'granted';
+                    else if(Notification.permission !== 'denied') estadoPermiso = await Notification.requestPermission();
+                    else estadoPermiso = 'denied';
                 }
             } catch(e){}
-
-            try {
-                if('wakeLock' in navigator) await navigator.wakeLock.request('screen');
-            } catch(e){}
+            try { if('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch(e){}
 
             localStorage.setItem('SySO_SOS_Guard_Active', 'true');
             iniciarPulsoSilenciosoSegundoPlano();
             actualizarEstadoVisualBotonGuardia();
 
-            if(estadoPermiso === 'granted') {
-                mostrarNotificacionMovilSegura('🛡️ Guardia S.O.S. 24/7 Activada', 'Recibirás alertas de emergencia en segundo plano.');
-            }
-
             if(navigator.clipboard) {
                 try { await navigator.clipboard.writeText(SOS_PUSH_TOPIC); } catch(e){}
             }
-
-            const notaPermiso = estadoPermiso === 'denied'
-                ? '\n⚠️ Nota: En este navegador tienes bloqueadas las notificaciones emergentes (puedes habilitarlas tocando el candado 🔒 de la barra de direcciones arriba), pero la sirena sonora en segundo plano ya quedó ACTIVA.'
-                : '\n✅ Permiso del navegador vinculado correctamente.';
-
-            alert(`✅ GUARDIA S.O.S. 24/7 ACTIVADA EN ESTE DISPOSITIVO:${notaPermiso}\n\n1) Con la app minimizada o pantalla encendida: la sirena sonará automáticamente cada vez que haya una emergencia.\n2) Para que suene incluso con Chrome totalmente cerrado: instala la app gratuita "ntfy" (Play Store / App Store), toca "+" y pega este canal (ya se copió a tu portapapeles):\n\n${SOS_PUSH_TOPIC}`);
-        };
-
-        const _activarAlarmaOrig = activarAlarmaVisualYSonora;
-        activarAlarmaVisualYSonora = function(sosData) {
-            _activarAlarmaOrig(sosData);
-            if(ultimoSOSDescartadoId !== String(sosData.id)) {
-                mostrarNotificacionMovilSegura(
-                    `🚨 S.O.S. ${sosData.tipo.toUpperCase()} EN ${sosData.seccion}`,
-                    `Reporta: ${sosData.reporta} (${sosData.hora}) — Inicien protocolo de emergencia.`
-                );
-            }
+            alert(`✅ GUARDIA S.O.S. 24/7 ACTIVADA:\n\n• Para silenciar una alarma en PC o Celular: basta con tocar la notificación emergente o usar el botón "🔕 Apagar S.O.S.".\n• Canal permanente para app ntfy (ya copiado al portapapeles):\n\n${SOS_PUSH_TOPIC}`);
         };
 
         const _dispararSOSOrig = dispararSOS;
@@ -4966,20 +5057,79 @@ INSTRUCCIÓN ESTRICTA:
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            aplicarLimpiezaBotonesDuplicadosYV634();
+            aplicarLimpiezaBotonesDuplicadosYV635();
             asegurarEstructuraEmergencias();
             if(localStorage.getItem('SySO_SOS_Guard_Active') === 'true') {
                 iniciarPulsoSilenciosoSegundoPlano();
             }
             setTimeout(actualizarEstadoVisualBotonGuardia, 400);
         });
-        // === FIN DEL PASO 1 DE 2 ===
-        // =========================================================================
-        // ACTUALIZACIÓN V6.34 - PASO 2 DE 2:
-        // PANEL BRIGADISTA COMUNICACIÓN, SEMÁFORO 30 DÍAS, FAMILIARES Y NÓMINA BOMBEROS
+        // === FIN DEL PASO 1 DE 2 (V6.35) ===
+// =========================================================================
+        // ACTUALIZACIÓN V6.35 - PASO 2 DE 2:
+        // CORTE S.O.S. SOLO JACK WIENS, EDITORES CON CANCELAR Y BLINDAJE DE VIGENCIA
         // =========================================================================
         let editEmergenciaId = null;
+        let editTelCompaneroId = null;
 
+        // 1. Restringir el Corte Global de S.O.S. exclusivamente a Jack Wiens
+        window.finalizarAlertaSOSGlobalPlanta = async function() {
+            if(!esUsuarioCreador()) {
+                apagarMiAlarmaSOS();
+                return;
+            }
+            if(!confirm("👑 ¿Desea finalizar y apagar la alerta S.O.S. para TODOS los dispositivos de la planta?")) return;
+            apagarMiAlarmaSOS();
+            try {
+                await fetch(CLOUD_SOS_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: false, id: 0, finalizadoPor: usuarioActual ? usuarioActual.nombre : 'Jack Wiens', ts: Date.now() })
+                });
+                fetch(`https://ntfy.sh/${SOS_PUSH_TOPIC}`, {
+                    method: 'POST',
+                    headers: { 'Title': 'ALARMA S.O.S. FINALIZADA POR JEFATURA', 'Priority': 'default', 'Tags': 'white_check_mark' },
+                    body: `La alerta S.O.S. fue desactivada globalmente por Jack Wiens.`
+                }).catch(()=>{});
+            } catch(e){}
+            cerrarModalSOS();
+            alert("🔕 Alerta S.O.S. finalizada en toda la planta.");
+        };
+
+        // Sobrescribir el banner S.O.S. para que solo Jack Wiens vea el botón amarillo de apagado global
+        const _activarAlarmaV635 = activarAlarmaVisualYSonora;
+        activarAlarmaVisualYSonora = function(sosData) {
+            _activarAlarmaV635(sosData);
+            const banner = document.getElementById('sosLiveBanner');
+            if(banner && !banner.classList.contains('hidden')) {
+                const btnGlobal = esUsuarioCreador()
+                    ? `<button type="button" class="btn-small" style="background:#ffc107; color:#000; padding:10px 16px; font-size:13.5px; border:2px solid #000;" onclick="finalizarAlertaSOSGlobalPlanta()">👑 Apagar S.O.S. en Toda la Planta</button>`
+                    : '';
+                banner.innerHTML = `
+                    <div id="sosLiveText" style="font-size:15px; margin-bottom:10px;">
+                        🚨 ¡ALERTA S.O.S.: ${sosData.tipo.toUpperCase()}!<br>
+                        📍 Sector: ${sosData.seccion} | Reporta: ${sosData.reporta} (${sosData.hora})
+                    </div>
+                    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-small" style="background:#000; color:#fff; padding:10px 18px; font-size:13.5px; border:2px solid #fff;" onclick="apagarMiAlarmaSOS()">🔇 Entendido / Apagar Mi Sirena</button>
+                        ${btnGlobal}
+                    </div>
+                `;
+            }
+        };
+
+        // Ocultar el botón de apagado global dentro del modal S.O.S. si no es Jack Wiens
+        const _renderDirSOSV635 = window.renderDirectorioEnModalSOS;
+        window.renderDirectorioEnModalSOS = function() {
+            _renderDirSOSV635();
+            const boxSOS = document.getElementById('boxDirectorioRapidoSOS');
+            if(boxSOS && !esUsuarioCreador()) {
+                const btnG = boxSOS.querySelector('button[onclick*="finalizarAlertaSOSGlobalPlanta"]');
+                if(btnG) btnG.remove();
+            }
+        };
+
+        // 2. Permisos y construcción del Panel de Comunicación con botones "Cancelar"
         function esUsuarioComunicacionOAdmin(u = usuarioActual) {
             if(!u) return false;
             if(u.rol === 'Admin') return true;
@@ -4994,7 +5144,6 @@ INSTRUCCIÓN ESTRICTA:
             const vistaAjustes = document.getElementById('view-ajustes');
             if(!vistaAjustes) return;
 
-            // 1. Agregar botón de Guardia S.O.S. 24/7 en la tarjeta de Perfil
             const btnDark = document.getElementById('btnDarkMode');
             if(btnDark && btnDark.parentElement && !document.getElementById('btnActivarGuardiaSOS')) {
                 const btnGuardia = document.createElement('button');
@@ -5002,12 +5151,12 @@ INSTRUCCIÓN ESTRICTA:
                 btnGuardia.type = 'button';
                 btnGuardia.className = 'btn btn-danger';
                 btnGuardia.style.marginTop = '5px';
-                btnGuardia.innerHTML = '🔔 Activar Guardia S.O.S. 24/7 (Con App Cerrada)';
+                btnGuardia.innerHTML = '🔔 Activar Guardia S.O.S. 24/7 (Segundo Plano)';
                 btnGuardia.onclick = () => activarGuardiaSOS247();
                 btnDark.parentElement.insertAdjacentElement('afterend', btnGuardia);
+                actualizarEstadoVisualBotonGuardia();
             }
 
-            // 2. Crear acordeón de Agenda S.O.S., Familiares y Nómina Bomberos
             if(!document.getElementById('cardAgendaComunicacion')) {
                 const card = document.createElement('div');
                 card.id = 'cardAgendaComunicacion';
@@ -5015,7 +5164,7 @@ INSTRUCCIÓN ESTRICTA:
                 card.style.cssText = 'padding:0; overflow:hidden; border:2px solid #0284c7;';
                 card.innerHTML = `
                     <div class="accordion" style="margin:0; border:none;">
-                        <div class="accordion-header" style="background:#0284c7; color:#fff;" onclick="this.parentElement.classList.toggle('active'); renderPanelAgendaComunicacion();">
+                        <div class="accordion-header" style="background:#0284c7; color:#fff;" onclick="this.parentElement.classList.toggle('active'); cancelarEdicionEmergencia(); cerrarEditorTelCompanero(); renderPanelAgendaComunicacion();">
                             <div class="acc-title-wrap"><span class="acc-title-text">📞 Agenda S.O.S., Familiares y Nómina Bomberos</span></div>
                             <span style="flex-shrink:0;">▼</span>
                         </div>
@@ -5023,12 +5172,12 @@ INSTRUCCIÓN ESTRICTA:
                             <!-- A. Nómina Mensual para Bomberos -->
                             <div class="chart-card" style="border-color:var(--primary);">
                                 <div style="font-weight:bold; color:var(--primary); font-size:13px; margin-bottom:4px;">🚒 Control de Evacuación y Nómina para Bomberos:</div>
-                                <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Descargue o imprima cada mes la lista actualizada de personal activo por Sección con sus teléfonos y contacto familiar:</p>
+                                <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Descargue o imprima cada mes la lista de personal activo por Sección (sin duplicados) con teléfonos y contacto familiar:</p>
                                 <button type="button" class="btn btn-primary" style="margin:0; padding:10px; font-size:13px;" onclick="imprimirListaEvacuacionBomberos()">🖨️ Imprimir / Descargar Lista de Empleados por Sección</button>
                             </div>
 
-                            <!-- B. Números de Emergencia (Accidente / Incendio) -->
-                            <div class="chart-card">
+                            <!-- B. Números de Emergencia Externa con Botón Cancelar -->
+                            <div class="chart-card" id="boxFormEmergenciaExterna">
                                 <div style="font-weight:bold; color:var(--danger); font-size:13px; margin-bottom:6px;">🚨 Números de Emergencia Externa (Verificación Mensual):</div>
                                 <div class="form-grid-pc" style="margin-bottom:8px;">
                                     <div>
@@ -5040,21 +5189,49 @@ INSTRUCCIÓN ESTRICTA:
                                     </div>
                                     <div>
                                         <label style="font-size:11.5px;">Entidad / Servicio:</label>
-                                        <input type="text" id="emNombreInput" placeholder="Ej. Bomberos Filadelfia" style="padding:8px; font-size:13px;">
+                                        <input type="text" id="emNombreInput" placeholder="Ej. Bomberos Voluntarios" style="padding:8px; font-size:13px;">
                                     </div>
                                 </div>
                                 <div style="display:flex; gap:6px; margin-bottom:10px;">
                                     <input type="text" id="emTelefonoInput" placeholder="N° Teléfono (Ej. 132 o 0981...)" style="flex:1.5; padding:8px; font-size:13px;">
-                                    <button type="button" id="btnGuardarEmergencia" class="btn-small btn-success" style="padding:8px 12px;" onclick="guardarContactoEmergencia()">➕ Guardar</button>
+                                    <button type="button" id="btnGuardarEmergencia" class="btn-small btn-success" style="padding:8px 12px;" onclick="guardarContactoEmergencia()">➕ Agregar</button>
+                                    <button type="button" id="btnCancelarEmergencia" class="btn-small btn-s-del hidden" style="padding:8px 10px;" onclick="cancelarEdicionEmergencia()">✖ Cancelar</button>
                                 </div>
                                 <div id="listaContactosEmergenciaAdmin"></div>
                             </div>
 
-                            <!-- C. Teléfonos de Brigadistas y Contacto Familiar -->
+                            <!-- C. Teléfonos de Brigadistas y Contacto Familiar con Editor en Pantalla y Cancelar -->
                             <div class="chart-card" style="margin-bottom:0;">
                                 <div style="font-weight:bold; color:var(--primary); font-size:13px; margin-bottom:4px;">👨‍🚒 Teléfonos de Personal y Contacto Familiar:</div>
-                                <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Llame o escriba por WhatsApp para confirmar que el número sigue vigente y presione <b>✅ Vigente</b>:</p>
-                                <div id="listaTelefonosPersonalAdmin" style="max-height:340px; overflow-y:auto;"></div>
+                                <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Toque <b>✏️ Teléfonos</b> para cargar o editar números, o <b>✅ Vigente</b> luego de verificar por llamada/WhatsApp:</p>
+
+                                <!-- Mini-Formulario en pantalla para editar teléfonos de un compañero con botón Cancelar -->
+                                <div id="boxEditorTelCompanero" class="hidden" style="border:2px solid var(--edit); border-radius:8px; padding:10px; background:var(--card-bg); margin-bottom:10px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                        <b id="tituloEditorTelCompanero" style="color:var(--edit); font-size:13px;">✏️ Editando Teléfonos</b>
+                                        <button type="button" class="btn-small btn-s-del" onclick="cerrarEditorTelCompanero()">✖ Cancelar</button>
+                                    </div>
+                                    <div class="form-grid-pc">
+                                        <div class="form-group" style="margin-bottom:6px;">
+                                            <label style="font-size:11.5px;">📞 Teléfono Personal del Compañero:</label>
+                                            <input type="text" id="inpEditTelPersonal" placeholder="Ej. 0981 123 456" style="padding:8px; font-size:13px;">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom:6px;">
+                                            <label style="font-size:11.5px;">👪 Nombre y Parentesco del Familiar:</label>
+                                            <input type="text" id="inpEditFamNombre" placeholder="Ej. María (Esposa) / Padre" style="padding:8px; font-size:13px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11.5px;">📞 Teléfono del Familiar (Caso de Emergencia):</label>
+                                        <input type="text" id="inpEditFamTel" placeholder="Ej. 0982 654 321" style="padding:8px; font-size:13px;">
+                                    </div>
+                                    <div style="display:flex; gap:8px;">
+                                        <button type="button" class="btn btn-info" style="margin:0; padding:9px; font-size:13px; flex:2;" onclick="guardarEditorTelCompanero()">💾 Guardar Teléfonos</button>
+                                        <button type="button" class="btn btn-outline" style="margin:0; padding:9px; font-size:13px; flex:1;" onclick="cerrarEditorTelCompanero()">✖ Cancelar</button>
+                                    </div>
+                                </div>
+
+                                <div id="listaTelefonosPersonalAdmin" style="max-height:360px; overflow-y:auto;"></div>
                             </div>
                         </div>
                     </div>
@@ -5077,7 +5254,9 @@ INSTRUCCIÓN ESTRICTA:
             }
         }
 
-        function calcularSemaforoVigencia30Dias(ts, fechaStr) {
+        // Semáforo estricto: Si no tiene número cargado, jamás puede figurar como Vigente
+        function calcularSemaforoVigencia30Dias(ts, fechaStr, tieneNumeroCargado = true) {
+            if(!tieneNumeroCargado) return `<span class="alerta-dias-na" style="background:rgba(148,163,184,0.18); padding:2px 6px; border-radius:4px;">⚪ Sin número cargado</span>`;
             if(!ts || ts === 0) return `<span class="alerta-dias-venc">⚠️ Sin verificar</span>`;
             const dias = Math.floor((Date.now() - ts) / 86400000);
             if(dias > 30) return `<span class="alerta-dias-venc">⏰ Verificar (hace ${dias} d.)</span>`;
@@ -5090,12 +5269,11 @@ INSTRUCCIÓN ESTRICTA:
             const contPer = document.getElementById('listaTelefonosPersonalAdmin');
             if(!contEm || !contPer) return;
 
-            // Renderizar números de emergencia externa
             contEm.innerHTML = config.contactosEmergencia.map(c => {
                 const icono = c.categoria === 'INCENDIO' ? '🔥' : '🚑';
                 const telLimpio = limpiarTelefonoParaLlamada(c.telefono);
                 const telWA = limpiarTelefonoParaWhatsApp(c.telefono);
-                const badgeVig = calcularSemaforoVigencia30Dias(c.verificadoTS, c.verificadoFecha);
+                const badgeVig = calcularSemaforoVigencia30Dias(c.verificadoTS, c.verificadoFecha, !!telLimpio);
                 const btnWA = telWA.length >= 8 ? `<a href="https://wa.me/${telWA}?text=${encodeURIComponent('Hola, nos comunicamos de la Brigada SySO para verificar si este número de emergencia sigue vigente.')}" target="_blank" class="btn-small btn-success" style="text-decoration:none;">💬 WA</a>` : '';
                 const btnDel = esUsuarioCreador() || (usuarioActual && usuarioActual.rol === 'Admin') ? `<button type="button" class="btn-small btn-s-del" onclick="borrarContactoEmergencia('${c.id}')">❌</button>` : '';
                 return `
@@ -5105,7 +5283,7 @@ INSTRUCCIÓN ESTRICTA:
                             <div class="action-btns">
                                 <a href="tel:${telLimpio}" class="btn-small btn-primary" style="text-decoration:none;">📞 Llamar</a>
                                 ${btnWA}
-                                <button type="button" class="btn-small btn-info" onclick="marcarEmergenciaVigenteHoy('${c.id}')" title="Confirmar que el número sigue activo">✅ Vigente</button>
+                                <button type="button" class="btn-small btn-info" onclick="marcarEmergenciaVigenteHoy('${c.id}')">✅ Vigente</button>
                                 <button type="button" class="btn-small btn-s-edit" onclick="cargarEdicionEmergencia('${c.id}')">✏️</button>
                                 ${btnDel}
                             </div>
@@ -5113,22 +5291,25 @@ INSTRUCCIÓN ESTRICTA:
                     </div>`;
             }).join('');
 
-            // Renderizar teléfonos de compañeros y contacto familiar
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
             contPer.innerHTML = (config.usuarios || []).map(u => {
-                const badgeVig = calcularSemaforoVigencia30Dias(u.telVerificadoTS, u.telVerificadoFecha);
+                const tieneAlgunTel = !!(String(u.telefono || '').trim() || String(u.familiarTel || '').trim());
+                const badgeVig = calcularSemaforoVigencia30Dias(u.telVerificadoTS, u.telVerificadoFecha, tieneAlgunTel);
                 const telP = limpiarTelefonoParaLlamada(u.telefono);
                 const waP = limpiarTelefonoParaWhatsApp(u.telefono);
                 const telF = limpiarTelefonoParaLlamada(u.familiarTel);
                 const estadoAct = u.activo !== false ? `<span style="color:var(--success);font-weight:bold;">Activo</span>` : `<span style="color:var(--danger);font-weight:bold;">Inactivo</span>`;
-                const btnToggleAct = esAdmin ? `<button type="button" class="btn-small btn-dark" onclick="alternarEstadoActivoUsuario(${u.id})" title="Cambiar Activo/Inactivo para lista de evacuación">${u.activo !== false ? '🟢 Activo' : '🔴 Baja'}</button>` : '';
+                const btnToggleAct = esAdmin ? `<button type="button" class="btn-small btn-dark" onclick="alternarEstadoActivoUsuario(${u.id})">${u.activo !== false ? '🟢 Activo' : '🔴 Baja'}</button>` : '';
+                const btnVigente = tieneAlgunTel
+                    ? `<button type="button" class="btn-small btn-info" onclick="marcarTelefonoUsuarioVigenteHoy(${u.id})">✅ Vigente</button>`
+                    : '';
                 return `
                     <div style="padding:8px 4px; border-bottom:1px solid var(--border); font-size:12px; opacity:${u.activo !== false ? '1' : '0.6'};">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
                             <div><b>👷 ${u.nombre}</b> (${estadoAct}) — <small>${(u.secciones || ['Todas']).join(', ')}</small> ${badgeVig}</div>
                             <div class="action-btns">
                                 <button type="button" class="btn-small btn-s-edit" onclick="editarTelefonosCompanero(${u.id})">✏️ Teléfonos</button>
-                                <button type="button" class="btn-small btn-info" onclick="marcarTelefonoUsuarioVigenteHoy(${u.id})">✅ Vigente</button>
+                                ${btnVigente}
                                 ${btnToggleAct}
                             </div>
                         </div>
@@ -5141,27 +5322,6 @@ INSTRUCCIÓN ESTRICTA:
             }).join('');
         };
 
-        window.guardarContactoEmergencia = async function() {
-            asegurarEstructuraEmergencias();
-            const cat = document.getElementById('emCategoriaInput').value;
-            const nom = corregirOrtografiaTexto(document.getElementById('emNombreInput').value.trim());
-            const tel = document.getElementById('emTelefonoInput').value.trim();
-            if(!nom || !tel) return alert("Complete el nombre de la entidad y el número de teléfono.");
-            const hoy = obtenerFechaHoraEstandar().soloFecha;
-            if(editEmergenciaId) {
-                const item = config.contactosEmergencia.find(x => x.id === editEmergenciaId);
-                if(item) { item.categoria = cat; item.nombre = nom; item.telefono = tel; item.verificadoFecha = hoy; item.verificadoTS = Date.now(); }
-                editEmergenciaId = null;
-                document.getElementById('btnGuardarEmergencia').innerText = '➕ Guardar';
-            } else {
-                config.contactosEmergencia.push({ id: 'em_' + Date.now(), categoria: cat, nombre: nom, telefono: tel, verificadoFecha: hoy, verificadoTS: Date.now() });
-            }
-            document.getElementById('emNombreInput').value = '';
-            document.getElementById('emTelefonoInput').value = '';
-            await parchearSubnodoConfigNube('contactosEmergencia', config.contactosEmergencia);
-            renderPanelAgendaComunicacion();
-        };
-
         window.cargarEdicionEmergencia = function(id) {
             const item = (config.contactosEmergencia || []).find(x => x.id === id);
             if(!item) return;
@@ -5170,11 +5330,48 @@ INSTRUCCIÓN ESTRICTA:
             document.getElementById('emNombreInput').value = item.nombre;
             document.getElementById('emTelefonoInput').value = item.telefono;
             document.getElementById('btnGuardarEmergencia').innerText = '💾 Actualizar';
+            const btnCancel = document.getElementById('btnCancelarEmergencia');
+            if(btnCancel) btnCancel.classList.remove('hidden');
+            document.getElementById('boxFormEmergenciaExterna').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        window.cancelarEdicionEmergencia = function() {
+            editEmergenciaId = null;
+            if(document.getElementById('emNombreInput')) document.getElementById('emNombreInput').value = '';
+            if(document.getElementById('emTelefonoInput')) document.getElementById('emTelefonoInput').value = '';
+            if(document.getElementById('btnGuardarEmergencia')) document.getElementById('btnGuardarEmergencia').innerText = '➕ Agregar';
+            const btnCancel = document.getElementById('btnCancelarEmergencia');
+            if(btnCancel) btnCancel.classList.add('hidden');
+        };
+
+        window.guardarContactoEmergencia = async function() {
+            asegurarEstructuraEmergencias();
+            const cat = document.getElementById('emCategoriaInput').value;
+            const nom = corregirOrtografiaTexto(document.getElementById('emNombreInput').value.trim());
+            const tel = document.getElementById('emTelefonoInput').value.trim();
+            if(!nom || !tel) return alert("⚠️ Complete el nombre de la entidad y el número de teléfono, o toque '✖ Cancelar'.");
+            const hoy = obtenerFechaHoraEstandar().soloFecha;
+            if(editEmergenciaId) {
+                const item = config.contactosEmergencia.find(x => x.id === editEmergenciaId);
+                if(item) {
+                    const huboCambio = (item.categoria !== cat || item.nombre !== nom || item.telefono !== tel);
+                    if(!huboCambio) {
+                        cancelarEdicionEmergencia();
+                        return;
+                    }
+                    item.categoria = cat; item.nombre = nom; item.telefono = tel; item.verificadoFecha = hoy; item.verificadoTS = Date.now();
+                }
+            } else {
+                config.contactosEmergencia.push({ id: 'em_' + Date.now(), categoria: cat, nombre: nom, telefono: tel, verificadoFecha: hoy, verificadoTS: Date.now() });
+            }
+            cancelarEdicionEmergencia();
+            await parchearSubnodoConfigNube('contactosEmergencia', config.contactosEmergencia);
+            renderPanelAgendaComunicacion();
         };
 
         window.marcarEmergenciaVigenteHoy = async function(id) {
             const item = (config.contactosEmergencia || []).find(x => x.id === id);
-            if(!item) return;
+            if(!item || !String(item.telefono || '').trim()) return alert("⚠️ Este registro no tiene un número de teléfono válido.");
             item.verificadoFecha = obtenerFechaHoraEstandar().soloFecha;
             item.verificadoTS = Date.now();
             await parchearSubnodoConfigNube('contactosEmergencia', config.contactosEmergencia);
@@ -5183,26 +5380,60 @@ INSTRUCCIÓN ESTRICTA:
 
         window.borrarContactoEmergencia = async function(id) {
             if(!confirm("¿Eliminar este número de emergencia?")) return;
+            if(editEmergenciaId === id) cancelarEdicionEmergencia();
             config.contactosEmergencia = (config.contactosEmergencia || []).filter(x => x.id !== id);
             await parchearSubnodoConfigNube('contactosEmergencia', config.contactosEmergencia);
             renderPanelAgendaComunicacion();
         };
 
-        window.editarTelefonosCompanero = async function(uId) {
+        // Editor en pantalla para Teléfonos de Compañero y Familiar con botón Cancelar
+        window.editarTelefonosCompanero = function(uId) {
             const u = (config.usuarios || []).find(x => x.id === uId);
             if(!u) return;
-            const nuevoTel = prompt(`📞 Teléfono personal de ${u.nombre}:`, u.telefono || '');
-            if(nuevoTel === null) return;
-            const nuevoFamNom = prompt(`👪 Nombre y parentesco del Contacto Familiar de ${u.nombre} (Ej. María - Esposa):`, u.familiarNombre || '');
-            if(nuevoFamNom === null) return;
-            const nuevoFamTel = prompt(`📞 Teléfono del Familiar (${nuevoFamNom || 'Emergencia'}):`, u.familiarTel || '');
-            if(nuevoFamTel === null) return;
+            editTelCompaneroId = uId;
+            document.getElementById('tituloEditorTelCompanero').innerText = `✏️ Teléfonos de: ${u.nombre}`;
+            document.getElementById('inpEditTelPersonal').value = u.telefono || '';
+            document.getElementById('inpEditFamNombre').value = u.familiarNombre || '';
+            document.getElementById('inpEditFamTel').value = u.familiarTel || '';
+            const box = document.getElementById('boxEditorTelCompanero');
+            box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
 
-            u.telefono = nuevoTel.trim();
-            u.familiarNombre = corregirOrtografiaTexto(nuevoFamNom.trim());
-            u.familiarTel = nuevoFamTel.trim();
-            u.telVerificadoFecha = obtenerFechaHoraEstandar().soloFecha;
-            u.telVerificadoTS = Date.now();
+        window.cerrarEditorTelCompanero = function() {
+            editTelCompaneroId = null;
+            const box = document.getElementById('boxEditorTelCompanero');
+            if(box) box.classList.add('hidden');
+        };
+
+        window.guardarEditorTelCompanero = async function() {
+            if(!editTelCompaneroId) return;
+            const u = (config.usuarios || []).find(x => x.id === editTelCompaneroId);
+            if(!u) return cerrarEditorTelCompanero();
+
+            const nuevoTel = document.getElementById('inpEditTelPersonal').value.trim();
+            const nuevoFamNom = corregirOrtografiaTexto(document.getElementById('inpEditFamNombre').value.trim());
+            const nuevoFamTel = document.getElementById('inpEditFamTel').value.trim();
+
+            const huboCambio = (nuevoTel !== (u.telefono || '') || nuevoFamNom !== (u.familiarNombre || '') || nuevoFamTel !== (u.familiarTel || ''));
+            if(!huboCambio) {
+                cerrarEditorTelCompanero();
+                return;
+            }
+
+            u.telefono = nuevoTel;
+            u.familiarNombre = nuevoFamNom;
+            u.familiarTel = nuevoFamTel;
+
+            if(nuevoTel || nuevoFamTel) {
+                u.telVerificadoFecha = obtenerFechaHoraEstandar().soloFecha;
+                u.telVerificadoTS = Date.now();
+            } else {
+                u.telVerificadoFecha = 'Sin verificar';
+                u.telVerificadoTS = 0;
+            }
+
+            cerrarEditorTelCompanero();
             await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
             renderPanelAgendaComunicacion();
         };
@@ -5210,6 +5441,9 @@ INSTRUCCIÓN ESTRICTA:
         window.marcarTelefonoUsuarioVigenteHoy = async function(uId) {
             const u = (config.usuarios || []).find(x => x.id === uId);
             if(!u) return;
+            if(!String(u.telefono || '').trim() && !String(u.familiarTel || '').trim()) {
+                return alert(`⚠️ ${u.nombre} aún no tiene ningún número cargado. Toque primero "✏️ Teléfonos" para registrar su número.`);
+            }
             u.telVerificadoFecha = obtenerFechaHoraEstandar().soloFecha;
             u.telVerificadoTS = Date.now();
             await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
@@ -5224,136 +5458,34 @@ INSTRUCCIÓN ESTRICTA:
             renderPanelAgendaComunicacion();
         };
 
-        // --- PLANILLA MENSUAL DE EMPLEADOS ACTIVOS POR SECCIÓN PARA BOMBEROS Y EVACUACIÓN ---
+        // 3. Blindaje Preventivo en todos los demás formularios de edición (Auto-Scroll y Auto-Cancelación al cambiar de pestaña)
+        const _cargarEdUsuOrig = cargarEdicionUsu;
+        cargarEdicionUsu = function(id) {
+            _cargarEdUsuOrig(id);
+            const el = document.getElementById('nuevoUsuNombre');
+            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        const _cargarEdSecOrig = cargarEdicionSec;
+        cargarEdicionSec = function(sec) {
+            _cargarEdSecOrig(sec);
+            const el = document.getElementById('nuevaSeccion');
+            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        const _cargarEdGrpOrig = cargarEdicionGrupo;
+        cargarEdicionGrupo = function(nom) {
+            _cargarEdGrpOrig(nom);
+            const el = document.getElementById('nuevoGrupoNom');
+            if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        // 4. Planilla Oficial de Evacuación para Bomberos (Sin Duplicar Personal Multisección)
         window.imprimirListaEvacuacionBomberos = function() {
             asegurarEstructuraEmergencias();
             const activos = (config.usuarios || []).filter(u => u.activo !== false);
             const fechaHoy = obtenerFechaHoraEstandar().fechaHora;
             const secciones = (config.secciones || []).slice().sort(sortNatural);
-
-            let tablasSeccionesHTML = '';
-            secciones.forEach(sec => {
-                const empSec = activos.filter(u => !u.secciones || u.secciones.includes('Todas') || u.secciones.includes(sec));
-                if(empSec.length === 0) return;
-                const filas = empSec.map((u, idx) => `
-                    <tr>
-                        <td style="text-align:center;">${idx + 1}</td>
-                        <td><b>${u.nombre}</b></td>
-                        <td>${u.rol} (${(u.grupo || ['Todos']).join(', ')})</td>
-                        <td>${u.telefono || 'S/D'}</td>
-                        <td>${u.familiarNombre ? `${u.familiarNombre}: <b>${u.familiarTel || ''}</b>` : (u.familiarTel || 'S/D')}</td>
-                        <td style="text-align:center; font-weight:bold; font-size:14px;">[ &nbsp;&nbsp; ] EVACUADO</td>
-                    </tr>`).join('');
-                tablasSeccionesHTML += `
-                    <h3 style="background:#1F4E78; color:#fff; padding:8px 12px; margin:18px 0 6px 0; border-radius:4px;">📍 SECCIÓN: ${sec.toUpperCase()} (${empSec.length} Personas)</h3>
-                    <table>
-                        <thead>
-                            <tr><th style="width:40px;">N°</th><th>Nombre y Apellido</th><th>Rol / Brigada</th><th>Tel. Personal</th><th>Contacto Familiar (Urgencia)</th><th style="width:140px;">Control Evacuación</th></tr>
-                        </thead>
-                        <tbody>${filas}</tbody>
-                    </table>`;
-            });
-
-            const htmlDoc = `<html><head><meta charset="utf-8"><title>Nómina de Evacuación para Bomberos</title>
-                <style>
-                    body{font-family:'Segoe UI',Arial,sans-serif; padding:20px; color:#111;}
-                    h1{color:#b71c1c; margin-bottom:4px; font-size:20px;}
-                    table{width:100%; border-collapse:collapse; font-size:12px; margin-bottom:10px;}
-                    th{background:#e2e8f0; color:#0f172a; border:1px solid #94a3b8; padding:6px 8px; text-align:left;}
-                    td{border:1px solid #cbd5e1; padding:6px 8px;}
-                    .btn-bar{margin-bottom:15px; display:flex; gap:10px;}
-                    .btn-p{background:#b71c1c; color:#fff; border:none; padding:10px 18px; font-weight:bold; border-radius:6px; cursor:pointer; font-size:14px;}
-                    @media print { .no-print{display:none;} }
-                </style></head><body>
-                <div class="no-print btn-bar">
-                    <button class="btn-p" onclick="window.print()">🖨️ Imprimir Planilla para Bomberos / Puesto de Guardia</button>
-                </div>
-                <h1>🚒 PLANILLA OFICIAL DE EVACUACIÓN Y CONTACTO DE EMERGENCIA POR SECCIÓN</h1>
-                <p style="font-size:12.5px; margin-top:0;"><b>Planta Industrial SySO</b> | Fecha de Emisión: ${fechaHoy} | Total Personal Activo: <b>${activos.length}</b></p>
-                <p style="font-size:12px; background:#fff3cd; padding:8px; border-left:4px solid #dc3545;"><b>Números Oficiales S.O.S.:</b> ${(config.contactosEmergencia || []).map(c => `${c.nombre}: <b>${c.telefono}</b>`).join(' | ')}</p>
-                ${tablasSeccionesHTML}
-                </body></html>`;
-
-            const blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `Nomina_Evacuacion_Bomberos_${obtenerFechaHoraEstandar().mesISO}.html`;
-            a.click();
-        };
-
-        // Conectar visibilidad del panel al iniciar sesión y al cambiar a la pestaña Ajustes
-        const _validarAccesoV634 = validarAcceso;
-        validarAcceso = function() {
-            _validarAccesoV634();
-            aplicarLimpiezaBotonesDuplicadosYV634();
-            if(usuarioActual) actualizarVisibilidadPanelComunicacion();
-        };
-
-        const _navV634 = nav;
-        nav = function(vista, btn) {
-            _navV634(vista, btn);
-            if(vista === 'ajustes') actualizarVisibilidadPanelComunicacion();
-        };
-
-        // Sumar preguntas de Emergencias, Familiares y Bomberos al catálogo del Asistente IA
-        GUIAS_AYUDA_CATALOGO["📞 ¿Dónde están los números de emergencia y familiares?"] = {
-            roles: ["LOGIN", "BRIGADISTA", "ADMIN"],
-            titulo: "Llamada Directa 1-Toque y Contacto Familiar",
-            replica: "SOS",
-            detalle: "1. Toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Debajo de los botones de alerta verá los números de <b>🚑 Ambulancia/Hospital</b> y <b>🔥 Bomberos</b>: al tocarlos se abre el teléfono listo para llamar.<br>3. En el desplegable <b>👨‍🚒 Teléfonos de Brigadistas y Contacto Familiar</b> puede llamar al compañero o a su familiar."
-        };
-        GUIAS_AYUDA_CATALOGO["🚒 ¿Cómo imprimir la lista por sección para los Bomberos?"] = {
-            roles: ["BRIGADISTA", "ADMIN"],
-            titulo: "Nómina Mensual de Evacuación para Bomberos",
-            replica: "SOS",
-            detalle: "1. Dentro del botón <b>🚨 S.O.S.</b> (o en <b>⚙️ Ajustes ➔ 📞 Agenda S.O.S.</b> para la Brigadista de Comunicación y Admins), toque <b>🚒 Lista de Empleados por Sección (Para Bomberos)</b>.<br>2. Descargará la planilla lista para imprimir con los empleados activos de cada sector, sus teléfonos, contacto familiar y casilla de evacuación."
-        };
-// =========================================================================
-        // BLINDAJE POST-AUDITORÍA DE ESTRÉS V6.34 (EVACUACIÓN SIN DUPLICADOS + UI LIMPIA + IA S.O.S.)
-        // =========================================================================
-        
-        // 1. Asegurar que la sincronización con Firebase preserve siempre la estructura de emergencias
-        const _normalizarV634 = normalizarObjetoConfig;
-        normalizarObjetoConfig = function(cfg) {
-            _normalizarV634(cfg);
-            if(!Array.isArray(cfg.contactosEmergencia) || cfg.contactosEmergencia.length === 0) {
-                cfg.contactosEmergencia = [
-                    { id: 'em_1', categoria: 'INCENDIO', nombre: 'Bomberos Voluntarios', telefono: '132', verificadoFecha: 'Sin verificar', verificadoTS: 0 },
-                    { id: 'em_2', categoria: 'INCENDIO', nombre: 'Emergencias Policiales / 911', telefono: '911', verificadoFecha: 'Sin verificar', verificadoTS: 0 },
-                    { id: 'em_3', categoria: 'ACCIDENTE', nombre: 'Ambulancia / SEME', telefono: '141', verificadoFecha: 'Sin verificar', verificadoTS: 0 },
-                    { id: 'em_4', categoria: 'ACCIDENTE', nombre: 'Hospital / Urgencias Médicas', telefono: '0491432000', verificadoFecha: 'Sin verificar', verificadoTS: 0 }
-                ];
-            }
-        };
-
-        // 2. Ocultar las casillas vacías ("Sin escanear") cuando no hay equipo activo para que el Hilo de Recorrido quede arriba
-        const _mostrarCamposInfOrig = mostrarCamposInferioresControl;
-        mostrarCamposInferioresControl = function(visible) {
-            _mostrarCamposInfOrig(visible);
-            const grpIdEq = document.getElementById('idEquipo') ? document.getElementById('idEquipo').closest('.form-group') : null;
-            const fichaPos = document.querySelector('#view-control .pos-ficha-card');
-            if(grpIdEq) grpIdEq.classList.toggle('hidden', !visible);
-            if(fichaPos) fichaPos.classList.toggle('hidden', !visible);
-        };
-
-        // 3. Auto-enfocar el visor de cámara QR al activarlo desde el Hilo de Recorrido
-        const _activarQRScroll = activarQR;
-        activarQR = async function() {
-            await _activarQRScroll();
-            const wrap = document.getElementById('qr-wrapper');
-            if(wrap && wrap.style.display !== 'none') {
-                wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        };
-
-        // 4. Planilla para Bomberos sin duplicar al personal Multisección / Planta Completa
-        window.imprimirListaEvacuacionBomberos = function() {
-            asegurarEstructuraEmergencias();
-            const activos = (config.usuarios || []).filter(u => u.activo !== false);
-            const fechaHoy = obtenerFechaHoraEstandar().fechaHora;
-            const secciones = (config.secciones || []).slice().sort(sortNatural);
-
-            // Separar personal de Planta Completa (o asignado a múltiples secciones) para que cada persona figure 1 sola vez
             const multiseccion = activos.filter(u => !u.secciones || u.secciones.includes('Todas') || u.secciones.length > 1);
             let tablasSeccionesHTML = '';
 
@@ -5427,8 +5559,60 @@ INSTRUCCIÓN ESTRICTA:
             a.click();
         };
 
-        // 5. Conectar el buscador escrito del Asistente IA a los teléfonos S.O.S., familiares y lista de Bomberos en vivo
-        const _analizarIAPrev = analizarYResponderPreguntaUsuario;
+        // 5. Ocultar casillas vacías en Control, limpiar editores al cambiar de pestaña y conectar IA a teléfonos S.O.S.
+        const _normalizarV635 = normalizarObjetoConfig;
+        normalizarObjetoConfig = function(cfg) {
+            _normalizarV635(cfg);
+            asegurarEstructuraEmergencias();
+        };
+
+        const _mostrarCamposInfV635 = mostrarCamposInferioresControl;
+        mostrarCamposInferioresControl = function(visible) {
+            _mostrarCamposInfV635(visible);
+            const grpIdEq = document.getElementById('idEquipo') ? document.getElementById('idEquipo').closest('.form-group') : null;
+            const fichaPos = document.querySelector('#view-control .pos-ficha-card');
+            if(grpIdEq) grpIdEq.classList.toggle('hidden', !visible);
+            if(fichaPos) fichaPos.classList.toggle('hidden', !visible);
+        };
+
+        const _validarAccesoV635 = validarAcceso;
+        validarAcceso = function() {
+            _validarAccesoV635();
+            aplicarLimpiezaBotonesDuplicadosYV635();
+            if(usuarioActual) actualizarVisibilidadPanelComunicacion();
+        };
+
+        const _navV635 = nav;
+        nav = function(vista, btn) {
+            // Si había algún formulario en modo edición y el usuario cambió de pestaña, se cancela automáticamente
+            if(vista !== 'ajustes') {
+                if(editUsuId) cancelarEdicionUsu();
+                if(editSecNom) cancelarEdicionSec();
+                if(editGrupoNom) cancelarEdicionGrupo();
+                if(editEmergenciaId) cancelarEdicionEmergencia();
+                if(editTelCompaneroId) cerrarEditorTelCompanero();
+            }
+            if(vista !== 'equipos' && editQRId) {
+                cancelarEdicionQR(true);
+            }
+            _navV635(vista, btn);
+            if(vista === 'ajustes') actualizarVisibilidadPanelComunicacion();
+        };
+
+        GUIAS_AYUDA_CATALOGO["📞 ¿Dónde están los números de emergencia y familiares?"] = {
+            roles: ["LOGIN", "BRIGADISTA", "ADMIN"],
+            titulo: "Llamada Directa 1-Toque y Contacto Familiar",
+            replica: "SOS",
+            detalle: "1. Toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Debajo de los botones de alerta verá los números de <b>🚑 Ambulancia/Hospital</b> y <b>🔥 Bomberos</b>: al tocarlos se abre el teléfono listo para llamar.<br>3. En el desplegable <b>👨‍🚒 Teléfonos de Brigadistas y Contacto Familiar</b> puede llamar al compañero o a su familiar."
+        };
+        GUIAS_AYUDA_CATALOGO["🚒 ¿Cómo imprimir la lista por sección para los Bomberos?"] = {
+            roles: ["BRIGADISTA", "ADMIN"],
+            titulo: "Nómina Mensual de Evacuación para Bomberos",
+            replica: "SOS",
+            detalle: "1. Dentro del botón <b>🚨 S.O.S.</b> (o en <b>⚙️ Ajustes ➔ 📞 Agenda S.O.S.</b> para la Brigadista de Comunicación y Admins), toque <b>🚒 Lista de Empleados por Sección (Para Bomberos)</b>.<br>2. Descargará la planilla sin duplicados con los empleados activos de cada sector, sus teléfonos, contacto familiar y casilla de evacuación."
+        };
+
+        const _analizarIAPrevV635 = analizarYResponderPreguntaUsuario;
         analizarYResponderPreguntaUsuario = function(preguntaOriginal) {
             const p = preguntaOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             if(p.includes('bombero') || p.includes('ambulancia') || p.includes('hospital') || p.includes('llamar') || p.includes('numero') || p.includes('telefono') || p.includes('familiar') || p.includes('evacuacion') || p.includes('incendio') || p.includes('accidente') || p.includes('sos')) {
@@ -5444,7 +5628,7 @@ INSTRUCCIÓN ESTRICTA:
                         generarReplicaVisualApp('SOS')
                 };
             }
-            return _analizarIAPrev(preguntaOriginal);
+            return _analizarIAPrevV635(preguntaOriginal);
         };
 
         document.addEventListener('DOMContentLoaded', () => {
