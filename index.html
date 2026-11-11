@@ -3687,8 +3687,8 @@ const CFG_KEY = 'SySO_Config_Master';
             const l = document.createElement("a"); l.href = URL.createObjectURL(archivo); l.download = archivo.name; l.click();
         }
 
-        // =========================================================================
-        // MOTOR 1: ALTA FLEXIBLE EN OFICINA + LLAVE GEMINI FIJA + ASISTENTE POR ROL
+// =========================================================================
+        // MOTOR 1: IA DE ALTA PRECISIÓN CON DATOS EN VIVO, RÉPLICAS VISUALES DE LA APP Y FALLBACK HONESTO
         // =========================================================================
         guardarQR = async function() { 
             const sec = document.getElementById('qrSeccion').value; 
@@ -3767,6 +3767,7 @@ const CFG_KEY = 'SySO_Config_Master';
             const obf = btoa(rawKey.split('').reverse().join(''));
             if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
             config.iaConfig.apiKeyObf = obf;
+            config.iaConfig.cacheRespuestas = {};
             localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
             parchearSubnodoConfigNube('iaConfig', config.iaConfig);
             if(inp) inp.value = '';
@@ -3799,92 +3800,290 @@ const CFG_KEY = 'SySO_Config_Master';
             } catch(e) { return ""; }
         }
 
+        // --- GENERADOR DE RÉPLICAS VISUALES IDÉNTICAS A LA APP (MINIATURAS DE PANTALLA REALES) ---
+        function generarReplicaVisualApp(tipo) {
+            const cajaEstilo = `margin-top:10px; border:2px solid var(--border); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
+            const tagGuia = `<div style="font-size:10.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.3px;">📱 Vista igual a tu pantalla de la App:</div>`;
+            const flecha = `<span style="background:#ffc107; color:#000; font-weight:900; padding:2px 6px; border-radius:6px; font-size:10.5px; margin-left:6px; display:inline-block;">👈 TOCA AQUÍ</span>`;
+
+            switch(tipo) {
+                case 'ESCANEAR_QR':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><b style="color:var(--primary);">📋 Realizar Control</b><span style="background:#343a40; color:#fff; padding:3px 7px; border-radius:5px; font-size:10.5px;">⌨️ Elegir de Lista</span></div>
+                        <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+                            <div style="flex:1; padding:7px; border:1px solid var(--border); border-radius:5px; background:var(--input-bg); color:var(--text-muted);">Escanee QR -></div>
+                            <div style="background:#ffc107; color:#000; font-weight:bold; padding:7px 10px; border-radius:6px; border:2px solid var(--primary);">📷 Escanear QR ${flecha}</div>
+                        </div>
+                        <div style="background:#28a745; color:#fff; font-weight:bold; text-align:center; padding:8px; border-radius:6px;">✅ Guardar Control</div>
+                    </div>`;
+
+                case 'CARGA_MANUAL':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><b style="color:var(--primary);">📋 Realizar Control</b><span style="background:#343a40; color:#fff; padding:4px 9px; border-radius:6px; font-weight:bold; border:2px solid #ffc107;">⌨️ Elegir de Lista ${flecha}</span></div>
+                        <div style="padding:8px; border:1px solid var(--primary); border-radius:6px; background:var(--input-bg);">
+                            <div style="font-size:11px; font-weight:bold; margin-bottom:4px;">☑️ ⏳ Mostrar solo equipos pendientes de este mes</div>
+                            <div style="font-size:11px; color:var(--text-muted);">1° Sección ➔ 2° Grupo ➔ 3° Equipo (Orden Numérico)</div>
+                        </div>
+                    </div>`;
+
+                case 'SALIR_EQUIPO':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 9px; border-radius:6px; background:rgba(220,53,69,0.12); border:1px solid #dc3545;">
+                            <span>📌 Equipo activo: <b style="color:var(--primary);">AGR-EXT-015</b></span>
+                            <span style="background:#dc3545; color:#fff; padding:4px 8px; border-radius:5px; font-weight:bold;">❌ Cerrar / Salir ${flecha}</span>
+                        </div>
+                    </div>`;
+
+                case 'ACTUALIZAR_FICHA':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="border:1.5px solid var(--edit); color:var(--edit); padding:7px 10px; border-radius:6px; font-weight:bold; text-align:center; margin-bottom:6px;">
+                            ✏️ Actualizar Ubicación / Foto Ref. / Vencimiento ${flecha}
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:11px; background:var(--input-bg); padding:7px; border-radius:6px;">
+                            <div>📍 Ubicación Exacta</div><div>📅 Vencimiento Carga</div>
+                            <div>📷 Subir Foto Ref.</div><div style="color:var(--edit); font-weight:bold;">💾 Guardar Ficha</div>
+                        </div>
+                    </div>`;
+
+                case 'BOTIQUIN':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="border:2px solid var(--edit); border-radius:6px; padding:8px; background:var(--input-bg);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+                                <b style="color:var(--primary); font-size:11.5px;">💊 Control de Stock y Reposición</b>
+                                <div><span style="background:#28a745; color:#fff; padding:3px 6px; border-radius:4px; font-size:10px; font-weight:bold;">✅ Botiquín Intacto</span> <span style="background:#17a2b8; color:#fff; padding:3px 6px; border-radius:4px; font-size:10px; font-weight:bold;">➕ Sumar Insumo</span></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:4px; font-size:10.5px; background:var(--card-bg); padding:5px; border-radius:4px; text-align:center; font-weight:bold;">
+                                <div style="text-align:left;">Kitadol</div><div>Stk: 10</div><div style="border:1px solid var(--border);">➖ 2</div><div style="border:1px solid var(--border);">➕ 2</div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                case 'PENDIENTES_HISTORIAL':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="margin-bottom:6px;"><b style="color:var(--primary);">📊 Pestaña Historial ➔ Filtro Estado / Vista:</b></div>
+                        <div style="padding:7px 10px; border:2px solid var(--primary); border-radius:6px; background:var(--input-bg); font-weight:bold; margin-bottom:6px;">
+                            ⏳ Equipos Pendientes del Mes ${flecha}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-top:1px solid var(--border); font-size:11.5px;">
+                            <span><b style="color:#856404;">⏳ AGR-EXT-001 (PENDIENTE)</b></span>
+                            <span style="background:var(--primary); color:#fff; padding:3px 8px; border-radius:5px; font-weight:bold;">▶️ Controlar</span>
+                        </div>
+                    </div>`;
+
+                case 'DESCARGAR_REPORTES':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="margin-bottom:6px;"><b style="color:var(--primary);">📊 Pestaña Historial ➔ Botones de Descarga:</b></div>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap; text-align:center; font-weight:bold; font-size:11px;">
+                            <div style="flex:1; background:#28a745; color:#fff; padding:7px 4px; border-radius:6px;">📥 Excel Controles</div>
+                            <div style="flex:1; background:#17a2b8; color:#fff; padding:7px 4px; border-radius:6px;">💊 Excel Botiquines</div>
+                            <div style="flex:1; background:var(--primary); color:#fff; padding:7px 4px; border-radius:6px;">📄 PDF Firmado</div>
+                        </div>
+                    </div>`;
+
+                case 'ALTA_EQUIPO_ADMIN':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="background:var(--primary); color:#fff; padding:7px 10px; border-radius:6px; font-weight:bold; display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <span>📦 Equipos ➔ ➕ Registrar Nuevo Equipo / Generar QR</span><span>▼ ${flecha}</span>
+                        </div>
+                        <div style="font-size:11px; padding:6px; background:var(--input-bg); border-radius:5px;">
+                            1. Sección ➔ 2. Grupo ➔ Número Correlativo ➔ <b style="background:#ffc107; color:#000; padding:2px 6px; border-radius:4px;">Guardar Equipo</b>
+                        </div>
+                    </div>`;
+
+                case 'PERMISOS_PERSONAL':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="background:var(--primary); color:#fff; padding:7px 10px; border-radius:6px; font-weight:bold; margin-bottom:6px;">
+                            ⚙️ Ajustes ➔ 👥 Gestión de Personal (Secciones y Grupos) ${flecha}
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; background:var(--input-bg); padding:6px; border-radius:5px;">
+                            <div>☑️ 1° Secciones Habilitadas</div><div>☑️ 2° Grupos Habilitados</div>
+                        </div>
+                    </div>`;
+
+                case 'SOS':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--primary); color:#fff; padding:8px 10px; border-radius:8px; margin-bottom:6px;">
+                            <b>Gestión SySO V6.33</b>
+                            <span style="background:#dc3545; color:#fff; border:2px solid #fff; padding:4px 8px; border-radius:8px; font-weight:bold;">🚨 S.O.S. ${flecha}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; text-align:center; font-weight:bold; font-size:11px;">
+                            <div style="flex:1; background:#ff9800; color:#fff; padding:6px; border-radius:5px;">🚑 Accidente Médico</div>
+                            <div style="flex:1; background:#dc3545; color:#fff; padding:6px; border-radius:5px;">🔥 Incendio / Fuego</div>
+                        </div>
+                    </div>`;
+
+                case 'HILO_RECORRIDO':
+                    return `<div style="${cajaEstilo}">${tagGuia}
+                        <div style="border:2px solid var(--primary); border-radius:8px; padding:8px; background:var(--input-bg);">
+                            <div style="font-weight:bold; color:var(--primary); font-size:11.5px; margin-bottom:4px;">🧭 Hilo de Recorrido del Mes</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:10.5px; margin-bottom:6px;">
+                                <div style="padding:4px; border:1px solid var(--border); background:var(--card-bg); border-radius:4px;">1° Filtrar Sección ▼</div>
+                                <div style="padding:4px; border:1px solid var(--border); background:var(--card-bg); border-radius:4px;">2° Filtrar Grupo ▼</div>
+                            </div>
+                            <div style="font-size:11px;">⏭️ Siguiente Pendiente ➔ <b style="background:#28a745; color:#fff; padding:2px 6px; border-radius:4px;">▶️ Cargar</b></div>
+                        </div>
+                    </div>`;
+
+                default:
+                    return '';
+            }
+        }
+
+        // --- CALCULADOR EN TIEMPO REAL DEL ESTADO DEL SISTEMA SEGÚN EL PERFIL ACTIVO ---
+        function obtenerRadiografiaTiempoRealPlanta() {
+            const mesActual = obtenerFechaHoraEstandar().mesISO;
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            const controlesMes = db.filter(r => parsearMesDeRegistro(r) === mesActual && config.equipos[r.ID_Equipo]);
+            const visitadosMesSet = new Set(controlesMes.map(r => r.ID_Equipo));
+
+            const todosIds = Object.keys(config.equipos || {}).sort(sortNatural);
+            const misIds = usuarioActual ? todosIds.filter(id => usuarioTienePermisoEquipo(usuarioActual, config.equipos[id])) : todosIds;
+            const misPendientesIds = misIds.filter(id => !visitadosMesSet.has(id));
+            const misControladosIds = misIds.filter(id => visitadosMesSet.has(id));
+
+            // Desglose por sección en toda la planta
+            const estadoSecciones = {};
+            const seccionesSinIniciar = [];
+            const seccionesEnProgreso = [];
+            const seccionesCompletas = [];
+
+            (config.secciones || []).slice().sort(sortNatural).forEach(sec => {
+                const eqsSec = todosIds.filter(id => config.equipos[id].seccion === sec);
+                const tot = eqsSec.length;
+                const ctrl = eqsSec.filter(id => visitadosMesSet.has(id)).length;
+                const pend = tot - ctrl;
+                const pct = tot > 0 ? Math.round((ctrl / tot) * 100) : 0;
+                estadoSecciones[sec] = { total: tot, controlados: ctrl, pendientes: pend, pct };
+                if(tot > 0) {
+                    if(ctrl === 0) seccionesSinIniciar.push(`${sec} (0/${tot} eq.)`);
+                    else if(pend > 0) seccionesEnProgreso.push(`${sec} (${ctrl}/${tot} eq. — ${pct}%, faltan ${pend})`);
+                    else seccionesCompletas.push(`${sec} (${tot}/${tot} — 100%)`);
+                }
+            });
+
+            // Desglose de lo que le falta al usuario activo por sección y por grupo
+            const misPendientesPorSec = {};
+            const misPendientesPorGrp = {};
+            misPendientesIds.forEach(id => {
+                const eq = config.equipos[id];
+                misPendientesPorSec[eq.seccion] = (misPendientesPorSec[eq.seccion] || 0) + 1;
+                misPendientesPorGrp[eq.grupo] = (misPendientesPorGrp[eq.grupo] || 0) + 1;
+            });
+
+            // Vencidos y Fallas
+            const equiposVencidos = [];
+            todosIds.forEach(id => {
+                const eq = config.equipos[id];
+                const v = verificarEquipoTieneVencidos(eq);
+                if(v.vencido) equiposVencidos.push({ id, seccion: eq.seccion, grupo: eq.grupo, detalle: v.detalle });
+            });
+
+            return {
+                mesActual,
+                totalPlanta: todosIds.length,
+                totalControladosPlanta: visitadosMesSet.size,
+                totalPendientesPlanta: todosIds.length - visitadosMesSet.size,
+                misTotal: misIds.length,
+                misControlados: misControladosIds.length,
+                misPendientes: misPendientesIds.length,
+                misPendientesIds,
+                misPendientesPorSec,
+                misPendientesPorGrp,
+                estadoSecciones,
+                seccionesSinIniciar,
+                seccionesEnProgreso,
+                seccionesCompletas,
+                equiposVencidos,
+                fallasActivas: config.fallas || {},
+                enRecarga: config.enRecarga || {},
+                controlesMes
+            };
+        }
+
+        // --- CATÁLOGO DE PREGUNTAS FRECUENTES REALISTAS CON RÉPLICAS DE LA APP ---
         const GUIAS_AYUDA_CATALOGO = {
-            "👤 ¿Cómo ingreso con mi PIN o Huella?": {
-                roles: ["LOGIN"],
-                titulo: "Ingreso Rápido de Personal",
-                pasos: ["<span>👤</span>1. Elegir Nombre", "<span>🔢</span>2. Poner PIN", "<span>👆</span>3. O Usar Huella"],
-                detalle: "1. Escriba las primeras letras de su nombre o toque el botón <b>⚡ Ingreso Rápido</b> si usa su propio celular.<br>2. Ingrese su PIN de 4 dígitos y presione <b>Ingresar</b>.<br>3. Si ya activó su huella en este teléfono, toque directamente <b>👆 Ingresar con Huella / FaceID</b>."
+            "📊 ¿Cuántos equipos me falta verificar este mes?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                dinamica: "MIS_PENDIENTES"
             },
-            "🔒 ¿Qué hago si olvidé mi PIN o no aparezco?": {
-                roles: ["LOGIN"],
-                titulo: "Asistencia de Acceso y Alta de Usuario",
-                pasos: ["<span>🔄</span>1. Actualizar", "<span>👨‍💼</span>2. Avisar a Admin", "<span>🔑</span>3. Nuevo PIN"],
-                detalle: "1. Primero toque el botón <b>🔄 Actualizar</b> abajo a la derecha por si un Administrador lo acaba de dar de alta.<br>2. Si aún no figura en la lista o no recuerda su PIN, solicite a un <b>Administrador SySO</b> que verifique su usuario en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>."
-            },
-            "📲 ¿Cómo compartir o actualizar la app?": {
-                roles: ["LOGIN"],
-                titulo: "Compartir Enlace o Actualizar Versión",
-                pasos: ["<span>📲</span>1. Compartir App", "<span>📷</span>2. QR o WhatsApp", "<span>🔄</span>3. Actualizar"],
-                detalle: "1. Para pasar la app a un compañero, toque <b>📲 Compartir App</b> para mostrarle el código QR en pantalla o enviarle el link por WhatsApp.<br>2. Para descargar la última versión del sistema sin borrar sus datos, toque <b>🔄 Actualizar</b>."
+            "🏢 ¿Qué sección aún no hizo su control este mes?": {
+                roles: ["ADMIN", "BRIGADISTA"],
+                dinamica: "ESTADO_SECCIONES"
             },
             "📋 ¿Cómo controlar un equipo y seguir el hilo?": {
                 roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Control en Terreno y Continuidad Mensual",
-                pasos: ["<span>🧭</span>1. Elegir Sector", "<span>📷</span>2. Escanear QR", "<span>❌</span>3. O Salir"],
-                detalle: "1. En <b>📋 Control</b> verá el tablero <b>🧭 Hilo de Recorrido</b>: si tiene varias secciones o grupos habilitados, elija cuál desea recorrer hoy (ej. <i>Balanceados + PA Botiquines</i>) para ver el siguiente equipo pendiente de ese sector.<br>2. Si abre un equipo y no desea controlarlo, toque el botón rojo <b>✖ Salir / Cerrar Equipo</b>."
+                titulo: "Control Rápido con QR y Continuidad del Mes",
+                replica: "ESCANEAR_QR",
+                detalle: "1. En la pestaña <b>📋 Control</b>, el cuadro <b>🧭 Hilo de Recorrido</b> le muestra qué equipo sigue en su ruta.<br>2. Toque el botón amarillo <b>📷 Escanear QR</b> y apunte a la etiqueta.<br>3. Deje los puntos en <b>✅ OK</b> (o elija <b>🔧 En Recarga</b> / <b>🚨 Falla</b>) y presione <b>✅ Guardar Control</b>."
             },
-            "✏️ ¿Qué hago si un equipo se mudó o no tiene foto?": {
+            "✏️ ¿Cómo actualizo ubicación, foto o vencimiento en terreno?": {
                 roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Actualizar Ubicación, Foto de Referencia o Vencimiento en Terreno",
-                pasos: ["<span>📋</span>1. Cargar Equipo", "<span>✏️</span>2. Tocar Actualizar", "<span>💾</span>3. Guardar Ficha"],
-                detalle: "1. Si durante el recorrido nota que un equipo cambió de ubicación, volvió de recarga con nueva fecha de vencimiento o desea subirle su Foto de Referencia, toque el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> en <b>📋 Control</b>.<br>2. Edite el dato y toque <b>💾 Guardar Actualización de Ficha</b>."
+                titulo: "Actualizar Datos del Equipo durante el Recorrido",
+                replica: "ACTUALIZAR_FICHA",
+                detalle: "1. Una vez cargado el equipo en <b>📋 Control</b>, toque el botón celeste <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b>.<br>2. Corrija la ubicación si el equipo se mudó, anote el nuevo vencimiento si volvió de recarga o suba su Foto de Referencia.<br>3. Presione <b>💾 Guardar Actualización de Ficha</b>."
             },
-            "💊 ¿Cómo reponer un Botiquín?": {
+            "❌ ¿Cómo cierro un equipo abierto si no quiero controlarlo?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Salir de un Equipo sin Guardar",
+                replica: "SALIR_EQUIPO",
+                detalle: "Si seleccionó o escaneó un equipo solo para consultarlo y no desea registrarle un control, toque el botón rojo <b>❌ Cerrar / Salir de este Equipo</b> (o el botón <b>✖ Salir</b> junto al código QR) para volver a la vista inicial."
+            },
+            "💊 ¿Cómo reponer un Botiquín sin marcar falla?": {
                 roles: ["BOTIQUIN", "ADMIN"],
-                titulo: "Control de Stock, Consumo y Reposición (Sin Falla)",
-                pasos: ["<span>✅</span>1. Intacto o Uso", "<span>🔄</span>2. Anotar Repuesto", "<span>💾</span>3. Guardar"],
-                detalle: "1. Al escanear un <b>Botiquín</b>, si nadie usó insumos toque <b>✅ Botiquín Intacto</b> arriba a la derecha.<br>2. Si hubo consumo, anote cuánto se usó en <b>➖ Usado</b> y cuánto repuso en <b>➕ Repuesto</b>.<br>3. <b>No marque Falla</b> por consumo normal: al guardar, el stock real se actualiza solo en la nube."
+                titulo: "Control de Stock y Reposición de Medicamentos",
+                replica: "BOTIQUIN",
+                detalle: "1. Si el botiquín no tuvo consumo, toque el botón verde <b>✅ Botiquín Intacto</b>.<br>2. Si se usaron insumos y los repone en el momento, anote las cantidades en <b>➖ Usado</b> y <b>➕ Repuesto</b>.<br>3. Deje los puntos en <b>✅ OK</b> y guarde: el stock se actualizará solo y quedará registrado en el Excel de Botiquines."
             },
             "🏷️ ¿Qué hago si el QR está roto o no lee?": {
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Carga Manual Filtrada por Pendientes del Mes",
-                pasos: ["<span>⌨️</span>1. Elegir Lista", "<span>⏳</span>2. Solo Pendientes", "<span>📸</span>3. Foto Oblig."],
-                detalle: "1. En <b>📋 Control</b>, toque <b>⌨️ Elegir de Lista</b>.<br>2. El filtro <b>⏳ Mostrar solo equipos pendientes de este mes</b> viene activado por defecto para que solo vea los que faltan controlar.<br>3. Al cargarlo sin QR, el sistema le pedirá foto como comprobante."
+                replica: "CARGA_MANUAL",
+                detalle: "1. En <b>📋 Control</b>, toque el botón oscuro <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>2. La opción <b>⏳ Mostrar solo equipos pendientes de este mes</b> le filtrará únicamente los que faltan.<br>3. Elija Sección, Grupo y Equipo, y tome la <b>📸 Foto de Evidencia</b> obligatoria."
             },
-            "📸 ¿Cuándo es obligatorio sacar foto en Control?": {
+            "📸 ¿Cuándo es obligatorio sacar foto?": {
                 roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Regla de Fotos en Terreno (Referencia vs. Evidencia)",
-                pasos: ["<span>🚨</span>1. Si hay Falla", "<span>⌨️</span>2. Si es Sin QR", "<span>✅</span>3. Opcional si OK"],
-                detalle: "• <b>Foto de Evidencia del Control:</b> Es obligatoria únicamente cuando marca <b>🚨 Falla</b> o cuando usa <b>⌨️ Elegir de Lista</b>. Si escanea QR y está <b>✅ OK</b>, no hace falta foto.<br>• <b>Foto de Referencia del Equipo:</b> Es opcional y puede subirla desde el botón <b>✏️ Actualizar</b> para que quede la miniatura del equipo."
+                titulo: "Regla de Fotos en Control vs. Registro",
+                replica: "ESCANEAR_QR",
+                detalle: "• <b>En 📋 Control (Brigadistas y Admins):</b> La foto de evidencia solo es obligatoria si marca <b>🚨 Falla</b> o si elige el equipo manualmente desde <b>⌨️ Elegir de Lista</b>. Si escanea QR y está <b>✅ OK</b>, es opcional.<br>• <b>Foto de Referencia (Miniatura):</b> Es opcional al crear el equipo en oficina y puede agregarse en terreno desde <b>✏️ Actualizar</b>."
             },
-            "🔧 ¿Cómo marco un equipo En Recarga o Taller?": {
+            "📥 ¿Cómo ver pendientes o descargar el Excel y PDF?": {
                 roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Equipos Retirados por Mantenimiento o Recarga",
-                pasos: ["<span>📋</span>1. Cargar Equipo", "<span>🔧</span>2. Elegir Recarga", "<span>✅</span>3. Guardar"],
-                detalle: "1. Si un extintor o equipo se retiró temporalmente para recarga, cárguelo en <b>📋 Control</b>.<br>2. En el selector de estado elija <b>🔧 En Recarga / Taller (Sin Falla)</b> y guarde.<br>3. Cuando regrese recargado, use <b>✏️ Actualizar Ubicación / Vencimiento</b> en Control para anotar su nueva fecha de vencimiento."
-            },
-            "⏳ ¿Cómo veo qué equipos me faltan este mes?": {
-                roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Detector de Equipos Pendientes del Mes",
-                pasos: ["<span>📊</span>1. Ir a Historial", "<span>⏳</span>2. Ver Pendientes", "<span>▶️</span>3. Controlar"],
-                detalle: "1. En la misma pestaña <b>📋 Control</b> puede filtrar su Sección y Grupo en el cuadro <b>🧭 Hilo de Recorrido</b>.<br>2. También puede ir a <b>📊 Historial</b> y en <b>Estado / Vista</b> elegir <b>⏳ Equipos Pendientes del Mes</b>."
+                titulo: "Filtro de Pendientes y Exportación de Reportes",
+                replica: "DESCARGAR_REPORTES",
+                detalle: "1. Entre a <b>📊 Historial</b>.<br>2. Para ver qué equipos faltan, cambie el filtro <b>Estado / Vista</b> a <b>⏳ Equipos Pendientes del Mes</b>.<br>3. Para exportar, toque <b>📥 Excel Controles</b>, <b>💊 Excel Consumo Botiquines</b> o <b>📄 PDF Firmado</b>."
             },
             "📦 ¿Cómo registrar un equipo nuevo desde oficina?": {
                 roles: ["ADMIN"],
-                titulo: "Alta Rápida en Oficina y Completado en Terreno",
-                pasos: ["<span>📍</span>1. Sección y Grupo", "<span>🖨️</span>2. Crear QR", "<span>👷</span>3. Datos en Campo"],
-                detalle: "1. En <b>📦 Equipos</b>, elija <b>Sección</b>, <b>Grupo</b> y <b>Número</b> y toque <b>Guardar Equipo</b>.<br>2. Puede dejar la Foto de Referencia y la Ubicación Exacta vacías si está en la oficina.<br>3. El brigadista podrá completarlas o actualizarlas desde el botón <b>✏️ Actualizar</b> en <b>📋 Control</b>."
+                titulo: "Alta Rápida de Equipo y Creación de QR",
+                replica: "ALTA_EQUIPO_ADMIN",
+                detalle: "1. En <b>📦 Equipos</b>, despliegue <b>➕ Registrar Nuevo Equipo / Generar QR</b>.<br>2. Seleccione <b>1. Sección</b> y <b>2. Grupo</b> (el número correlativo se autocompleta).<br>3. Toque <b>Guardar Equipo</b> para descargar el QR (la ubicación y foto de referencia puede completarlas usted o el brigadista en terreno)."
             },
-            "🖨️ ¿Cómo imprimir QRs nuevos o dañados?": {
+            "👥 ¿Cómo asignar secciones y grupos a un brigadista?": {
                 roles: ["ADMIN"],
-                titulo: "Impresión de Etiquetas QR por Lote o Dañadas",
-                pasos: ["<span>📦</span>1. Ir a Equipos", "<span>🖨️</span>2. QRs Dañados", "<span>📍</span>3. O por Sección"],
-                detalle: "• <b>Para reimprimir etiquetas rotas:</b> En <b>📦 Equipos</b> toque arriba <b>🖨️ QRs Dañados</b>.<br>• <b>Para imprimir una sección o grupo:</b> Despliegue el grupo en el inventario y toque el botón amarillo <b>🖨️ QR</b> de esa sección."
+                titulo: "Configuración de Permisos por Usuario",
+                replica: "PERMISOS_PERSONAL",
+                detalle: "1. Vaya a <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b> y toque <b>✏️</b> en el usuario.<br>2. Marque sus sectores en <b>1° Secciones Habilitadas</b> y sus equipos en <b>2° Grupos Habilitados</b>.<br>3. Presione <b>💾 Actualizar Usuario</b>."
             },
-            "👥 ¿Cómo asignar secciones y grupos al personal?": {
-                roles: ["ADMIN"],
-                titulo: "Permisos de Personal por Sección y Grupo",
-                pasos: ["<span>⚙️</span>1. Ir a Ajustes", "<span>👥</span>2. Personal", "<span>☑️</span>3. Marcar Acceso"],
-                detalle: "1. En <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>, cree un usuario o toque <b>✏️</b> en uno existente.<br>2. En <b>1° Secciones Habilitadas</b> marque qué sectores controla y en <b>2° Grupos Habilitados</b> marque sus grupos.<br>3. Toque <b>Guardar Usuario</b>."
+            "👤 ¿Cómo ingreso con mi PIN o Huella?": {
+                roles: ["LOGIN"],
+                titulo: "Ingreso Rápido al Sistema",
+                replica: "",
+                detalle: "1. Elija su nombre de la lista (o toque <b>⚡ Ingreso Rápido</b> arriba).<br>2. Ingrese su PIN de 4 dígitos y toque <b>Ingresar</b>.<br>3. En <b>⚙️ Ajustes</b> puede activar <b>👆 Huella / FaceID</b> para entrar con un toque."
+            },
+            "🚨 ¿Cómo funciona el botón S.O.S.?": {
+                roles: ["LOGIN", "BRIGADISTA", "ADMIN"],
+                titulo: "Disparo de Alerta S.O.S. en Planta",
+                replica: "SOS",
+                detalle: "1. Toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Seleccione el sector y toque <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Activará la sirena en los dispositivos conectados y abrirá el mensaje de emergencia para WhatsApp."
             }
         };
 
         const PREGUNTAS_ANALISTA_JACK = [
-            "🧠 ¿Qué mejoras detectó el Gemelo Digital hoy?",
-            "📊 ¿Qué secciones tienen más fallas o pendientes este mes?",
-            "🛠️ ¿Qué equipos actualizaron los brigadistas en terreno?",
-            "💊 ¿Qué botiquines tienen insumos vencidos o agotados?"
+            "🏢 ¿Qué sección aún no hizo su control este mes?",
+            "📊 ¿Cuántos equipos faltan verificar por sección y grupo?",
+            "🚨 ¿Qué equipos tienen fallas o vencimientos activos hoy?",
+            "🛠️ ¿Qué fichas actualizaron los brigadistas en terreno?",
+            "🧠 ¿Qué mejoras detectó el Gemelo Digital hoy?"
         ];
 
         function obtenerPreguntasSegunPermisosUsuario() {
@@ -3908,9 +4107,7 @@ const CFG_KEY = 'SySO_Config_Master';
                     else if(rolesGuia.includes("BOTIQUIN") && controlaBotiquines) preguntas.push(k);
                 }
             });
-
-            const aprendidas = ((config.aprendidos && config.aprendidos.preguntasAyuda) || []).slice(-3);
-            return [...preguntas, ...aprendidas];
+            return preguntas;
         }
 
         function cambiarModoChatIA(modo) {
@@ -3940,7 +4137,8 @@ const CFG_KEY = 'SySO_Config_Master';
                 btn.style.padding = '7px 10px';
                 btn.innerText = q;
                 btn.onclick = () => {
-                    if(modoChatIAActual === 'ANALISTA' || !GUIAS_AYUDA_CATALOGO[q]) {
+                    const itemCat = GUIAS_AYUDA_CATALOGO[q];
+                    if(modoChatIAActual === 'ANALISTA' || !itemCat || itemCat.dinamica) {
                         document.getElementById('inputPreguntaAyuda').value = q;
                         consultarAsistenteAyudaLibre();
                     } else {
@@ -3968,125 +4166,362 @@ const CFG_KEY = 'SySO_Config_Master';
             document.getElementById('modalAyudaIA').classList.remove('hidden');
         }
 
-        function generarRespuestaContextualInteligente(pregunta, modo) {
-            const p = pregunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        window.ejecutarSugerenciaDirectaIA = function(preguntaSugerida) {
+            if(GUIAS_AYUDA_CATALOGO[preguntaSugerida] && !GUIAS_AYUDA_CATALOGO[preguntaSugerida].dinamica) {
+                mostrarGuiaEnModal(preguntaSugerida);
+            } else {
+                const inp = document.getElementById('inputPreguntaAyuda');
+                if(inp) inp.value = preguntaSugerida;
+                consultarAsistenteAyudaLibre();
+            }
+        };
+
+        // --- MOTOR ANALÍTICO Y SEMÁNTICO DE RESPUESTAS PRECISAS CON IMÁGENES DE LA APP ---
+        function analizarYResponderPreguntaUsuario(preguntaOriginal) {
+            const p = preguntaOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
             const nombreUsu = usuarioActual ? usuarioActual.nombre : 'Compañero';
-            const rolTexto = !usuarioActual ? 'Ingreso' : (esAdmin ? 'Administrador' : 'Brigadista / Inspector');
-            const secsUsu = (usuarioActual && Array.isArray(usuarioActual.secciones) && !usuarioActual.secciones.includes('Todas')) ? usuarioActual.secciones.join(', ') : 'Todas las secciones';
-            const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px;">🤖 Respuesta para "${pregunta}" <small class="text-muted">(${rolTexto})</small>:</div>`;
+            const rolTexto = !usuarioActual ? 'Sin iniciar sesión' : (esAdmin ? 'Administrador' : 'Brigadista / Inspector');
+            const rad = obtenerRadiografiaTiempoRealPlanta();
+            const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta a: "${preguntaOriginal}" <small class="text-muted">(${rolTexto})</small></div>`;
 
-            if(modo === 'ANALISTA' && esUsuarioCreador()) {
-                const pendientes = obtenerEquiposPendientesDelMes();
-                const fallasActivas = Object.entries(config.fallas || {});
-                const cambiosCampo = (config.cambiosTerreno || []).slice(-5).reverse();
-                const gemeloH = (config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || [];
-                if(p.includes('gemelo') || p.includes('mejora') || p.includes('velocidad') || p.includes('usabilidad')) {
-                    return encabezado + `• <b>Velocidad actual:</b> Arranque en ${metricasVelocidad.arranqueMs} ms | Nube en ${metricasVelocidad.latenciaNubeMs} ms | Memoria local: ${metricasVelocidad.usoMemoriaKB} KB.<br>• <b>Hallazgos del Gemelo Autónomo:</b><br>${gemeloH.length ? gemeloH.map(h => `• ${h}`).join('<br>') : '• Todo operando en parámetros óptimos.'}`;
-                }
-                if(p.includes('terreno') || p.includes('actualizaron') || p.includes('mudanza') || p.includes('ficha')) {
-                    return encabezado + (cambiosCampo.length ? cambiosCampo.map(c => `• <b>${c.id}</b> (${c.inspector} - ${c.fecha}): ${c.detalle}`).join('<br>') : '✅ Aún no hay modificaciones de fichas realizadas en terreno.');
-                }
-                if(p.includes('botiqu') || p.includes('vencid') || p.includes('agotad')) {
-                    let botAlertas = [];
-                    Object.keys(config.equipos || {}).forEach(id => {
-                        const eq = config.equipos[id];
-                        if(esGrupoBotiquinOPA(eq.grupo)) {
-                            const v = verificarEquipoTieneVencidos(eq);
-                            if(v.vencido) botAlertas.push(`• <b>${id}</b> (${eq.seccion}): ${v.detalle}`);
-                        }
-                    });
-                    return encabezado + (botAlertas.length ? botAlertas.join('<br>') : '✅ Todos los botiquines tienen stock y fechas al día.');
-                }
-                return encabezado + `• <b>Equipos totales en planta:</b> ${Object.keys(config.equipos || {}).length}<br>• <b>Pendientes de controlar este mes:</b> ${pendientes.length} equipos.<br>• <b>Fallas activas hoy:</b> ${fallasActivas.length ? fallasActivas.map(f => `${f[0]} (${f[1]})`).join(', ') : '0 fallas.'}`;
-            }
-
-            if(p.includes('observacion') || p.includes('nota') || p.includes('auto-aprendizaje') || p.includes('autoaprendizaje')) {
-                return encabezado +
-                    `El campo <b>📝 Observaciones o Notas Preventivas</b> es un cuadro opcional que aparece al escanear un equipo para anotar detalles que no son una falla técnica (ej. <i>"Se limpió polvo exterior"</i> o <i>"Acceso despejado"</i>). Cuando una nota corta se usa 3 veces, se convierte sola en un botón de toque rápido arriba del cuadro.`;
-            }
-
-            if(p.includes('salir') || p.includes('cerrar') || p.includes('cancelar') || p.includes('descartar')) {
-                return encabezado +
-                    `Si abriste un equipo en <b>📋 Control</b> solo para mirarlo y no deseas guardarlo ni editarlo, toca el botón rojo <b>✖ Salir</b> (arriba junto al código) o <b>❌ Cerrar / Salir de este Equipo</b> para limpiar la pantalla y volver al tablero de recorrido mensual.`;
-            }
-
-            if(p.includes('registrar') || p.includes('nuevo') || p.includes('alta') || p.includes('mudo') || p.includes('mudanza') || p.includes('cambiar ubicacion') || (p.includes('foto') && p.includes('referencia'))) {
-                if(!esAdmin) {
-                    return encabezado +
-                        `Como <b>Brigadista / Inspector</b> (${nombreUsu}):<br>` +
-                        `• <b>Crear el código de un equipo nuevo:</b> Lo hace un <b>Administrador</b> desde <b>📦 Equipos</b>.<br>` +
-                        `• <b>Actualizar Ubicación, Foto de Referencia o Vencimiento en tu recorrido:</b> Cuando escanees el equipo en <b>📋 Control</b>, toca el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b>, edita el dato o sube la foto y toca <b>💾 Guardar Actualización de Ficha</b>.`;
-                } else {
-                    return encabezado +
-                        `Como <b>Administrador</b>, puedes registrar equipos nuevos desde tu oficina en <b>📦 Equipos</b> ingresando solo Sección, Grupo y Número. Cuando el brigadista lo escanee en <b>📋 Control</b>, podrá completarle o actualizarle la Ubicación y la Foto de Referencia con el botón <b>✏️ Actualizar</b>.`;
+            // 0. ¿Preguntó por un código de equipo puntual (ej. "AGR-EXT-015", "BAL-BOT-001", "extintor 015")?
+            const todosIds = Object.keys(config.equipos || {});
+            let idEncontrado = todosIds.find(id => p.includes(id.toLowerCase()));
+            if(!idEncontrado) {
+                const matchNum = p.match(/\b(\d{3})\b/);
+                if(matchNum) {
+                    const candidatosNum = todosIds.filter(id => id.endsWith(matchNum[1]) && (!usuarioActual || usuarioTienePermisoEquipo(usuarioActual, config.equipos[id])));
+                    if(candidatosNum.length === 1) idEncontrado = candidatosNum[0];
                 }
             }
+            if(idEncontrado && (p.includes('donde') || p.includes('ubicacion') || p.includes('estado') || p.includes('controlo') || p.includes('venc') || p.includes('que es') || p.includes(idEncontrado.toLowerCase()))) {
+                const eq = config.equipos[idEncontrado];
+                const ctrlMes = rad.controlesMes.find(r => r.ID_Equipo === idEncontrado);
+                const infoV = verificarEquipoTieneVencidos(eq);
+                const fallaAct = rad.fallasActivas[idEncontrado];
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `📌 <b>Ficha en vivo del equipo ${idEncontrado}:</b><br>` +
+                        `• <b>Sección y Grupo:</b> ${eq.seccion} (${eq.grupo})<br>` +
+                        `• <b>Ubicación Exacta:</b> ${eq.ubicacion || 'Pendiente en terreno'}<br>` +
+                        `• <b>Tipo / Capacidad:</b> ${eq.tipo || 'S/D'} ${eq.capacidad ? '('+eq.capacidad+')' : ''}<br>` +
+                        `• <b>¿Controlado este mes (${rad.mesActual})?:</b> ${ctrlMes ? `<span style="color:var(--success);font-weight:bold;">✅ SÍ</span> (el ${ctrlMes.Fecha} por ${ctrlMes.Inspector})` : `<span style="color:var(--danger);font-weight:bold;">⏳ NO (Pendiente de verificar)</span>`}<br>` +
+                        `• <b>Estado / Alertas:</b> ${fallaAct ? `🚨 Con Falla (${fallaAct})` : (infoV.vencido ? `⏱️ ${infoV.detalle}` : '✅ En regla')}` +
+                        generarReplicaVisualApp('ESCANEAR_QR')
+                };
+            }
 
-            const misPendientesHoy = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : 0;
-            return encabezado +
-                `Hola <b>${nombreUsu}</b> (${rolTexto} — Secciones: <b>${secsUsu}</b>):<br>` +
-                `• En <b>📋 Control</b> tienes el tablero <b>🧭 Hilo de Recorrido</b> donde puedes elegir qué <b>Sección y Grupo</b> deseas revisar hoy (te quedan <b>${misPendientesHoy} equipos pendientes</b> este mes), el botón <b>✖ Salir</b> para cerrar cualquier equipo sin guardar, y el botón <b>✏️ Actualizar</b> si un equipo se mudó o volvió de recarga.`;
+            // 1. CONSULTA DE DATOS EN VIVO: ¿QUÉ SECCIÓN AÚN NO HIZO SU CONTROL / AVANCE POR SECCIÓN?
+            if((p.includes('que seccion') || p.includes('cual seccion') || p.includes('secciones') || p.includes('sector') || p.includes('planta')) &&
+               (p.includes('no hizo') || p.includes('falta') || p.includes('pendiente') || p.includes('sin controlar') || p.includes('avance') || p.includes('control') || p.includes('como va') || p.includes('estado'))) {
+                const sinIni = rad.seccionesSinIniciar.length > 0 ? `<b style="color:var(--danger);">${rad.seccionesSinIniciar.join(', ')}</b>` : `<b style="color:var(--success);">Ninguna (todas las secciones ya iniciaron)</b>`;
+                const enProg = rad.seccionesEnProgreso.length > 0 ? rad.seccionesEnProgreso.join(' | ') : 'Ninguna';
+                const compl = rad.seccionesCompletas.length > 0 ? `<b style="color:var(--success);">${rad.seccionesCompletas.join(', ')}</b>` : 'Ninguna aún al 100%';
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `🏢 <b>Estado Real de Control por Sección (${rad.mesActual}):</b><br>` +
+                        `• 🔴 <b>Secciones sin iniciar (0% controlado):</b> ${sinIni}<br>` +
+                        `• 🟡 <b>Secciones en progreso:</b> ${enProg}<br>` +
+                        `• 🟢 <b>Secciones completadas (100%):</b> ${compl}<br>` +
+                        `• 📊 <b>Total Planta:</b> ${rad.totalControladosPlanta} controlados de ${rad.totalPlanta} equipos (faltan <b>${rad.totalPendientesPlanta}</b>).` +
+                        generarReplicaVisualApp('PENDIENTES_HISTORIAL')
+                };
+            }
+
+            // 2. CONSULTA DE DATOS EN VIVO: ¿CUÁNTOS EQUIPOS ME FALTA VERIFICAR / QUÉ ME FALTA CONTROLAR?
+            if((p.includes('cuanto') || p.includes('que equipo') || p.includes('cuales') || p.includes('me falta') || p.includes('faltan') || p.includes('pendiente') || p.includes('queda')) &&
+               (p.includes('falta') || p.includes('verificar') || p.includes('controlar') || p.includes('revisar') || p.includes('pendiente') || p.includes('mi') || p.includes('mes') || p.includes('equipo'))) {
+                const desgloseSec = Object.entries(rad.misPendientesPorSec).map(x => `<b>${x[0]}</b>: ${x[1]} eq.`).join(' | ') || '0 pendientes';
+                const desgloseGrp = Object.entries(rad.misPendientesPorGrp).map(x => `${x[0]} (${x[1]})`).join(', ') || 'Ninguno';
+                const primeros5 = rad.misPendientesIds.slice(0, 6).join(', ');
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `👷 <b>Resumen en vivo para tu perfil (${nombreUsu}):</b><br>` +
+                        `• ⏳ <b>Te faltan verificar:</b> <b style="color:var(--danger); font-size:14px;">${rad.misPendientes} equipos</b> en este mes (ya se verificaron <b>${rad.misControlados}</b> de los <b>${rad.misTotal}</b> habilitados en tu perfil).<br>` +
+                        `• 📍 <b>Por Sección:</b> ${desgloseSec}<br>` +
+                        `• 🔧 <b>Por Grupo:</b> ${desgloseGrp}<br>` +
+                        `${primeros5 ? `• ⏭️ <b>Próximos códigos pendientes:</b> ${primeros5}${rad.misPendientes > 6 ? '...' : ''}` : '🎉 <b>¡Ya completaste todos tus equipos este mes!</b>'}` +
+                        generarReplicaVisualApp('HILO_RECORRIDO')
+                };
+            }
+
+            // 3. CONSULTA DE DATOS EN VIVO: ¿QUÉ EQUIPOS TIENEN FALLA, RECARGA O ESTÁN VENCIDOS / AGOTADOS?
+            if((p.includes('que equipo') || p.includes('cuales') || p.includes('cuanto') || p.includes('hay')) &&
+               (p.includes('falla') || p.includes('averiad') || p.includes('roto') || p.includes('vencid') || p.includes('agotad') || p.includes('recarga') || p.includes('taller'))) {
+                const fArr = Object.entries(rad.fallasActivas).map(f => `<b>${f[0]}</b> (${f[1]})`);
+                const rArr = Object.keys(rad.enRecarga);
+                const vArr = rad.equiposVencidos.map(v => `<b>${v.id}</b> en ${v.seccion}: ${v.detalle}`);
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `🚨 <b>Estado de Alertas Activas en Planta Hoy:</b><br>` +
+                        `• <b>Equipos con Falla reportada (${fArr.length}):</b> ${fArr.length ? fArr.join(' | ') : '✅ 0 fallas activas.'}<br>` +
+                        `• <b>Equipos en Recarga / Taller (${rArr.length}):</b> ${rArr.length ? rArr.join(', ') : 'Ninguno en taller.'}<br>` +
+                        `• <b>Equipos o Botiquines Vencidos/Agotados (${vArr.length}):</b> ${vArr.length ? vArr.slice(0, 6).join(' | ') : '✅ Todos vigentes.'}` +
+                        generarReplicaVisualApp('PENDIENTES_HISTORIAL')
+                };
+            }
+
+            // 4. CONSULTA DE DATOS EN VIVO: ¿QUIÉN CONTROLÓ / HISTORIAL DE INSPECTORES ESTE MES?
+            if((p.includes('quien') || p.includes('inspector') || p.includes('brigadista') || p.includes('hizo')) && (p.includes('control') || p.includes('recorrido') || p.includes('verifico') || p.includes('mes'))) {
+                const porInsp = {};
+                rad.controlesMes.forEach(r => { porInsp[r.Inspector] = (porInsp[r.Inspector] || 0) + 1; });
+                const listaI = Object.entries(porInsp).sort((a,b)=>b[1]-a[1]).map(x => `• <b>${x[0]}:</b> ${x[1]} controles realizados este mes.`);
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `👷 <b>Controles registrados por Inspector en ${rad.mesActual}:</b><br>` +
+                        (listaI.length ? listaI.join('<br>') : '⏳ Aún ningún inspector ha registrado controles en este mes.') +
+                        generarReplicaVisualApp('DESCARGAR_REPORTES')
+                };
+            }
+
+            // 5. CONSULTA DE USO: ¿QUÉ PASA SI NO CONTROLO TODOS LOS EQUIPOS EN EL MES?
+            if((p.includes('que pasa') || p.includes('si no controlo') || p.includes('falta controlar') || p.includes('olvido')) && (p.includes('mes') || p.includes('todo') || p.includes('equipo'))) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Si no se controlan todos los equipos antes de fin de mes:<br>` +
+                        `1. <b>Quedan listados como pendientes:</b> En <b>📊 Historial ➔ Estado/Vista: ⏳ Equipos Pendientes del Mes</b> (hoy faltan <b>${rad.misPendientes} equipos</b> en tus sectores).<br>` +
+                        `2. <b>Aparecen resaltados en el Excel:</b> Al descargar <b>📥 Excel Controles</b>, todos los equipos no visitados se agregan al final en color amarillo como <b>⏳ SIN CONTROLAR</b>.` +
+                        generarReplicaVisualApp('PENDIENTES_HISTORIAL')
+                };
+            }
+
+            // 6. CONSULTA DE USO: ¿CÓMO SALIR / CERRAR UN EQUIPO ABIERTO SIN GUARDAR?
+            if((p.includes('salir') || p.includes('cerrar') || p.includes('descartar') || p.includes('quitar') || p.includes('sacar')) && (p.includes('equipo') || p.includes('control') || p.includes('abierto') || p.includes('pantalla') || p.includes('sin guardar'))) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Para salir de un equipo que abriste en <b>📋 Control</b> sin hacerle control ni actualización:<br>` +
+                        `• Toca el botón rojo <b>❌ Cerrar / Salir de este Equipo</b> (o el botón <b>✖ Salir</b> arriba al lado de <i>Escanear QR</i>). Eso limpia la pantalla en el acto y te devuelve al hilo del mes.` +
+                        generarReplicaVisualApp('SALIR_EQUIPO')
+                };
+            }
+
+            // 7. CONSULTA DE USO: REGISTRAR EQUIPO NUEVO vs. ACTUALIZAR UBICACIÓN / FOTO / MUDANZA EN TERRENO
+            if(p.includes('registrar') || p.includes('nuevo equipo') || p.includes('equipo nuevo') || p.includes('alta') || p.includes('mudo') || p.includes('mudanza') || p.includes('cambiar ubicacion') || p.includes('actualizar ubicacion') || (p.includes('foto') && p.includes('referencia'))) {
+                if(!esAdmin && (p.includes('registrar') || p.includes('nuevo') || p.includes('alta') || p.includes('crear'))) {
+                    return {
+                        exacta: true,
+                        html: encabezado +
+                            `Con tu perfil de <b>Brigadista / Inspector</b> (${nombreUsu}):<br>` +
+                            `• <b>No tienes el módulo 📦 Equipos para dar de alta equipos nuevos:</b> debes pedirle a un <b>Administrador</b> que cree el código y el QR.<br>` +
+                            `• <b>Lo que SÍ puedes actualizar tú en terreno:</b> Cuando escanees un equipo en <b>📋 Control</b>, si se mudó de lugar, volvió de recarga o no tiene su Foto de Referencia, toca el botón celeste <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> y guárdalo.` +
+                            generarReplicaVisualApp('ACTUALIZAR_FICHA')
+                    };
+                }
+                if(p.includes('mudo') || p.includes('mudanza') || p.includes('ubicacion') || p.includes('terreno') || (!esAdmin && p.includes('foto'))) {
+                    return {
+                        exacta: true,
+                        html: encabezado +
+                            `Si durante el recorrido un equipo cambió de lugar, volvió de recarga con nuevo vencimiento o aún no tiene Foto de Referencia:<br>` +
+                            `1. Cárgalo en <b>📋 Control</b> y toca el botón celeste <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b>.<br>` +
+                            `2. Corrige el dato o toma la foto y presiona <b>💾 Guardar Actualización de Ficha</b>.` +
+                            generarReplicaVisualApp('ACTUALIZAR_FICHA')
+                    };
+                }
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Como <b>Administrador</b>, para registrar un equipo nuevo:<br>` +
+                        `1. Ve a <b>📦 Equipos</b> y abre <b>➕ Registrar Nuevo Equipo / Generar QR</b>.<br>` +
+                        `2. Elige <b>1. Sección</b>, <b>2. Grupo</b> y <b>Número</b> y toca <b>Guardar Equipo</b>.<br>` +
+                        `3. <b>La Foto de Referencia y la Ubicación son opcionales desde oficina:</b> si las dejas vacías, el brigadista podrá completarlas en terreno desde el botón <b>✏️ Actualizar</b> en Control.` +
+                        generarReplicaVisualApp('ALTA_EQUIPO_ADMIN')
+                };
+            }
+
+            // 8. CONSULTA DE USO: ¿CUÁNDO ES OBLIGATORIO SACAR FOTO EN UN CONTROL?
+            if(p.includes('foto') && (p.includes('obligatori') || p.includes('si o si') || p.includes('cuando') || p.includes('falla') || p.includes('hallazgo') || p.includes('control') || p.includes('sacar'))) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `En la pestaña <b>📋 Control</b>:<br>` +
+                        `• 📸 <b>La Foto de Evidencia es OBLIGATORIA en 2 casos:</b><br>` +
+                        `  1) Cuando marcas <b>🚨 Falla</b> en algún punto del equipo.<br>` +
+                        `  2) Cuando seleccionas el equipo manualmente desde <b>⌨️ Elegir de Lista</b> (sin escanear el QR).<br>` +
+                        `• ✅ <b>Es OPCIONAL:</b> Cuando escaneas el código QR con la cámara y el equipo está <b>✅ OK</b> o <b>🔧 En Recarga</b>.` +
+                        generarReplicaVisualApp('ESCANEAR_QR')
+                };
+            }
+
+            // 9. CONSULTA DE USO: BOTIQUINES / MEDICAMENTOS / REPOSICIÓN
+            if(p.includes('botiquin') || p.includes('medicamento') || p.includes('reponer') || p.includes('reposicion') || p.includes('pastilla') || p.includes('insumo') || p.includes('intacto')) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Al controlar un <b>Botiquín</b> en <b>📋 Control</b>:<br>` +
+                        `• <b>Si nadie usó nada:</b> Toca el botón verde <b>✅ Botiquín Intacto</b>.<br>` +
+                        `• <b>Si se consumieron insumos:</b> Anota cuánto se usó en <b>➖ Usado</b> y cuánto agregaste en <b>➕ Repuesto</b> (si agregas un remedio nuevo, toca <b>➕ Sumar Insumo</b>). No marques Falla por consumo normal.` +
+                        generarReplicaVisualApp('BOTIQUIN')
+                };
+            }
+
+            // 10. CONSULTA DE USO: QR ROTO / CARGA MANUAL / ELEGIR DE LISTA
+            if(p.includes('qr') && (p.includes('roto') || p.includes('no lee') || p.includes('borroso') || p.includes('danad') || p.includes('manual') || p.includes('lista') || p.includes('camara'))) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Si la etiqueta QR física está rota o la cámara no logra leerla:<br>` +
+                        `1. En <b>📋 Control</b> toca el botón gris <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>` +
+                        `2. Selecciona Sección, Grupo y Equipo (la lista muestra solo los pendientes del mes para no repetir).<br>` +
+                        `3. Toma la <b>📸 Foto de Evidencia</b> obligatoria y guarda.${esAdmin ? '<br>4. En <b>📦 Equipos ➔ 🖨️ QRs Dañados</b> puedes reimprimir todas las etiquetas falladas juntas.' : ''}` +
+                        generarReplicaVisualApp('CARGA_MANUAL')
+                };
+            }
+
+            // 11. CONSULTA DE USO: EXCEL / PDF FIRMADO / DESCARGAS
+            if(p.includes('excel') || p.includes('pdf') || p.includes('firma') || p.includes('descargar') || p.includes('reporte') || p.includes('whatsapp')) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `En la pestaña <b>📊 Historial</b> filtra el mes o sección y elige:<br>` +
+                        `• <b>📥 Excel Controles:</b> Descarga la planilla con autofiltros, fallas en rojo, links para abrir fotos y equipos pendientes.<br>` +
+                        `• <b>💊 Excel Consumo Botiquines:</b> Descarga el detalle de medicamentos usados y repuestos.<br>` +
+                        `• <b>📄 PDF Firmado:</b> Abre el recuadro para firmar con el dedo y enviarlo por WhatsApp.` +
+                        generarReplicaVisualApp('DESCARGAR_REPORTES')
+                };
+            }
+
+            // 12. CONSULTA DE USO: PERMISOS / SECCIONES HABILITADAS
+            if(p.includes('permiso') || p.includes('habilitad') || p.includes('asignad') || p.includes('no me deja') || p.includes('personal') || p.includes('usuario')) {
+                const secsUsu = (usuarioActual && Array.isArray(usuarioActual.secciones)) ? usuarioActual.secciones.join(', ') : 'Todas';
+                const grpsUsu = (usuarioActual && Array.isArray(usuarioActual.grupo)) ? usuarioActual.grupo.join(', ') : 'Todos';
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `👤 <b>Permisos actuales de ${nombreUsu} (${rolTexto}):</b><br>` +
+                        `• <b>Secciones habilitadas:</b> ${secsUsu}<br>` +
+                        `• <b>Grupos habilitados:</b> ${grpsUsu}<br>` +
+                        (esAdmin ? `Para cambiar los permisos de cualquier usuario, entra a <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>.` : `Si necesitas acceso a otra sección o grupo, solicita a un <b>Administrador</b> que lo habilite en tu usuario.`) +
+                        (esAdmin ? generarReplicaVisualApp('PERMISOS_PERSONAL') : '')
+                };
+            }
+
+            // 13. CONSULTA DE USO: EN RECARGA / TALLER
+            if(p.includes('recarga') || p.includes('taller') || p.includes('mantenimiento')) {
+                return {
+                    exacta: true,
+                    html: encabezado +
+                        `Cuando un extintor o equipo fue retirado para recarga o taller:<br>` +
+                        `1. Cárgalo en <b>📋 Control</b> y en los puntos a evaluar elige <b>🔧 En Recarga / Taller (Sin Falla)</b>.<br>` +
+                        `2. Cuando vuelva recargado con nueva fecha, usa el botón <b>✏️ Actualizar Ubicación / Vencimiento</b> en Control para actualizar su vencimiento.` +
+                        generarReplicaVisualApp('ACTUALIZAR_FICHA')
+                };
+            }
+
+            // Si no coincidió con ninguna intención clara, devolver exacta: false para que intente Gemini API o muestre el Fallback Honesto con opciones similares
+            return { exacta: false, html: '' };
+        }
+
+        // Genera opciones clicables similares cuando la pregunta no se puede responder de forma directa
+        function generarFallbackHonestoConSimilares(preguntaOriginal) {
+            const p = preguntaOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
+            const rad = obtenerRadiografiaTiempoRealPlanta();
+
+            const opcionesBase = [
+                { q: "📊 ¿Cuántos equipos me falta verificar este mes?", tags: ["cuanto", "falta", "pendiente", "verificar", "controlar", "equipo", "mes", "quedan"] },
+                { q: "🏢 ¿Qué sección aún no hizo su control este mes?", tags: ["seccion", "sector", "no hizo", "falta", "avance", "planta", "control"] },
+                { q: "🚨 ¿Qué equipos tienen fallas o vencimientos activos hoy?", tags: ["falla", "vencido", "roto", "alerta", "agotado", "recarga"] },
+                { q: "📋 ¿Cómo controlar un equipo y seguir el hilo?", tags: ["como", "controlar", "escanear", "qr", "hilo", "recorrido", "inspeccion"] },
+                { q: "✏️ ¿Cómo actualizo ubicación, foto o vencimiento en terreno?", tags: ["actualizar", "editar", "ubicacion", "mudo", "mudanza", "foto", "referencia", "vencimiento", "nuevo"] },
+                { q: "❌ ¿Cómo cierro un equipo abierto si no quiero controlarlo?", tags: ["cerrar", "salir", "sacar", "cancelar", "abierto", "equipo"] },
+                { q: "📸 ¿Cuándo es obligatorio sacar foto?", tags: ["foto", "obligatorio", "si o si", "camara", "imagen", "evidencia"] },
+                { q: "💊 ¿Cómo reponer un Botiquín sin marcar falla?", tags: ["botiquin", "medicamento", "reponer", "stock", "pastilla", "insumo"] },
+                { q: "🏷️ ¿Qué hago si el QR está roto o no lee?", tags: ["qr", "roto", "no lee", "lista", "manual", "elegir"] },
+                { q: "📥 ¿Cómo ver pendientes o descargar el Excel y PDF?", tags: ["excel", "pdf", "descargar", "historial", "firma", "reporte"] }
+            ];
+            if(esAdmin) {
+                opcionesBase.push(
+                    { q: "📦 ¿Cómo registrar un equipo nuevo desde oficina?", tags: ["registrar", "nuevo", "alta", "crear", "qr", "equipo", "inventario"] },
+                    { q: "👥 ¿Cómo asignar secciones y grupos a un brigadista?", tags: ["permiso", "usuario", "brigadista", "personal", "seccion", "grupo"] }
+                );
+            }
+
+            // Puntuar similitud según las palabras que escribió el usuario
+            const puntuadas = opcionesBase.map(item => {
+                let score = 0;
+                item.tags.forEach(t => { if(p.includes(t)) score += 3; });
+                return { ...item, score };
+            }).sort((a, b) => b.score - a.score);
+
+            const sugeridas = puntuadas.slice(0, 5);
+            const botonesHTML = sugeridas.map(s => {
+                const qEsc = s.q.replace(/'/g, "\\'");
+                return `<button type="button" class="btn-small btn-info btn-chip-wrap" style="padding:8px 10px; font-size:12px; width:100%; justify-content:flex-start; margin-bottom:5px;" onclick="ejecutarSugerenciaDirectaIA('${qEsc}')">👉 ${s.q}</button>`;
+            }).join('');
+
+            return `
+                <div style="border-left:4px solid #ffc107; padding-left:10px; margin-bottom:10px;">
+                    <b style="color:var(--primary);">⚠️ No tengo una respuesta exacta para «${preguntaOriginal}»</b><br>
+                    <span class="text-muted" style="font-size:12px;">Para no darte un dato incorrecto, selecciona cuál de estas consultas relacionadas de tu perfil (${esAdmin ? 'Administrador' : 'Brigadista'}) necesitas resolver:</span>
+                </div>
+                <div>${botonesHTML}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">
+                    💡 <b>Dato rápido en vivo:</b> Hoy tienes <b>${rad.misPendientes} equipos pendientes</b> de verificar en este mes (${rad.mesActual}).
+                </div>
+            `;
         }
 
         function mostrarGuiaEnModal(pregunta) {
             const box = document.getElementById('respuestaGraficaAyuda');
             if(!box) return;
             box.classList.remove('hidden');
-            let guia = GUIAS_AYUDA_CATALOGO[pregunta];
-            if(guia) {
-                const pasosHTML = guia.pasos.map(p => `<div class="step-node">${p}</div>`).join('');
-                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:4px;">${guia.titulo}</div><div class="step-flow">${pasosHTML}</div><div>${guia.detalle}</div>`;
+            const guia = GUIAS_AYUDA_CATALOGO[pregunta];
+            if(guia && guia.dinamica) {
+                const res = analizarYResponderPreguntaUsuario(pregunta);
+                box.innerHTML = res.html;
                 return;
             }
-            const rolActual = (usuarioActual && usuarioActual.rol) ? usuarioActual.rol : 'Inspector';
-            const normKey = `${rolActual}_${modoChatIAActual}_${pregunta.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").substring(0, 55)}`;
-            const respuestaCacheada = config.iaConfig && config.iaConfig.cacheRespuestas && config.iaConfig.cacheRespuestas[normKey];
-            if(respuestaCacheada) {
-                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Respuesta para "${pregunta}" (${rolActual}):</div><div>${respuestaCacheada}</div>`;
-            } else {
-                box.innerHTML = generarRespuestaContextualInteligente(pregunta, modoChatIAActual);
+            if(guia) {
+                const htmlReplica = guia.replica ? generarReplicaVisualApp(guia.replica) : '';
+                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:6px;">${guia.titulo}</div><div>${guia.detalle}</div>${htmlReplica}`;
+                return;
             }
+            const res = analizarYResponderPreguntaUsuario(pregunta);
+            box.innerHTML = res.exacta ? res.html : generarFallbackHonestoConSimilares(pregunta);
         }
 
         async function consultarAsistenteAyudaLibre() {
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
-            const texto = inp.value.trim();
+            const texto = inp ? inp.value.trim() : '';
             if(!texto || !box) return;
             inp.value = '';
             box.classList.remove('hidden');
 
-            const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
-            const rolActual = esAdmin ? 'Admin' : 'Inspector';
-            const nombreUsu = usuarioActual ? usuarioActual.nombre : 'Operario';
-            const secsUsu = (usuarioActual && Array.isArray(usuarioActual.secciones)) ? usuarioActual.secciones.join(', ') : 'Todas';
-            const grpsUsu = (usuarioActual && Array.isArray(usuarioActual.grupo)) ? usuarioActual.grupo.join(', ') : 'Todos';
-
-            const normKey = `${rolActual}_${modoChatIAActual}_${texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").substring(0, 55)}`;
-            if(modoChatIAActual === 'AYUDA' && config.iaConfig && config.iaConfig.cacheRespuestas && config.iaConfig.cacheRespuestas[normKey]) {
-                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Respuesta para "${texto}" (${esAdmin ? 'Administrador' : 'Brigadista'}):</div><div>${config.iaConfig.cacheRespuestas[normKey]}</div>`;
+            // 1. Primero evaluar con el Motor Analítico y de Datos en Vivo (Precisión 100% instantánea + Réplica Visual de la App)
+            const analisisLocal = analizarYResponderPreguntaUsuario(texto);
+            if(analisisLocal.exacta) {
+                box.innerHTML = analisisLocal.html;
                 return;
             }
 
+            // 2. Si es una pregunta abierta diferente y hay API Key de Gemini configurada, consultar a Gemini con la radiografía en vivo
             const apiKey = obtenerLlaveGeminiDesencriptada();
             if(apiKey) {
-                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando tu consulta según tu perfil (${esAdmin ? 'Administrador' : 'Brigadista'})...</div>`;
+                const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
+                const nombreUsu = usuarioActual ? usuarioActual.nombre : 'Operario';
+                const rad = obtenerRadiografiaTiempoRealPlanta();
+                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Consultando datos del sistema para responder tu pregunta...</div>`;
                 try {
-                    const pendientesMes = obtenerEquiposPendientesDelMes().length;
-                    const misPendientes = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : pendientesMes;
-                    const reglasExactasApp = `
-REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
-- Usuario actual: Nombre="${nombreUsu}", Rol="${esAdmin ? 'Administrador (Admin)' : 'Brigadista / Inspector'}", Secciones="${secsUsu}", Grupos="${grpsUsu}".
-- CONTINUIDAD MENSUAL Y CIERRE DE EQUIPO:
-  1) Si el usuario tiene acceso a varias secciones o grupos (ej. Administrador), en el cuadro "🧭 Hilo de Recorrido" tiene dos desplegables ("1° Filtrar Sección" y "2° Filtrar Grupo") para elegir qué sector quiere recorrer hoy (ej. Balanceados + PA Botiquines).
-  2) Si abre un equipo y quiere salir sin guardar, tiene el botón rojo "✖ Salir / Cerrar Equipo". Mientras no haya un equipo cargado, los campos de Observaciones, Foto y Guardar permanecen ocultos.
-- FLUJO OFICINA VS TERRENO: El Administrador crea equipos en "📦 Equipos". El Brigadista puede actualizar Ubicación, Foto de Referencia o Vencimiento post-recarga desde el botón "✏️ Actualizar" en "📋 Control".
-- PENDIENTES DEL MES: Hoy faltan ${pendientesMes} equipos en planta (${misPendientes} en sectores de este usuario).`;
-
-                    const promptSistema = (modoChatIAActual === 'ANALISTA' && esUsuarioCreador())
-                        ? `Eres el Analista Senior de Planta exclusivo para Jack Wiens. Datos en vivo: Equipos=${Object.keys(config.equipos||{}).length}, Pendientes mes=${pendientesMes}, Fallas=${JSON.stringify(config.fallas||{})}, Cambios en terreno=${JSON.stringify((config.cambiosTerreno||[]).slice(-5))}, Gemelo=${JSON.stringify((config.gemeloAutonomo&&config.gemeloAutonomo.hallazgos)||[])}. Responde en español, directo y en máximo 120 palabras a: "${texto}"`
-                        : `Eres el Asistente Inteligente de Gestión SySO. Responde DIRECTAMENTE la pregunta exacta del usuario según su Rol (${esAdmin ? 'Administrador' : 'Brigadista'}) y estas reglas: ${reglasExactasApp}\nResponde en español claro en máximo 95 palabras.\nPregunta exacta: "${texto}"`;
+                    const contextoVivo = `
+DATOS EN VIVO DE LA PLANTA (${rad.mesActual}):
+- Usuario que consulta: "${nombreUsu}", Perfil="${esAdmin ? 'Administrador (Acceso total)' : 'Brigadista / Inspector (Solo ve Control, Historial y Ajustes; NO ve Equipos)'}".
+- Equipos que le faltan verificar a este usuario este mes: ${rad.misPendientes} pendientes de ${rad.misTotal} asignados (Ya verificó ${rad.misControlados}). Desglose por sección: ${JSON.stringify(rad.misPendientesPorSec)}.
+- Secciones con 0 controles este mes (Sin iniciar): ${rad.seccionesSinIniciar.join(', ') || 'Ninguna'}.
+- Secciones en progreso: ${rad.seccionesEnProgreso.join(', ') || 'Ninguna'}.
+- Secciones al 100%: ${rad.seccionesCompletas.join(', ') || 'Ninguna'}.
+- Fallas activas: ${JSON.stringify(rad.fallasActivas)}. Vencidos: ${JSON.stringify(rad.equiposVencidos.slice(0,5))}.
+INSTRUCCIÓN ESTRICTA:
+1) Si la pregunta se puede responder con los datos en vivo o las funciones de Gestión SySO, responde de forma directa, clara y concisa en máximo 85 palabras.
+2) Si la pregunta NO tiene relación con la app o no estás seguro, responde exactamente la palabra: NO_SOPORTADO`;
 
                     const modelosDisponibles = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
                     let data = null, respOk = false;
@@ -4095,30 +4530,23 @@ REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
                         const resp = await fetch(urlApi, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: promptSistema }] }] })
+                            body: JSON.stringify({ contents: [{ parts: [{ text: `${contextoVivo}\nPregunta del usuario: "${texto}"` }] }] })
                         });
                         if (resp.ok) { data = await resp.json(); respOk = true; break; }
                     }
                     if(respOk && data) {
                         const txtIA = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text;
-                        if(txtIA) {
+                        if(txtIA && !txtIA.includes('NO_SOPORTADO')) {
                             const htmlLimpio = txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
                             box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px;">🤖 Respuesta para "${texto}" (${esAdmin ? 'Administrador' : 'Brigadista'}):</div><div>${htmlLimpio}</div>`;
-                            if(modoChatIAActual === 'AYUDA') {
-                                if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
-                                if(!config.iaConfig.cacheRespuestas) config.iaConfig.cacheRespuestas = {};
-                                config.iaConfig.cacheRespuestas[normKey] = htmlLimpio;
-                                if(texto.length <= 52) aprenderTerminoNuevo('preguntasAyuda', texto.startsWith('¿') ? texto : `❓ ${texto}`);
-                                parchearSubnodoConfigNube(null, { iaConfig: config.iaConfig, aprendidos: config.aprendidos, aprendidosCandidatos: config.aprendidosCandidatos });
-                                renderBotonesSugeridosModalIA();
-                            }
                             return;
                         }
                     }
                 } catch(e) {}
             }
 
-            box.innerHTML = generarRespuestaContextualInteligente(texto, modoChatIAActual);
+            // 3. Fallback Honesto: Nunca inventa respuestas falsas; ofrece botones clicables de consultas similares
+            box.innerHTML = generarFallbackHonestoConSimilares(texto);
         }
 
         // =========================================================================
@@ -4127,7 +4555,6 @@ REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
         function ejecutarGemeloDigitalAutonomo() {
             try {
                 const clonConfig = JSON.parse(JSON.stringify(config || {}));
-                const clonDB = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
                 const hallazgos = [];
 
                 calcularUsoMemoriaLocalKB();
@@ -4149,54 +4576,22 @@ REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
                     ? `🎨 <b>Auto-Corrección Visual:</b> Se ajustaron ${desbordesDetectados} botón(es) largos automáticamente.`
                     : `🎨 <b>Auditoría Visual OK:</b> 0 botones cortados o desbordados en pantalla.`);
 
-                const idsTodos = Object.keys(clonConfig.equipos || {});
-                const totalPlanta = idsTodos.length;
-                const pendientes = obtenerEquiposPendientesDelMes();
-                const controladosMes = Math.max(0, totalPlanta - pendientes.length);
-
-                let secsConUrgencia = {};
-                idsTodos.forEach(id => {
-                    const eq = clonConfig.equipos[id];
-                    const v = verificarEquipoTieneVencidos(eq);
-                    const f = clonConfig.fallas && clonConfig.fallas[id];
-                    if(v.vencido || f) secsConUrgencia[eq.seccion] = (secsConUrgencia[eq.seccion] || 0) + 1;
-                });
-                const listaUrgencias = Object.entries(secsConUrgencia).sort((a,b) => b[1]-a[1]);
-
-                if(totalPlanta > 0 && controladosMes === 0) {
-                    const urgTxt = listaUrgencias.length > 0
-                        ? `Se sugiere iniciar por <b>${listaUrgencias[0][0]}</b> porque registra <b>${listaUrgencias[0][1]} equipo(s) con insumos vencidos o falla activa</b>.`
-                        : `Todas las secciones están en 0% listas para iniciar el mes.`;
-                    hallazgos.push(`📅 <b>Ciclo Mensual Sin Iniciar (0/${totalPlanta} eq.):</b> Aún no se controló ningún equipo este mes. ${urgTxt}`);
-                } else if(totalPlanta > 0 && pendientes.length > 0) {
-                    let peorSec = null, menorPct = 101, faltanPeor = 0, totalPeor = 0;
-                    (clonConfig.secciones || []).forEach(sec => {
-                        const totS = idsTodos.filter(id => clonConfig.equipos[id].seccion === sec).length;
-                        if(totS === 0) return;
-                        const pendS = pendientes.filter(p => p.seccion === sec).length;
-                        const pctS = Math.round(((totS - pendS) / totS) * 100);
-                        if(pctS < menorPct && pendS > 0) {
-                            menorPct = pctS; peorSec = sec; faltanPeor = pendS; totalPeor = totS;
-                        }
-                    });
-                    if(peorSec) {
-                        hallazgos.push(`📍 <b>Avance Mensual en Curso (${controladosMes}/${totalPlanta}):</b> La sección con menor porcentaje hoy es <b>${peorSec}</b> (${menorPct}% completado, faltan ${faltanPeor} de ${totalPeor}).`);
-                    }
-                } else if(totalPlanta > 0 && pendientes.length === 0) {
-                    hallazgos.push(`🎉 <b>Cobertura Mensual Completa:</b> El 100% de los equipos (${totalPlanta}) ya fue controlado este mes.`);
+                const rad = obtenerRadiografiaTiempoRealPlanta();
+                if(rad.totalPlanta > 0 && rad.totalControladosPlanta === 0) {
+                    hallazgos.push(`📅 <b>Ciclo Mensual Sin Iniciar (0/${rad.totalPlanta} eq.):</b> Ninguna sección ha iniciado controles este mes (${rad.seccionesSinIniciar.join(', ')}).`);
+                } else if(rad.totalPlanta > 0 && rad.totalPendientesPlanta > 0) {
+                    hallazgos.push(`📍 <b>Avance Mensual (${rad.totalControladosPlanta}/${rad.totalPlanta}):</b> Secciones sin iniciar: ${rad.seccionesSinIniciar.join(', ') || 'Ninguna'} | En curso: ${rad.seccionesEnProgreso.join(', ') || 'Ninguna'}.`);
+                } else if(rad.totalPlanta > 0 && rad.totalPendientesPlanta === 0) {
+                    hallazgos.push(`🎉 <b>Cobertura Mensual Completa:</b> El 100% de los equipos (${rad.totalPlanta}) ya fue controlado este mes.`);
                 }
 
+                const idsTodos = Object.keys(clonConfig.equipos || {});
                 const sinUbi = idsTodos.filter(id => !clonConfig.equipos[id].ubicacion || clonConfig.equipos[id].ubicacion === 'S/D' || clonConfig.equipos[id].ubicacion === 'Pendiente en terreno').length;
                 const sinFotoRef = idsTodos.filter(id => !clonConfig.equipos[id].tieneFotoRef).length;
                 if(sinUbi > 0) {
                     hallazgos.push(`📌 <b>Equipos sin Ubicación Exacta:</b> Hay <b>${sinUbi} equipo(s)</b> pendientes de ubicación en terreno.`);
                 } else if(sinFotoRef > 0) {
-                    hallazgos.push(`🖼️ <b>Miniaturas de Referencia:</b> ${totalPlanta - sinFotoRef} con foto / ${sinFotoRef} sin foto de referencia (opcional en Control ➔ ✏️ Actualizar).`);
-                }
-
-                const mudanzas = Object.entries(clonConfig.mudanzasPendientes || {});
-                if(mudanzas.length > 0) {
-                    hallazgos.push(`🚚 <b>Mudanzas Reportadas en Terreno:</b> ${mudanzas.map(m => `${m[0]} (${m[1].de} ➔ ${m[1].a})`).join(', ')}.`);
+                    hallazgos.push(`🖼️ <b>Miniaturas de Referencia:</b> ${rad.totalPlanta - sinFotoRef} con foto / ${sinFotoRef} sin foto de referencia.`);
                 }
 
                 if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [] };
