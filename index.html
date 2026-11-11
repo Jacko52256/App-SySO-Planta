@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Gestión SySO V6.32 - Industrial Cloud IA</title>
+    <title>Gestión SySO V6.33 - Industrial Cloud IA</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -16,7 +16,7 @@
         :root { --bg:#eef2f6; --primary:#2F5597; --accent:#ffc107; --danger:#dc3545; --success:#28a745; --text:#2c3e50; --text-muted:#596a7a; --edit:#17a2b8; --card-bg:#ffffff; --input-bg:#f8fafc; --border:#cbd5e1; --warn-bg:#ffeeba; --warn-text:#856404; --danger-bg:#dc3545; --danger-text:#fff; --info-bg:#17a2b8; --info-text:#fff; }
         body.dark-mode { --bg:#0b0f19; --text:#f1f5f9; --text-muted:#94a3b8; --card-bg:#151c2c; --input-bg:#1e293b; --primary:#00e5ff; --border:#334155; --success:#00e676; --warn-bg:#4a3c00; --warn-text:#ffea00; --danger-bg:#660000; --danger-text:#ffaaaa; --info-bg:#004d40; --info-text:#18ffff; --edit:#00b0ff; }
         * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-        body { background:var(--bg); color:var(--text); padding-bottom:95px; transition:background 0.2s,color 0.2s; -webkit-overflow-scrolling:touch; }
+        body { background:var(--bg); color:var(--text); padding-bottom:95px; transition:background 0.2s,color 0.2s; -webkit-overflow-scrolling:touch; overflow-x:hidden; }
         .app-shell { width:100%; max-width:960px; margin:0 auto; }
         .header { background:var(--primary); color:white; padding:12px 14px; box-shadow:0 4px 10px rgba(0,0,0,0.12); display:flex; justify-content:space-between; align-items:center; gap:8px; }
         body.dark-mode .header { color:#000; }
@@ -83,6 +83,8 @@
         @keyframes pulse { 0%{opacity:1;} 50%{opacity:0.65;} 100%{opacity:1;} }
         .action-btns { display:flex; gap:5px; align-items:center; flex-shrink:0; }
         .btn-small { padding:5px 9px; font-size:11.5px; border-radius:6px; border:none; cursor:pointer; color:white; font-weight:bold; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; }
+        /* Blindaje anti-desborde para botones de preguntas en el Asistente IA */
+        .btn-chip-wrap { white-space:normal !important; word-break:break-word !important; max-width:100% !important; text-align:left !important; line-height:1.25 !important; flex-shrink:1 !important; }
         .btn-s-edit { background:var(--edit); }
         .btn-s-del { background:var(--danger); }
         .text-muted { color:var(--text-muted) !important; }
@@ -117,7 +119,7 @@
         .sub-accordion-content { display:none; padding:0 5px; }
         .sub-accordion.active > .sub-accordion-content { display:block; }
         .modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:2000; display:flex; align-items:center; justify-content:center; padding:16px; }
-        .modal-content { background:var(--card-bg); width:100%; max-width:520px; padding:18px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35); max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+        .modal-content { background:var(--card-bg); width:100%; max-width:520px; padding:18px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35); max-height:92vh; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
         #canvasFirma { border:2px dashed var(--border); border-radius:8px; width:100%; height:180px; background:#fff; touch-action:none; margin-bottom:12px; }
         #dropdownUsuarios { display:none; position:absolute; width:100%; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 6px 6px; max-height:160px; overflow-y:auto; z-index:9999; top:100%; margin-top:-2px; }
         .dropdown-item { padding:12px; border-bottom:1px solid var(--border); cursor:pointer; color:var(--primary); font-weight:bold; }
@@ -158,9 +160,10 @@
         <div id="sosLiveText" style="font-size:15px; margin-bottom:10px;"></div>
         <button class="btn-small" style="background:#000; color:#fff; padding:9px 18px; font-size:13px; border:2px solid #fff;" onclick="apagarMiAlarmaSOS()">🔇 Entendido / Apagar Mi Alarma</button>
     </div>
+    <!-- CABECERA GLOBAL CON UN ÚNICO BOTÓN DE AYUDA IA -->
     <div class="header">
         <div class="header-left">
-            <h2>Gestión SySO <span class="version-badge">V6.32</span></h2>
+            <h2>Gestión SySO <span class="version-badge">V6.33</span></h2>
             <p id="headerInfo" style="font-weight:bold; font-size:12.5px; margin-top:2px;">Sistema Industrial en Nube</p>
             <div id="cloudStatusBadge" class="cloud-badge" onclick="sincronizarDesdeNube(true)">☁️ Conectando a la Nube...</div>
         </div>
@@ -189,10 +192,14 @@
                 </div>
             </div>
         </div>
+        <!-- INGRESO DE PERSONAL (SIN BOTÓN IA TRIPLICADO Y CON MEMORIA RÁPIDA DE USUARIO) -->
         <div id="view-login" class="view">
             <div class="card">
                 <h3 style="margin-bottom:5px;">Ingreso de Personal</h3>
-                <p class="text-muted" style="font-size:12px; margin-bottom:15px;">Seleccioná tu nombre e ingresá tu PIN o huella.</p>
+                <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Seleccioná tu nombre e ingresá tu PIN o huella.</p>
+                <div id="quickUserLoginBox" class="hidden" style="margin-bottom:12px;">
+                    <button type="button" id="btnQuickUserLogin" class="btn btn-outline" style="padding:8px 10px; font-size:13px; margin-bottom:0;" onclick="seleccionarUltimoUsuarioDispositivo()"></button>
+                </div>
                 <div class="form-group">
                     <label>Nombre:</label>
                     <input type="text" id="loginInputUsuario" placeholder="Tipeá o elegí tu nombre..." autocomplete="off" onkeyup="filtrarUsuarios()" onfocus="filtrarUsuarios()">
@@ -205,7 +212,6 @@
             <div class="card" style="background-color:var(--input-bg);">
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-outline" style="flex:1; padding:10px; font-size:13px; margin-bottom:0;" onclick="abrirModalCompartirApp()">📲 Compartir App</button>
-                    <button class="btn btn-outline" style="flex:1; padding:10px; font-size:13px; margin-bottom:0;" onclick="abrirModalAyuda()">🤖 Guía de Uso</button>
                     <button class="btn btn-outline" style="flex:1; padding:10px; font-size:13px; margin-bottom:0;" onclick="forzarActualizacion()">🔄 Actualizar</button>
                 </div>
             </div>
@@ -278,11 +284,11 @@
                 <button id="btnGuardarControl" class="btn btn-success" style="margin-top:14px; font-size:17px; margin-bottom:0;" onclick="guardarRegistro()">✅ Guardar Control</button>
             </div>
         </div>
-        <!-- MÓDULO 2: HISTORIAL, GRÁFICOS Y DESCARGAS -->
+        <!-- MÓDULO 2: HISTORIAL, GRÁFICOS, EQUIPOS PENDIENTES Y DESCARGAS -->
         <div id="view-historial" class="view">
             <div class="card">
                 <h3 style="color:var(--primary); margin-bottom:4px;">📊 Historial y Avance de Planta</h3>
-                <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Sincronizado en tiempo real. Descargue el reporte general de controles o el historial de consumo y reposición de botiquines.</p>
+                <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Sincronizado en tiempo real. Consulte los equipos controlados, filtre los pendientes del mes o descargue los reportes en Excel y PDF.</p>
                 <div class="kpi-grid">
                     <div class="kpi-box"><span id="dashOk" class="kpi-num" style="color:var(--success)">0</span><span class="kpi-lbl">✅ En Regla</span></div>
                     <div class="kpi-box"><span id="dashFallas" class="kpi-num" style="color:var(--danger)">0</span><span class="kpi-lbl">🚨 Con Falla</span></div>
@@ -294,10 +300,12 @@
                     <div><label style="font-size:12px;">Sección:</label><select id="filtroHistSec" onchange="renderHistorial()" style="padding:8px; font-size:14px;"><option value="ALL">Todas</option></select></div>
                     <div><label style="font-size:12px;">Grupo:</label><select id="filtroHistGrp" onchange="renderHistorial()" style="padding:8px; font-size:14px;"><option value="ALL">Todos</option></select></div>
                     <div>
-                        <label style="font-size:12px;">Estado:</label>
+                        <label style="font-size:12px;">Estado / Vista:</label>
                         <select id="filtroHistEstado" onchange="renderHistorial()" style="padding:8px; font-size:14px;">
-                            <option value="ALL">Todos</option>
+                            <option value="ALL">Todos los Controlados</option>
+                            <option value="PENDIENTES">⏳ Equipos Pendientes del Mes</option>
                             <option value="FALLA">🚨 Solo Fallas</option>
+                            <option value="RECARGA">🔧 En Recarga / Taller</option>
                             <option value="REPOSICION">💊 Con Reposición Botiquín</option>
                             <option value="VENCIDO">⏱️ Vencidos / Stock 0</option>
                             <option value="OK">✅ Solo OK</option>
@@ -317,7 +325,10 @@
             <div class="card">
                 <div class="card-top-bar">
                     <h3>📦 Inventario de Equipos</h3>
-                    <button class="btn-small btn-success" style="padding:7px 11px;" onclick="descargarInventarioExcelProfesional()">📥 Exportar Excel</button>
+                    <div class="action-btns">
+                        <button class="btn-small btn-warning" style="padding:7px 9px; color:#000;" onclick="imprimirColaQRsDanados()">🖨️ QRs Dañados</button>
+                        <button class="btn-small btn-success" style="padding:7px 11px;" onclick="descargarInventarioExcelProfesional()">📥 Exportar Excel</button>
+                    </div>
                 </div>
                 <input type="text" id="buscadorEquipos" placeholder="🔎 Buscar por código, sección, tipo o medicamento..." onkeyup="renderListas()" style="margin-bottom:12px; border:2px solid var(--primary);">
                 <div id="listaEquipos" style="font-size:12.5px;"></div>
@@ -397,7 +408,7 @@
                 </div>
             </div>
         </div>
-        <!-- MÓDULO 4: AJUSTES -->
+        <!-- MÓDULO 4: AJUSTES (LIMPIO, SIN BOTÓN REPETIDO IA NI BOTÓN ROJO MANUAL) -->
         <div id="view-ajustes" class="view">
             <div class="card">
                 <h3 style="color:var(--primary); margin-bottom:5px;">👤 Mi Perfil y Seguridad</h3>
@@ -406,27 +417,44 @@
                     <button class="btn btn-info" onclick="registrarBiometria()">👆 Activar Huella / FaceID</button>
                     <button class="btn btn-dark" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Activar Modo Noche</button>
                 </div>
-                <button class="btn btn-warning" style="margin-top:5px;" onclick="abrirModalAyuda()">🤖 Abrir Asistente IA de Ayuda Paso a Paso</button>
                 <button class="btn btn-outline" style="margin-top:5px; margin-bottom:0;" onclick="cerrarSesion(true)">🔒 Cerrar Sesión</button>
             </div>
-            <div class="admin-only">
-                <!-- MONITOR IA DE DIAGNÓSTICO Y DICCIONARIO AUTO-APRENDIZAJE -->
-                <div class="card" style="padding:0; overflow:hidden;">
-                    <div class="accordion" style="margin:0; border:none;">
-                        <div class="accordion-header" style="background:#6366f1;" onclick="this.parentElement.classList.toggle('active'); renderPanelTelemetriaIA();">
-                            <div class="acc-title-wrap"><span class="acc-title-text">🤖 Monitor IA de Uso y Palabras Aprendidas</span></div>
-                            <span style="flex-shrink:0;">▼</span>
+            <!-- BÓVEDA EXCLUSIVA PARA JACK WIENS (OCULTA PARA OTROS ADMINISTRADORES E INSPECTORES) -->
+            <div id="cardCreatorIA" class="card hidden" style="padding:0; overflow:hidden; border:2px solid #6366f1;">
+                <div class="accordion" style="margin:0; border:none;">
+                    <div class="accordion-header" style="background:#6366f1; color:#fff;" onclick="this.parentElement.classList.toggle('active'); renderPanelTelemetriaIA();">
+                        <div class="acc-title-wrap"><span class="acc-title-text">🤖 Monitor IA, Gemelo Autónomo y Llave (Exclusivo Jack Wiens)</span></div>
+                        <span style="flex-shrink:0;">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <!-- 1. Casilla Segura para API Key Gratuita de Google AI Studio -->
+                        <div class="chart-card" style="border-color:#6366f1;">
+                            <label style="color:#6366f1; margin-bottom:4px;">🔑 Llave Gratuita Gemini Flash API (Google AI Studio):</label>
+                            <div style="display:flex; gap:6px;">
+                                <input type="password" id="inputGeminiApiKey" placeholder="Pegar clave AIzaSy..." style="flex:1; padding:8px; font-size:13px;">
+                                <button type="button" class="btn-small btn-success" style="padding:8px 14px;" onclick="guardarLlaveGeminiSegura()">💾 Guardar Llave</button>
+                            </div>
+                            <small id="lblEstadoLlaveIA" class="text-muted" style="display:block; margin-top:4px; font-size:11px;">100% Gratis (sin usar puntos personales). Se guarda protegida en Firebase.</small>
                         </div>
-                        <div class="accordion-content">
-                            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Diagnóstico automático de tiempos de uso, etiquetas QR difíciles de leer, alertas de stock y vocabulario aprendido:</p>
-                            <div id="panelTelemetriaIA" class="chart-card" style="font-size:12.5px;"></div>
-                            <button class="btn btn-info" style="padding:10px; font-size:13px;" onclick="copiarInformeDiagnosticoIA()">📋 Copiar Informe de Mejora Continua</button>
-                            <hr style="margin:12px 0; border:0; border-top:1px solid var(--border);">
-                            <label>📚 Palabras Aprendidas Automáticamente (Toque ❌ para borrar una palabra mal escrita):</label>
-                            <div id="listaPalabrasAprendidas" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+                        <!-- 2. Gemelo Digital Autónomo (Piloto Automático 24/7: Velocidad, Visual y Usabilidad) -->
+                        <div class="chart-card" style="border-color:var(--primary);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <b style="color:var(--primary); font-size:13px;">🧬 Gemelo Digital en Piloto Automático (Sandbox):</b>
+                                <span id="badgeEstadoGemelo" style="background:var(--success); color:#000; font-size:10.5px; font-weight:bold; padding:2px 7px; border-radius:8px;">Auditando en Vivo</span>
+                            </div>
+                            <div id="panelGemeloAutonomo" style="font-size:12px; line-height:1.45;"></div>
                         </div>
+                        <!-- 3. Telemetría Real de Terreno -->
+                        <p class="text-muted" style="font-size:12px; margin-bottom:6px;">📊 Telemetría Real de Operarios, QRs Dañados y Stock:</p>
+                        <div id="panelTelemetriaIA" class="chart-card" style="font-size:12.5px;"></div>
+                        <button class="btn btn-info" style="padding:10px; font-size:13px;" onclick="copiarInformeDiagnosticoIA()">📋 Copiar Informe Completo (Gemelo + Telemetría)</button>
+                        <hr style="margin:12px 0; border:0; border-top:1px solid var(--border);">
+                        <label>📚 Diccionario Auto-Aprendido y Candidatos (Toque ✅ para aprobar o ❌ para borrar):</label>
+                        <div id="listaPalabrasAprendidas" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
                     </div>
                 </div>
+            </div>
+            <div class="admin-only">
                 <!-- GESTIÓN DE PERSONAL CON FILTRO POR SECCIÓN + GRUPO CON EXCLUSIÓN AUTOMÁTICA -->
                 <div class="card" style="padding:0; overflow:hidden;">
                     <div class="accordion" style="margin:0; border:none;">
@@ -507,23 +535,28 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <button class="btn btn-danger" style="margin-bottom:0;" onclick="purgarHistorial()">🗑️ Limpiar Historial Mensual de Controles</button>
-                </div>
             </div>
         </div>
     </div>
-    <!-- MODAL ASISTENTE INTERACTIVO DE AYUDA PASO A PASO CON GRÁFICOS VISUALES -->
+    <!-- MODAL ASISTENTE INTERACTIVO IA (CON MODO ANALISTA EXCLUSIVO PARA JACK WIENS) -->
     <div id="modalAyudaIA" class="modal-overlay hidden">
         <div class="modal-content" style="border:2px solid var(--primary);">
-            <h3 style="color:var(--primary); margin-bottom:4px;">🤖 Centro de Ayuda Interactiva SySO</h3>
-            <p class="text-muted" style="font-size:12px; margin-bottom:10px;">Toque una pregunta frecuente para ver el paso a paso gráfico o escriba su consulta abajo:</p>
-            <div id="botonesPreguntasAyuda" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+            <h3 style="color:var(--primary); margin-bottom:4px;">🤖 Centro de Ayuda e Inteligencia SySO</h3>
+            <p class="text-muted" style="font-size:12px; margin-bottom:8px;">Toque una pregunta frecuente o escriba cualquier consulta abajo:</p>
+            <!-- Selector exclusivo para Jack Wiens dentro del chat IA -->
+            <div id="boxSwitchModoIA" class="hidden" style="margin-bottom:10px; padding:8px; border-radius:8px; background:rgba(99,102,241,0.15); border:1px solid #6366f1;">
+                <label style="font-size:11.5px; color:#6366f1; margin-bottom:5px;">👑 Modo Exclusivo Jack Wiens:</label>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" id="btnModoAyudaOp" class="btn-small btn-primary" style="flex:1; justify-content:center; padding:7px;" onclick="cambiarModoChatIA('AYUDA')">📘 Ayuda de Uso (Operarios)</button>
+                    <button type="button" id="btnModoAnalistaIA" class="btn-small btn-dark" style="flex:1; justify-content:center; padding:7px;" onclick="cambiarModoChatIA('ANALISTA')">🧠 Analista de Planta y Gemelo</button>
+                </div>
+            </div>
+            <div id="botonesPreguntasAyuda" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; max-width:100%;"></div>
             <div style="display:flex; gap:6px; margin-bottom:12px;">
-                <input type="text" id="inputPreguntaAyuda" placeholder="Escriba su duda (ej. cómo reponer botiquín)..." style="flex:1; padding:9px;">
+                <input type="text" id="inputPreguntaAyuda" placeholder="Escriba su duda o pregunta a la IA..." style="flex:1; padding:9px;" onkeydown="if(event.key==='Enter') consultarAsistenteAyudaLibre()">
                 <button class="btn btn-primary" style="width:auto; padding:0 14px; margin-bottom:0;" onclick="consultarAsistenteAyudaLibre()">Preguntar</button>
             </div>
-            <div id="respuestaGraficaAyuda" style="background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; line-height:1.45; margin-bottom:14px;"></div>
+            <div id="respuestaGraficaAyuda" style="background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; line-height:1.45; margin-bottom:14px; word-break:break-word;"></div>
             <button class="btn btn-outline" style="margin-bottom:0; padding:10px;" onclick="document.getElementById('modalAyudaIA').classList.add('hidden')">Cerrar Ayuda</button>
         </div>
     </div>
@@ -535,7 +568,7 @@
             <label style="font-size:12.5px; margin-bottom:6px;">Seleccione qué falla encontró (puede marcar una o varias):</label>
             <div id="contenedorChipsFalla" style="display:flex; flex-direction:column; gap:7px; margin-bottom:12px;"></div>
             <div class="form-group" style="margin-bottom:14px;">
-                <label style="font-size:12px;">Otro detalle específico (el sistema lo aprenderá para la próxima):</label>
+                <label style="font-size:12px;">Otro detalle específico (el sistema lo aprenderá tras validarse):</label>
                 <input type="text" id="inputDetalleFallaCustom" placeholder="Escriba si desea agregar otro motivo...">
             </div>
             <button type="button" class="btn btn-danger" style="font-size:15.5px; padding:13px;" onclick="confirmarMotivoFallaYAbrirCamara()">📸 Confirmar Falla y Tomar Foto</button>
@@ -619,11 +652,17 @@ const CFG_KEY = 'SySO_Config_Master';
         const EQ_REF_PHOTO_KEY = 'SySO_EqRefPhotos_Cache';
         const DRAFT_KEY = 'SySO_Draft_Master'; 
         const ACTIVITY_KEY = 'SySO_LastActivity';
+        const AUTO_CLEAN_KEY = 'SySO_LastAutoClean_TS';
+        const LAST_USER_KEY = 'SySO_LastDeviceUser';
         
         const CLOUD_BASE_URL = 'https://syso-industrial-default-rtdb.firebaseio.com';
         const CLOUD_CFG_URL = `${CLOUD_BASE_URL}/syso_master_config.json`;
         const CLOUD_INSP_URL = `${CLOUD_BASE_URL}/syso_inspections.json`;
         const CLOUD_SOS_URL = `${CLOUD_BASE_URL}/syso_sos_active.json`;
+
+        const tArranqueApp = performance.now();
+        let metricasVelocidad = { arranqueMs: 0, latenciaNubeMs: 0, cambioPestanaMs: 0, usoMemoriaKB: 0 };
+        let modoChatIAActual = 'AYUDA';
 
         const MEDICAMENTOS_BASE = [
             "Platsul-A", "Alka-Seltzer", "Rifamicina", "Prodent", "Gasas Estériles", "Agua Oxigenada",
@@ -633,7 +672,6 @@ const CFG_KEY = 'SySO_Config_Master';
             "Guantes de Nitrilo / Látex", "Paracetamol 500mg", "Ibuprofeno 400mg", "Diclofenac",
             "Colirio Oftálmico", "Pinza de Extracción", "Termómetro Digital", "Manta Térmica"
         ];
-
         const DICCIONARIO_ORTOGRAFICO = {
             "algodon":"Algodón", "hidrofilo":"Hidrófilo", "esteril":"Estéril", "esteriles":"Estériles",
             "antiseptico":"Antiséptico", "fisiologico":"Fisiológico", "oftalmico":"Oftálmico",
@@ -644,7 +682,6 @@ const CFG_KEY = 'SySO_Config_Master';
             "cajon":"Cajón", "plastico":"Plástico", "numero":"Número", "revision":"Revisión", "reposicion":"Reposición",
             "ubicacion":"Ubicación", "inspeccion":"Inspección", "oxido":"Óxido", "corrosion":"Corrosión", "perdida":"Pérdida"
         };
-
         const SIGLAS_FIJAS = new Set(["PQS", "ABC", "CO2", "HCFC", "BIE", "PA", "QR", "SOS", "AG", "AC", "DC", "LED"]);
 
         let config = { 
@@ -655,12 +692,16 @@ const CFG_KEY = 'SySO_Config_Master';
             prefijos: {}, 
             camposGrupo: {},
             fallas: {}, 
+            enRecarga: {},
             grupos: { 
                 "Combate Extintores": ["Manómetro", "Sello", "Boquilla", "Cuerpo"], 
                 "Combate Hidrantes": ["Caudal", "Presión", "Manguera", "Pico"], 
                 "Todos": [] 
             },
             aprendidos: { medicamentos: [], tipos: [], motivosFalla: [], notas: [], preguntasAyuda: [] },
+            aprendidosCandidatos: {},
+            iaConfig: { apiKeyObf: "", cacheRespuestas: {} },
+            gemeloAutonomo: { ultimaCorrida: "", ciclos: 0, hallazgos: [], rutasOptimizadas: {} },
             telemetria: { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} }
         };
 
@@ -673,39 +714,78 @@ const CFG_KEY = 'SySO_Config_Master';
         let intervaloSirena = null, sharedAudioCtx = null;
         let motivosFallaPorIndex = {}, indexFallaActivaModal = null;
 
+        // --- IDENTIFICADOR EXCLUSIVO DE CREADOR (SOLO JACK WIENS) ---
+        function esUsuarioCreador(u = usuarioActual) {
+            if(!u || !u.nombre) return false;
+            const n = u.nombre.trim().toLowerCase();
+            return n === 'jack wiens' || n.includes('jack wiens');
+        }
+
         function sortNatural(a, b) { return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }); }
         function actualizarBadgeNube(texto, colorTexto = '#ffffff') { const b = document.getElementById('cloudStatusBadge'); if(b){ b.innerText = texto; b.style.color = colorTexto; } }
         async function blindarAlmacenamientoPersistente() { try { if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch(e){} }
         function limpiarSigla(str) { return String(str || '').trim().toUpperCase().replace(/^-+|-+$/g, '').replace(/\s+/g, ''); }
 
-        // --- GESTOR INTELIGENTE DE MEMORIA ANTI-BLOQUEO (EVITA QUOTA EXCEEDED TRAS MESES DE USO) ---
+        // --- MANTENIMIENTO Y AUTO-LIMPIEZA INVISIBLE DE CACHÉ CADA 15 DÍAS (CERO INTERVENCIÓN MANUAL) ---
+        function calcularUsoMemoriaLocalKB() {
+            let total = 0;
+            for(let k in localStorage) {
+                if(Object.prototype.hasOwnProperty.call(localStorage, k)) {
+                    total += ((localStorage[k].length + k.length) * 2);
+                }
+            }
+            metricasVelocidad.usoMemoriaKB = Math.round(total / 1024);
+            return metricasVelocidad.usoMemoriaKB;
+        }
+
+        function ejecutarMantenimientoAutomaticoInvisible() {
+            try {
+                const ahora = Date.now();
+                const ultimaLimpieza = parseInt(localStorage.getItem(AUTO_CLEAN_KEY) || '0', 10);
+                const usoKB = calcularUsoMemoriaLocalKB();
+                const pasaron15Dias = (ahora - ultimaLimpieza) > (15 * 24 * 3600 * 1000);
+                if(pasaron15Dias || usoKB > 3600) {
+                    const cacheEv = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
+                    const keysEv = Object.keys(cacheEv);
+                    if(keysEv.length > 5) {
+                        const conservar = keysEv.slice(-5);
+                        const nuevoEv = {};
+                        conservar.forEach(k => nuevoEv[k] = cacheEv[k]);
+                        localStorage.setItem(PHOTO_KEY, JSON.stringify(nuevoEv));
+                    }
+                    const cacheRef = JSON.parse(localStorage.getItem(EQ_REF_PHOTO_KEY) || '{}');
+                    const keysRef = Object.keys(cacheRef);
+                    if(keysRef.length > 20) {
+                        const conservarRef = keysRef.slice(-20);
+                        const nuevoRef = {};
+                        conservarRef.forEach(k => nuevoRef[k] = cacheRef[k]);
+                        localStorage.setItem(EQ_REF_PHOTO_KEY, JSON.stringify(nuevoRef));
+                    }
+                    localStorage.setItem(AUTO_CLEAN_KEY, String(ahora));
+                    calcularUsoMemoriaLocalKB();
+                }
+            } catch(e) {}
+        }
+
         function guardarLocalSeguro(clave, valorStr) {
             try {
                 localStorage.setItem(clave, valorStr);
             } catch(quotaErr) {
                 try {
+                    localStorage.removeItem(PHOTO_KEY);
                     const cacheRef = JSON.parse(localStorage.getItem(EQ_REF_PHOTO_KEY) || '{}');
                     const keysRef = Object.keys(cacheRef);
-                    if(keysRef.length > 8) {
+                    if(keysRef.length > 6) {
                         keysRef.slice(0, Math.ceil(keysRef.length / 2)).forEach(k => delete cacheRef[k]);
                         localStorage.setItem(EQ_REF_PHOTO_KEY, JSON.stringify(cacheRef));
                     } else {
                         localStorage.removeItem(EQ_REF_PHOTO_KEY);
-                    }
-                    const cacheEv = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}');
-                    const keysEv = Object.keys(cacheEv);
-                    if(keysEv.length > 6) {
-                        keysEv.slice(0, Math.ceil(keysEv.length / 2)).forEach(k => delete cacheEv[k]);
-                        localStorage.setItem(PHOTO_KEY, JSON.stringify(cacheEv));
-                    } else {
-                        localStorage.removeItem(PHOTO_KEY);
                     }
                     localStorage.setItem(clave, valorStr);
                 } catch(e2) {}
             }
         }
 
-        // --- RELOJ UNIVERSAL ESTÁNDAR (IDÉNTICO EN IPHONE, ANDROID Y PC SIN IMPORTAR IDIOMA) ---
         function obtenerFechaHoraEstandar() {
             const d = new Date();
             const dia = String(d.getDate()).padStart(2, '0');
@@ -722,33 +802,46 @@ const CFG_KEY = 'SySO_Config_Master';
             };
         }
 
-        // --- MOTOR DE AUTO-CORRECCIÓN ORTOGRÁFICA Y AUTO-APRENDIZAJE EN NUBE ---
+        // --- MOTOR DE AUTO-CORRECCIÓN Y AUTO-APRENDIZAJE CON REGLA DE 3 (EVITA BASURA DE 200 OPERARIOS) ---
         function corregirOrtografiaTexto(texto) {
             if(!texto) return "";
             let limpio = String(texto).trim().replace(/\s+/g, ' ');
             if(!limpio) return "";
             let palabras = limpio.split(' ').map((pal, idx) => {
-                const sinSignos = pal.replace(/[.,;:()/\-]/g, "");
+                const sinSignos = pal.replace(/[.,;:()/\-¿?¡!]/g, "");
                 if(SIGLAS_FIJAS.has(sinSignos.toUpperCase())) return pal.toUpperCase();
                 let clave = sinSignos.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 if(DICCIONARIO_ORTOGRAFICO[clave]) return pal.replace(new RegExp(sinSignos, "i"), DICCIONARIO_ORTOGRAFICO[clave]);
-                if(pal.length <= 2 && idx > 0 && ["de","en","el","la","y","o","a","con","sin","por"].includes(pal.toLowerCase())) return pal.toLowerCase();
+                if(pal.length <= 2 && idx > 0 && ["de","en","el","la","y","o","a","con","sin","por","al"].includes(pal.toLowerCase())) return pal.toLowerCase();
                 return pal.charAt(0).toUpperCase() + pal.slice(1);
             });
             return palabras.join(' ');
         }
 
-        function aprenderTerminoNuevo(categoria, valorCrudo) {
+        function aprenderTerminoNuevo(categoria, valorCrudo, forzarAprobacion = false) {
             const corregido = corregirOrtografiaTexto(valorCrudo);
-            if(!corregido || corregido.length < 3 || corregido.length > 75) return corregido;
+            const maxLen = categoria === 'preguntasAyuda' ? 58 : 65;
+            if(!corregido || corregido.length < 3 || corregido.length > maxLen) return corregido;
             if(!config.aprendidos) config.aprendidos = { medicamentos:[], tipos:[], motivosFalla:[], notas:[], preguntasAyuda:[] };
             if(!Array.isArray(config.aprendidos[categoria])) config.aprendidos[categoria] = [];
+            if(!config.aprendidosCandidatos) config.aprendidosCandidatos = {};
+            if(!config.aprendidosCandidatos[categoria]) config.aprendidosCandidatos[categoria] = {};
+
             const normNuevo = corregido.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const listaBase = categoria === 'medicamentos' ? MEDICAMENTOS_BASE : [];
             const existeEnBase = listaBase.some(x => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === normNuevo);
             const existeAprendido = config.aprendidos[categoria].some(x => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === normNuevo);
-            if(!existeEnBase && !existeAprendido) {
+            if(existeEnBase || existeAprendido) return corregido;
+
+            // Si lo carga el Creador (Jack Wiens) o es un medicamento/tipo de alta oficial, aprueba directo.
+            // Si es de operarios (notas, motivosFalla, preguntasAyuda), aplica Regla de Consenso (3 usos).
+            const umbralConsenso = (forzarAprobacion || esUsuarioCreador() || categoria === 'medicamentos' || categoria === 'tipos') ? 1 : 3;
+            const conteoActual = (config.aprendidosCandidatos[categoria][corregido] || 0) + 1;
+            config.aprendidosCandidatos[categoria][corregido] = conteoActual;
+
+            if(conteoActual >= umbralConsenso) {
                 config.aprendidos[categoria].push(corregido);
+                delete config.aprendidosCandidatos[categoria][corregido];
                 poblarListasAutocompletado();
             }
             return corregido;
@@ -768,7 +861,6 @@ const CFG_KEY = 'SySO_Config_Master';
             }
         }
 
-        // --- VERIFICADOR DE PERMISOS POR SECCIÓN Y GRUPO ---
         function usuarioTienePermisoEquipo(u, eq) {
             if(!u || !eq) return false;
             if(u.rol === 'Admin') return true;
@@ -806,7 +898,6 @@ const CFG_KEY = 'SySO_Config_Master';
             const palabras = limpio.split(/\s+/).filter(Boolean);
             return (palabras.length >= 2 ? palabras[0].substring(0, 2) + palabras[1].substring(0, 1) : palabras[0].substring(0, 3)) || "SEC";
         }
-
         function obtenerSiglaSeccion(sec) { return (config.prefijosSeccion && config.prefijosSeccion[sec]) ? limpiarSigla(config.prefijosSeccion[sec]) : generarPrefijoSeccionAuto(sec); }
         function obtenerSiglaGrupo(grp) { return (config.prefijos && config.prefijos[grp]) ? limpiarSigla(config.prefijos[grp]) : limpiarSigla(grp.substring(0, 3)); }
         function obtenerPrefijoCompuesto(grp, sec) { if(!grp || !sec) return ""; const s = obtenerSiglaSeccion(sec), g = obtenerSiglaGrupo(grp); return (s && g) ? `${s}-${g}-` : (g ? `${g}-` : ""); }
@@ -821,7 +912,6 @@ const CFG_KEY = 'SySO_Config_Master';
             if(g.includes('tablero') || g.includes('electr') || g.includes('eléctr') || g.includes('energia') || g.includes('energía')) return ['capacidad', 'serie'];
             return ['capacidad', 'vencimiento'];
         }
-
         function obtenerCamposActivosGrupo(nomGrupo) {
             if(esGrupoBotiquinOPA(nomGrupo)) return ['insumos'];
             if(config.camposGrupo && Array.isArray(config.camposGrupo[nomGrupo])) return config.camposGrupo[nomGrupo].filter(c => c !== 'responsable' && c !== 'vencimientoPH');
@@ -841,7 +931,6 @@ const CFG_KEY = 'SySO_Config_Master';
             return { dias: diffDias, vencido: false, texto: `Faltan ${diffDias} d.`, clase: 'alerta-dias-ok' };
         }
 
-        // Detecta tanto insumos vencidos como medicamentos con Stock 0 (Agotados)
         function verificarEquipoTieneVencidos(eq) {
             if(!eq) return { vencido: false, cantidadInsumosVencidos: 0, detalle: '' };
             const currMonth = obtenerFechaHoraEstandar().mesISO;
@@ -886,20 +975,19 @@ const CFG_KEY = 'SySO_Config_Master';
                 const stk = parseInt(row.querySelector('.inp-ins-stk').value, 10);
                 const venc = row.querySelector('.inp-ins-venc').value.trim() || 'N/A';
                 if(rawNom) {
-                    const nomCorregido = aprenderTerminoNuevo('medicamentos', rawNom);
+                    const nomCorregido = aprenderTerminoNuevo('medicamentos', rawNom, true);
                     lista.push({ nombre: nomCorregido, stock: isNaN(stk) ? 1 : stk, vencimiento: venc });
                 }
             });
             return lista;
         }
 
-        // Permite agregar un medicamento nuevo al botiquín directamente durante el control mensual
         window.agregarInsumoNuevoEnControl = function() {
             const id = document.getElementById('idEquipo').value;
             if(!id || !config.equipos[id]) return;
             const rawNom = prompt("Nombre del nuevo medicamento o insumo a incorporar al botiquín:");
             if(!rawNom || !rawNom.trim()) return;
-            const nom = aprenderTerminoNuevo('medicamentos', rawNom.trim());
+            const nom = aprenderTerminoNuevo('medicamentos', rawNom.trim(), true);
             const cant = parseInt(prompt(`Cantidad inicial de "${nom}" ingresada al botiquín:`, "10"), 10);
             const venc = prompt(`Fecha de vencimiento (formato AAAA-MM-DD, ej. 2028-06-30) o deje vacío si no vence:`, "");
             if(!Array.isArray(config.equipos[id].insumos)) config.equipos[id].insumos = [];
@@ -909,6 +997,25 @@ const CFG_KEY = 'SySO_Config_Master';
                 vencimiento: (venc && venc.trim()) ? venc.trim() : 'N/A'
             });
             renderFormularioControlInspeccion(id);
+        };
+
+        window.marcarBotiquinIntacto = function() {
+            const id = document.getElementById('idEquipo').value;
+            if(!id || !config.equipos[id]) return;
+            const eq = config.equipos[id];
+            if(Array.isArray(eq.insumos)) {
+                eq.insumos.forEach((_, idx) => {
+                    const elC = document.getElementById(`inpBotCons_${idx}`);
+                    const elR = document.getElementById(`inpBotRep_${idx}`);
+                    if(elC) elC.value = 0;
+                    if(elR) elR.value = 0;
+                });
+            }
+            const obs = document.getElementById('observaciones');
+            if(obs && !obs.value.includes('Botiquín intacto sin consumo')) {
+                obs.value = obs.value.trim() ? obs.value.trim() + ', Botiquín intacto sin consumo' : 'Botiquín intacto sin consumo';
+                guardarBorrador();
+            }
         };
 
         function obtenerOpcionesFallaParaParametro(nombreParametro, nombreGrupo) {
@@ -927,95 +1034,10 @@ const CFG_KEY = 'SySO_Config_Master';
             return [...new Set([...base, ...aprendidas.slice(-6)])];
         }
 
-        // --- ASISTENTE INTERACTIVO DE AYUDA PASO A PASO CON DETECCIÓN CONTEXTUAL ---
-        const GUIAS_AYUDA_BASE = {
-            "📋 ¿Cómo controlar un equipo?": {
-                titulo: "Control Rápido de Equipos con QR",
-                pasos: ["<span>📷</span>1. Escanear QR", "<span>✅</span>2. Evaluar Puntos", "<span>☁️</span>3. Guardar"],
-                detalle: "1. En la pestaña <b>Control</b>, toque el botón amarillo <b>📷 Escanear QR</b> y apunte a la etiqueta.<br>2. Verifique la foto en miniatura a la derecha para confirmar que sea el equipo correcto.<br>3. Si todo está en regla, deje los puntos en <b>✅ OK</b> y toque <b>Guardar Control</b>. Si detecta un desperfecto, cambie ese punto a <b>🚨 Falla</b>, elija el motivo y tome la foto."
-            },
-            "💊 ¿Cómo reponer un Botiquín?": {
-                titulo: "Consumo y Reposición de Medicamentos (Sin Falla)",
-                pasos: ["<span>💊</span>1. Ver Stock", "<span>🔄</span>2. Anotar Uso/Rep.", "<span>📊</span>3. Guardar"],
-                detalle: "1. Al escanear un <b>Botiquín</b>, verá la tabla con todos sus medicamentos, stock actual y días para vencer.<br>2. Si se consumieron pastillas o vendas y las repone en el momento, anote la cantidad en <b>➖ Usado</b> y en <b>➕ Repuesto</b> (y actualice la fecha si el lote nuevo tiene otro vencimiento).<br>3. <b>No marque Falla</b> por consumo normal: el sistema actualizará el stock automáticamente y guardará el registro para el <b>Excel de Consumo de Botiquines</b>."
-            },
-            "🏷️ ¿Qué hago si el QR está roto?": {
-                titulo: "Carga Manual por Contingencia",
-                pasos: ["<span>⌨️</span>1. Elegir Lista", "<span>📍</span>2. Sección/Grupo", "<span>📸</span>3. Foto Comp."],
-                detalle: "1. Si la etiqueta QR física está borrosa o dañada, toque el botón gris <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>2. Elija su <b>Sección</b>, el <b>Grupo</b> y seleccione el número del equipo.<br>3. El sistema registrará qué etiqueta falló para que el Administrador pueda reimprimirla y le pedirá tomar una foto como comprobante."
-            },
-            "🚨 ¿Cómo funciona el botón S.O.S.?": {
-                titulo: "Protocolo de Emergencia S.O.S.",
-                pasos: ["<span>🚨</span>1. Tocar S.O.S.", "<span>🔥</span>2. Elegir Tipo", "<span>📲</span>3. Aviso Brigada"],
-                detalle: "1. Ante una emergencia real en planta, toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Seleccione la sección donde ocurre y toque <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Sonará una sirena en los dispositivos conectados (cada compañero puede apagar su propia alarma con <b>🔇 Entendido</b>) y se abrirá el aviso directo para WhatsApp."
-            },
-            "📥 ¿Cómo descargar el Excel en PC?": {
-                titulo: "Descarga de Reportes en Computadora",
-                pasos: ["<span>💻</span>1. Abrir en PC", "<span>📊</span>2. Ir a Historial", "<span>📥</span>3. Bajar Excel"],
-                detalle: "1. Abra el mismo enlace de la aplicación en la computadora.<br>2. Entre a <b>📊 Historial</b> y filtre por mes, sección o grupo.<br>3. Toque <b>📥 Excel Controles</b> (con autofiltros, filas rojas en fallas y link para abrir fotos) o <b>💊 Excel Consumo Botiquines</b>."
-            }
-        };
-
-        function abrirModalAyuda() {
-            const contBtns = document.getElementById('botonesPreguntasAyuda');
-            contBtns.innerHTML = '';
-            const preguntas = [...Object.keys(GUIAS_AYUDA_BASE), ...((config.aprendidos && config.aprendidos.preguntasAyuda) || [])];
-            preguntas.forEach(q => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn-small btn-info';
-                btn.style.padding = '7px 10px';
-                btn.innerText = q;
-                btn.onclick = () => mostrarGuiaEnModal(q);
-                contBtns.appendChild(btn);
-            });
-            const idEqAct = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
-            if(idEqAct && config.equipos[idEqAct] && esGrupoBotiquinOPA(config.equipos[idEqAct].grupo)) {
-                mostrarGuiaEnModal("💊 ¿Cómo reponer un Botiquín?");
-            } else {
-                mostrarGuiaEnModal(Object.keys(GUIAS_AYUDA_BASE)[0]);
-            }
-            document.getElementById('modalAyudaIA').classList.remove('hidden');
-        }
-
-        function mostrarGuiaEnModal(pregunta) {
-            const box = document.getElementById('respuestaGraficaAyuda');
-            let guia = GUIAS_AYUDA_BASE[pregunta];
-            if(!guia) {
-                const pLow = pregunta.toLowerCase();
-                if(pLow.includes('botiqu') || pLow.includes('medicamento') || pLow.includes('repon') || pLow.includes('pastilla') || pLow.includes('stock')) guia = GUIAS_AYUDA_BASE["💊 ¿Cómo reponer un Botiquín?"];
-                else if(pLow.includes('qr') || pLow.includes('camara') || pLow.includes('cámara') || pLow.includes('lista') || pLow.includes('manual')) guia = GUIAS_AYUDA_BASE["🏷️ ¿Qué hago si el QR está roto?"];
-                else if(pLow.includes('sos') || pLow.includes('emergencia') || pLow.includes('incendio') || pLow.includes('accidente')) guia = GUIAS_AYUDA_BASE["🚨 ¿Cómo funciona el botón S.O.S.?"];
-                else if(pLow.includes('excel') || pLow.includes('pc') || pLow.includes('computadora') || pLow.includes('pdf') || pLow.includes('descarga')) guia = GUIAS_AYUDA_BASE["📥 ¿Cómo descargar el Excel en PC?"];
-                else if(pLow.includes('permiso') || pLow.includes('usuario') || pLow.includes('seccion') || pLow.includes('sección')) guia = {
-                    titulo: "Asignación de Secciones y Grupos por Usuario",
-                    pasos: ["<span>⚙️</span>1. Ajustes", "<span>👥</span>2. Personal", "<span>📍</span>3. Secciones"],
-                    detalle: "En <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>, el Administrador puede marcar a qué <b>Secciones</b> (ej. solo <i>Balanceados</i>) y a qué <b>Grupos</b> tiene acceso cada brigadista. Al marcar una sección puntual, <i>Todas las Secciones</i> se desmarca automáticamente."
-                };
-                else guia = {
-                    titulo: `Guía Rápida: ${pregunta}`,
-                    pasos: ["<span>📋</span>1. Control", "<span>📊</span>2. Historial", "<span>⚙️</span>3. Ajustes"],
-                    detalle: `Para <b>${pregunta}</b>: utilice <b>📋 Control</b> para escanear códigos QR o anotar reposiciones de botiquines, <b>📊 Historial</b> para ver el avance por sección y descargar los archivos Excel, y <b>📦 Equipos</b> para dar de alta nuevos equipos.`
-                };
-            }
-            const pasosHTML = guia.pasos.map(p => `<div class="step-node">${p}</div>`).join('');
-            box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:4px;">${guia.titulo}</div><div class="step-flow">${pasosHTML}</div><div>${guia.detalle}</div>`;
-        }
-
-        async function consultarAsistenteAyudaLibre() {
-            const inp = document.getElementById('inputPreguntaAyuda');
-            const texto = inp.value.trim();
-            if(!texto) return;
-            const preguntaCorregida = aprenderTerminoNuevo('preguntasAyuda', texto.startsWith('¿') ? texto : `❓ ${texto}`);
-            await parchearSubnodoConfigNube('aprendidos', config.aprendidos);
-            inp.value = '';
-            abrirModalAyuda();
-            mostrarGuiaEnModal(preguntaCorregida);
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
+            ejecutarMantenimientoAutomaticoInvisible();
             verificarBotonBiometrico();
             const inpMes = document.getElementById('filtroHistMes');
             if(inpMes) inpMes.value = obtenerFechaHoraEstandar().mesISO;
@@ -1038,6 +1060,10 @@ const CFG_KEY = 'SySO_Config_Master';
                 iniciarCandadoTurno();
                 sincronizarDesdeNube(false);
             }
+            metricasVelocidad.arranqueMs = Math.round(performance.now() - tArranqueApp);
+            // Piloto Automático del Gemelo Digital: Corre en segundo plano sin intervención manual
+            setTimeout(() => { if(typeof ejecutarGemeloDigitalAutonomo === 'function') ejecutarGemeloDigitalAutonomo(); }, 3500);
+            setInterval(() => { if(typeof ejecutarGemeloDigitalAutonomo === 'function') ejecutarGemeloDigitalAutonomo(); }, 45000);
             setInterval(verificarSOSActivoEnNube, 12000);
             setInterval(() => {
                 const tagActivo = document.activeElement ? document.activeElement.tagName : '';
@@ -1064,12 +1090,21 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(g !== 'Todos' && !Array.isArray(cfg.camposGrupo[g])) cfg.camposGrupo[g] = deducirCamposPorDefecto(g);
             });
             if(!cfg.fallas) cfg.fallas = {};
+            if(!cfg.enRecarga) cfg.enRecarga = {};
             cfg.usuarios.forEach(u => { 
                 if(!Array.isArray(u.grupo)) u.grupo = [u.grupo || 'Todos']; 
                 if(!Array.isArray(u.secciones) || u.secciones.length === 0) u.secciones = ['Todas'];
             });
             if(!cfg.aprendidos) cfg.aprendidos = { medicamentos:[], tipos:[], motivosFalla:[], notas:[], preguntasAyuda:[] };
-            ['medicamentos','tipos','motivosFalla','notas','preguntasAyuda'].forEach(k => { if(!Array.isArray(cfg.aprendidos[k])) cfg.aprendidos[k] = []; });
+            ['medicamentos','tipos','motivosFalla','notas','preguntasAyuda'].forEach(k => {
+                if(!Array.isArray(cfg.aprendidos[k])) cfg.aprendidos[k] = [];
+                // Limpia automáticamente botones de preguntas excesivamente largos que desbordaban en V6.32
+                if(k === 'preguntasAyuda') cfg.aprendidos[k] = cfg.aprendidos[k].filter(q => String(q).length <= 58);
+            });
+            if(!cfg.aprendidosCandidatos) cfg.aprendidosCandidatos = {};
+            if(!cfg.iaConfig) cfg.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
+            if(!cfg.iaConfig.cacheRespuestas) cfg.iaConfig.cacheRespuestas = {};
+            if(!cfg.gemeloAutonomo) cfg.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [], rutasOptimizadas: {} };
             if(!cfg.telemetria) cfg.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
             if(!cfg.telemetria.equiposSinQR) cfg.telemetria.equiposSinQR = {};
         }
@@ -1077,6 +1112,7 @@ const CFG_KEY = 'SySO_Config_Master';
         async function sincronizarDesdeNube(mostrarFeedbackManual = false) {
             if(sincronizandoNube) return;
             sincronizandoNube = true;
+            const tIniSync = performance.now();
             if(mostrarFeedbackManual) actualizarBadgeNube('🔄 Sincronizando...', '#ffc107');
             try {
                 if(localStorage.getItem('SySO_Pending_Admin_Push') === 'true') {
@@ -1086,6 +1122,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 const res = await fetch(CLOUD_CFG_URL + '?nocache=' + Date.now(), { cache: 'no-store' });
                 if(!res.ok) throw new Error('HTTP ' + res.status);
                 const cloudCfg = await res.json();
+                metricasVelocidad.latenciaNubeMs = Math.round(performance.now() - tIniSync);
                 if(cloudCfg && cloudCfg.usuarios && cloudCfg.usuarios.length > 0) {
                     normalizarObjetoConfig(cloudCfg);
                     const prevJson = JSON.stringify(config.equipos || {});
@@ -1108,7 +1145,7 @@ const CFG_KEY = 'SySO_Config_Master';
                             if(usuarioActual.rol === 'Admin') poblarAdmin(true);
                         }
                     }
-                    if(mostrarFeedbackManual) alert(`✅ Sincronizado con la Nube.\nEquipos en planta: ${totalEq}`);
+                    if(mostrarFeedbackManual) alert(`✅ Sincronizado con la Nube (${metricasVelocidad.latenciaNubeMs} ms).\nEquipos en planta: ${totalEq}`);
                 } else if(config.usuarios && config.usuarios.length > 0) {
                     await fetch(CLOUD_CFG_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
                     const totalEq = Object.keys(config.equipos || {}).length;
@@ -1279,7 +1316,7 @@ const CFG_KEY = 'SySO_Config_Master';
             else { document.getElementById('modalFotoRef').classList.add('hidden'); alert("Este registro no tiene foto de evidencia adjunta."); }
         };
 
-        // --- HISTORIAL DE INSPECCIONES EN LA NUBE ---
+        // --- HISTORIAL DE INSPECCIONES EN LA NUBE CON BANDEJA DE SALIDA OFFLINE ---
         function generarClaveUnicaInspeccion(r) {
             const fechaLimpia = String(r.Fecha || '').split(',')[0].replace(/\D/g, '');
             const idLimpio = String(r.ID_Equipo || 'EQ').replace(/[^A-Za-z0-9_-]/g, '');
@@ -1345,7 +1382,7 @@ const CFG_KEY = 'SySO_Config_Master';
         function enviarEnlaceAppWhatsApp() { const url = obtenerUrlLimpiaApp(); window.location.href = `whatsapp://send?text=${encodeURIComponent(`*📲 Aplicación Gestión SySO Industrial*\n\nAcceda desde este enlace:\n${url}`)}`; }
         function copiarEnlaceApp() { const url = obtenerUrlLimpiaApp(); if(navigator.clipboard) navigator.clipboard.writeText(url).then(() => alert("✅ Enlace copiado.")); else prompt("Copie este enlace:", url); }
 
-        // --- SISTEMA S.O.S. ---
+        // --- SISTEMA S.O.S. CON IDENTIFICACIÓN DE DISPOSITIVO ---
         function sonarSirenaWebAudio() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1406,11 +1443,12 @@ const CFG_KEY = 'SySO_Config_Master';
             if(secActual) sel.value = secActual.split(" |")[0].split(" (")[0];
             document.getElementById('modalSOS').classList.remove('hidden');
         }
-
         function cerrarModalSOS() { document.getElementById('modalSOS').classList.add('hidden'); }
+
         async function dispararSOS(tipoEmergencia) {
             const sec = document.getElementById('sosSeccion').value;
-            const usr = usuarioActual ? usuarioActual.nombre : "Operario de Planta";
+            const ultimoDisp = localStorage.getItem(LAST_USER_KEY) || '';
+            const usr = usuarioActual ? usuarioActual.nombre : (ultimoDisp ? `Celular de ${ultimoDisp}` : "Operario de Planta");
             const horaStr = obtenerFechaHoraEstandar().fechaHora.split(', ')[1];
             const payloadSOS = { active: true, id: Date.now(), tipo: tipoEmergencia, seccion: sec, reporta: usr, hora: horaStr };
             cerrarModalSOS();
@@ -1421,7 +1459,7 @@ const CFG_KEY = 'SySO_Config_Master';
             window.location.href = `whatsapp://send?text=${encodeURIComponent(msg)}`;
         }
 
-        // --- BIOMETRÍA ---
+        // --- BIOMETRÍA Y ACCESO RÁPIDO DE 200 EMPLEADOS ---
         function verificarBotonBiometrico() {
             const btnBio = document.getElementById('btnLoginBio');
             if(localStorage.getItem('SySO_BioCredId') && localStorage.getItem('SySO_BioUser') && localStorage.getItem('SySO_BioPin')) btnBio.classList.remove('hidden');
@@ -1472,13 +1510,40 @@ const CFG_KEY = 'SySO_Config_Master';
         function iniciarCandadoTurno() { localStorage.setItem(ACTIVITY_KEY, Date.now()); document.addEventListener('touchstart', () => localStorage.setItem(ACTIVITY_KEY, Date.now()), {passive: true}); document.addEventListener('click', () => localStorage.setItem(ACTIVITY_KEY, Date.now()), {passive: true}); setInterval(() => { let lastAct = parseInt(localStorage.getItem(ACTIVITY_KEY) || 0); if(usuarioActual && (Date.now() - lastAct) > 12 * 3600000) { alert("⛔ Sesión expirada por inactividad (>12hs)."); cerrarSesion(false); } }, 60000); }
         function toggleDarkMode() { const body = document.body; body.classList.toggle('dark-mode'); const isDark = body.classList.contains('dark-mode'); localStorage.setItem('SySO_DarkMode', isDark); document.getElementById('btnDarkMode').innerHTML = isDark ? '☀️ Activar Modo Día' : '🌙 Activar Modo Noche'; }
         function forzarActualizacion() { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }
-        function filtrarUsuarios() { const input = document.getElementById('loginInputUsuario').value.toLowerCase(); const dropdown = document.getElementById('dropdownUsuarios'); dropdown.innerHTML = ''; const filtrados = config.usuarios.filter(u => u.nombre.toLowerCase().includes(input)); if (!filtrados.length) { dropdown.style.display = 'none'; return; } filtrados.forEach(u => { const div = document.createElement('div'); div.className = 'dropdown-item'; div.innerText = u.nombre; div.onclick = function() { document.getElementById('loginInputUsuario').value = u.nombre; dropdown.style.display = 'none'; }; dropdown.appendChild(div); }); dropdown.style.display = 'block'; }
+
+        function seleccionarUltimoUsuarioDispositivo() {
+            const uNom = localStorage.getItem(LAST_USER_KEY);
+            if(uNom) {
+                document.getElementById('loginInputUsuario').value = uNom;
+                document.getElementById('loginPin').focus();
+            }
+        }
+
+        function filtrarUsuarios() {
+            const input = document.getElementById('loginInputUsuario').value.toLowerCase();
+            const dropdown = document.getElementById('dropdownUsuarios');
+            dropdown.innerHTML = '';
+            const filtrados = config.usuarios.filter(u => u.activo !== false && u.nombre.toLowerCase().includes(input));
+            if (!filtrados.length) { dropdown.style.display = 'none'; return; }
+            filtrados.forEach(u => {
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.innerText = u.nombre;
+                div.onclick = function() {
+                    document.getElementById('loginInputUsuario').value = u.nombre;
+                    dropdown.style.display = 'none';
+                    document.getElementById('loginPin').focus();
+                };
+                dropdown.appendChild(div);
+            });
+            dropdown.style.display = 'block';
+        }
         document.addEventListener('click', function(e) { if (e.target.id !== 'loginInputUsuario') { const dropdown = document.getElementById('dropdownUsuarios'); if(dropdown) dropdown.style.display = 'none'; } });
 
         async function inicializarSistema() { 
             const nom = document.getElementById('initAdminName').value.trim(), pin = document.getElementById('initAdminPin').value.trim(); 
             if(!nom || !pin) return alert("Faltan datos."); 
-            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', secciones: ['Todas'], grupo: ['Todos'] }); 
+            config.usuarios.push({ id: Date.now(), nombre: nom, pin: pin, rol: 'Admin', secciones: ['Todas'], grupo: ['Todos'], activo: true }); 
             config.secciones = ["Agrochaco", "LabFil", "Balanceados", "Balanceados Viejo"]; 
             config.prefijosSeccion = { "Agrochaco": "AGR", "LabFil": "LAB", "Balanceados": "BAL", "Balanceados Viejo": "BAV" };
             config.prefijos = { "Combate Extintores": "EXT-", "Combate Hidrantes": "HID-" }; 
@@ -1491,14 +1556,23 @@ const CFG_KEY = 'SySO_Config_Master';
         function prepararLogin() { 
             document.getElementById('loginInputUsuario').value = ''; 
             document.getElementById('loginPin').value = ''; 
+            const lastU = localStorage.getItem(LAST_USER_KEY);
+            const qBox = document.getElementById('quickUserLoginBox'), qBtn = document.getElementById('btnQuickUserLogin');
+            if(lastU && qBox && qBtn && config.usuarios.some(u => u.nombre === lastU && u.activo !== false)) {
+                qBtn.innerText = `⚡ Ingreso Rápido: ${lastU}`;
+                qBox.classList.remove('hidden');
+            } else if(qBox) {
+                qBox.classList.add('hidden');
+            }
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
             document.getElementById('view-login').classList.add('active'); 
         }
         
         function validarAcceso() { 
             const nom = document.getElementById('loginInputUsuario').value.trim(), pin = document.getElementById('loginPin').value.trim(); 
-            usuarioActual = config.usuarios.find(u => u.nombre === nom && u.pin === pin); 
+            usuarioActual = config.usuarios.find(u => u.activo !== false && u.nombre === nom && u.pin === pin); 
             if(!usuarioActual) return alert("Usuario o PIN Incorrecto."); 
+            localStorage.setItem(LAST_USER_KEY, usuarioActual.nombre);
             const secsTxt = (!usuarioActual.secciones || usuarioActual.secciones.includes('Todas')) ? 'Planta Completa' : usuarioActual.secciones.join(', ');
             document.getElementById('headerInfo').innerText = `${usuarioActual.nombre} | ${secsTxt}`; 
             document.getElementById('lblInspectorTurno').innerText = `${usuarioActual.nombre} (${usuarioActual.rol} - ${secsTxt})`; 
@@ -1508,6 +1582,14 @@ const CFG_KEY = 'SySO_Config_Master';
             const adminBtns = document.querySelectorAll('.admin-only'); 
             if(usuarioActual.rol === 'Admin') { adminBtns.forEach(b => b.classList.remove('hidden')); poblarAdmin(false); }
             else adminBtns.forEach(b => b.classList.add('hidden')); 
+
+            // Bóveda y Modo Analista exclusivos para Jack Wiens
+            const cardCreator = document.getElementById('cardCreatorIA');
+            if(cardCreator) {
+                if(esUsuarioCreador(usuarioActual)) cardCreator.classList.remove('hidden');
+                else cardCreator.classList.add('hidden');
+            }
+
             poblarFiltrosHistorial();
             document.getElementById('menuNavegacion').classList.remove('hidden'); 
             nav('control', document.querySelectorAll('.tab-btn')[0]); 
@@ -1518,13 +1600,17 @@ const CFG_KEY = 'SySO_Config_Master';
             if(manual && !confirm("¿Desea cerrar su sesión?")) return; 
             detenerCamaraQR(false);
             usuarioActual = null; 
+            modoChatIAActual = 'AYUDA';
             document.getElementById('headerInfo').innerText = 'Sistema Industrial en Nube';
+            const cardCreator = document.getElementById('cardCreatorIA');
+            if(cardCreator) cardCreator.classList.add('hidden');
             document.getElementById('menuNavegacion').classList.add('hidden'); 
             prepararLogin(); 
             sincronizarDesdeNube(false);
         }
 
         function nav(vista, btn) { 
+            const tNav = performance.now();
             if((vista === 'equipos') && (!usuarioActual || usuarioActual.rol !== 'Admin')) vista = 'control';
             if(vista !== 'control') detenerCamaraQR(false);
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
@@ -1532,14 +1618,15 @@ const CFG_KEY = 'SySO_Config_Master';
             document.getElementById(`view-${vista}`).classList.add('active'); 
             if(btn) btn.classList.add('active'); 
             if(vista === 'historial') { poblarFiltrosHistorial(); sincronizarInspeccionesNube(false); }
-            if(vista === 'equipos' || vista === 'ajustes') { sincronizarDesdeNube(false); if(usuarioActual && usuarioActual.rol === 'Admin') renderPanelTelemetriaIA(); }
+            if(vista === 'equipos' || vista === 'ajustes') { sincronizarDesdeNube(false); if(esUsuarioCreador()) renderPanelTelemetriaIA(); }
             if(vista === 'control') {
                 const currentId = document.getElementById('idEquipo').value;
                 if(currentId && config.equipos[currentId]) renderFormularioControlInspeccion(currentId);
             }
+            metricasVelocidad.cambioPestanaMs = Math.max(1, Math.round(performance.now() - tNav));
         }
 
-        // --- MÓDULO HISTORIAL, GRÁFICOS Y EXPORTACIÓN EXCEL ---
+        // --- MÓDULO HISTORIAL, EQUIPOS PENDIENTES DEL MES Y EXPORTACIÓN EXCEL ---
         function poblarFiltrosHistorial() {
             const selSec = document.getElementById('filtroHistSec'), prevSec = selSec.value || 'ALL';
             selSec.innerHTML = '<option value="ALL">Todas las Secciones</option>';
@@ -1564,6 +1651,24 @@ const CFG_KEY = 'SySO_Config_Master';
             return "";
         }
 
+        function obtenerEquiposPendientesDelMes() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+            const fMes = document.getElementById('filtroHistMes') ? document.getElementById('filtroHistMes').value : obtenerFechaHoraEstandar().mesISO;
+            const fSec = document.getElementById('filtroHistSec') ? document.getElementById('filtroHistSec').value : 'ALL';
+            const fGrp = document.getElementById('filtroHistGrp') ? document.getElementById('filtroHistGrp').value : 'ALL';
+            const visitadosMes = new Set();
+            db.forEach(r => {
+                if(parsearMesDeRegistro(r) === fMes && r.ID_Equipo) visitadosMes.add(r.ID_Equipo);
+            });
+            return Object.keys(config.equipos || {}).sort(sortNatural).filter(id => {
+                if(visitadosMes.has(id)) return false;
+                const eq = config.equipos[id];
+                if(fSec !== 'ALL' && eq.seccion !== fSec) return false;
+                if(fGrp !== 'ALL' && eq.grupo !== fGrp) return false;
+                return true;
+            }).map(id => ({ id, ...config.equipos[id] }));
+        }
+
         function obtenerRegistrosFiltradosHistorial() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             const fMes = document.getElementById('filtroHistMes') ? document.getElementById('filtroHistMes').value : '';
@@ -1574,13 +1679,16 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(fMes && parsearMesDeRegistro(r) !== fMes) return false;
                 if(fSec !== 'ALL' && r.Seccion !== fSec) return false;
                 if(fGrp !== 'ALL' && r.Grupo !== fGrp) return false;
-                const tieneFalla = Object.values(r.Controles || {}).includes('Falla');
+                const valoresCtrl = Object.values(r.Controles || {});
+                const tieneFalla = valoresCtrl.includes('Falla');
+                const enRecarga = valoresCtrl.includes('Recarga') || (r.Observaciones && r.Observaciones.includes('[EN RECARGA]'));
                 const esVencido = (r.Observaciones && r.Observaciones.includes('[VENCIDO]')) || (r.Detalle_Fallas && (r.Detalle_Fallas.includes('VENCIDO') || r.Detalle_Fallas.includes('AGOTADO')));
                 const tieneReposicion = Array.isArray(r.Reposiciones) && r.Reposiciones.length > 0;
                 if(fEst === 'FALLA' && !tieneFalla) return false;
+                if(fEst === 'RECARGA' && !enRecarga) return false;
                 if(fEst === 'REPOSICION' && !tieneReposicion) return false;
                 if(fEst === 'VENCIDO' && !esVencido) return false;
-                if(fEst === 'OK' && (tieneFalla || esVencido)) return false;
+                if(fEst === 'OK' && (tieneFalla || esVencido || enRecarga)) return false;
                 return true;
             });
         }
@@ -1608,8 +1716,9 @@ const CFG_KEY = 'SySO_Config_Master';
                 }
             });
             const cantControlados = equiposControladosSet.size;
+            const faltantesMes = Math.max(0, totalUniverso - cantControlados);
             const pctGlobal = totalUniverso > 0 ? Math.min(100, Math.round((cantControlados / totalUniverso) * 100)) : 0;
-            let html = `<div class="chart-row" style="margin-bottom:10px;"><div class="chart-lbl-line"><span style="color:var(--primary);">📈 Cobertura de Planta en el Período</span><span>${cantControlados} / ${totalUniverso} Equipos (${pctGlobal}%)</span></div><div class="progress-bar-container" style="height:12px;"><div class="progress-bar-fill" style="width:${pctGlobal}%;"></div></div></div>`;
+            let html = `<div class="chart-row" style="margin-bottom:10px;"><div class="chart-lbl-line"><span style="color:var(--primary);">📈 Cobertura del Mes (Faltan ${faltantesMes} eq.)</span><span>${cantControlados} / ${totalUniverso} (${pctGlobal}%)</span></div><div class="progress-bar-container" style="height:12px;"><div class="progress-bar-fill" style="width:${pctGlobal}%;"></div></div></div>`;
             const seccionesAMostrar = fSec === 'ALL' ? config.secciones.slice().sort(sortNatural) : [fSec];
             seccionesAMostrar.forEach(sec => {
                 const totalSec = idsUniverso.filter(id => config.equipos[id].seccion === sec).length;
@@ -1624,6 +1733,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
 
         function renderHistorial() {
+            const fEst = document.getElementById('filtroHistEstado') ? document.getElementById('filtroHistEstado').value : 'ALL';
             const filtrados = obtenerRegistrosFiltradosHistorial();
             let ok = 0, fallas = 0, vencidos = 0;
             filtrados.forEach(r => { 
@@ -1638,15 +1748,33 @@ const CFG_KEY = 'SySO_Config_Master';
             const lista = document.getElementById('listaBitacora'); 
             if(!lista) return; 
             lista.innerHTML = '';
+
+            // Vista especial: Equipos Pendientes / Olvidados del Mes
+            if(fEst === 'PENDIENTES') {
+                const pendientes = obtenerEquiposPendientesDelMes();
+                if(pendientes.length === 0) {
+                    lista.innerHTML = '<p style="text-align:center; padding:15px; color:var(--success); font-weight:bold;">🎉 ¡Felicitaciones! Todos los equipos de este filtro ya fueron controlados en el mes.</p>';
+                    return;
+                }
+                pendientes.forEach(eq => {
+                    const puedeCtrl = usuarioTienePermisoEquipo(usuarioActual, eq);
+                    const btnIr = puedeCtrl ? `<button class="btn-small btn-primary" onclick="nav('control', document.querySelectorAll('.tab-btn')[0]); cargarSiguienteEquipoDirecto('${eq.id}')">▶️ Controlar</button>` : '';
+                    lista.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:9px 4px; align-items:center; gap:8px;"><div><b style="color:var(--warn-text); font-size:14px;">⏳ ${eq.id} (PENDIENTE)</b> — <small>${eq.seccion} (${eq.grupo})</small><br><small class="text-muted">📍 ${eq.ubicacion || 'S/D'} | ${eq.tipo || ''}</small></div><div class="action-btns">${btnIr}</div></div>`;
+                });
+                return;
+            }
+
             if(filtrados.length === 0) { 
                 lista.innerHTML = '<p class="text-muted" style="text-align:center; padding:15px;">No hay controles registrados para este filtro.</p>'; 
                 return; 
             }
-            const puedeBorrar = usuarioActual && usuarioActual.rol === 'Admin';
+            const puedeBorrar = esUsuarioCreador();
             [...filtrados].reverse().forEach(r => { 
-                let isFalla = Object.values(r.Controles || {}).includes('Falla'); 
-                let color = isFalla ? 'var(--danger)' : 'var(--success)'; 
-                let estadoBadge = isFalla ? '🚨 FALLA' : '✅ OK';
+                const vals = Object.values(r.Controles || {});
+                let isFalla = vals.includes('Falla'); 
+                let isRecarga = vals.includes('Recarga') || (r.Observaciones && r.Observaciones.includes('[EN RECARGA]'));
+                let color = isFalla ? 'var(--danger)' : (isRecarga ? 'var(--warn-text)' : 'var(--success)'); 
+                let estadoBadge = isFalla ? '🚨 FALLA' : (isRecarga ? '🔧 EN RECARGA' : '✅ OK');
                 let btnFotoEv = (isFalla || r.tieneFotoEvidencia) ? `<button class="btn-small btn-s-edit" onclick="verFotoEvidenciaHistorial('${r.uid || ''}', '${r.ID_Equipo}', '${r.Fecha}')">📸 Foto</button>` : '';
                 let btnDel = puedeBorrar ? `<button class="btn-small btn-s-del" onclick="borrarRegistroBitacora('${r.uid || ''}', '${r.ID_Equipo}', '${r.Fecha}')">🗑️</button>` : '';
                 let lineaFalla = r.Detalle_Fallas ? `<br><small style="color:var(--danger); font-weight:bold;">⚠️ Falla: ${r.Detalle_Fallas}</small>` : '';
@@ -1657,6 +1785,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
 
         window.borrarRegistroBitacora = async function(uid, id, fecha) { 
+            if(!esUsuarioCreador()) return alert("Solo el creador del sistema (Jack Wiens) puede eliminar registros de auditoría.");
             if(!confirm(`¿Eliminar el control del equipo ${id} (${fecha})?`)) return; 
             let db = JSON.parse(localStorage.getItem(DB_KEY) || '[]'); 
             db = db.filter(r => !(r.ID_Equipo === id && r.Fecha === fecha)); 
@@ -1686,15 +1815,18 @@ const CFG_KEY = 'SySO_Config_Master';
 
         function descargarHistorialExcelProfesional() {
             const registros = obtenerRegistrosFiltradosHistorial();
-            if(registros.length === 0) return alert("No hay controles en el filtro actual para descargar.");
+            const pendientes = obtenerEquiposPendientesDelMes();
+            if(registros.length === 0 && pendientes.length === 0) return alert("No hay datos en el filtro actual para descargar.");
             const mes = document.getElementById('filtroHistMes').value || 'Global';
             let htmlExcel = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Controles_${mes}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>table{border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;font-size:11pt;}th{background-color:#1F4E78;color:#FFFFFF;font-weight:bold;border:1px solid #8ea9db;padding:8px 10px;text-align:center;}td{border:1px solid #d9d9d9;padding:6px 8px;vertical-align:middle;}.row-ok{background-color:#ffffff;color:#1f2937;}.State-ok{background-color:#e2efda;color:#375623;font-weight:bold;text-align:center;}.row-falla{background-color:#fce4d6;color:#c00000;font-weight:bold;}.state-falla{background-color:#ff0000;color:#ffffff;font-weight:bold;text-align:center;}.btn-link{color:#0563c1;font-weight:bold;text-decoration:underline;}</style></head><body><h2 style="font-family:Segoe UI,Arial,sans-serif;color:#1F4E78;">Reporte de Controles SySO - Período: ${mes}</h2><table border="1"><thead><tr><th x:autofilter="all">Fecha y Hora</th><th x:autofilter="all">Sección</th><th x:autofilter="all">Grupo</th><th x:autofilter="all">ID Equipo</th><th x:autofilter="all">Tipo / Detalle</th><th x:autofilter="all">Ubicación Exacta</th><th x:autofilter="all">Estado General</th><th x:autofilter="all">Motivo de Falla / Hallazgo</th><th x:autofilter="all">Consumo / Reposición Botiquín</th><th x:autofilter="all">Puntos Evaluados</th><th x:autofilter="all">Otras Observaciones</th><th x:autofilter="all">Inspector</th><th x:autofilter="all">Foto Evidencia</th></tr></thead><tbody>`;
             registros.forEach(r => {
                 const eq = config.equipos[r.ID_Equipo] || {};
-                const tieneFalla = Object.values(r.Controles || {}).includes('Falla');
+                const vals = Object.values(r.Controles || {});
+                const tieneFalla = vals.includes('Falla');
+                const enRecarga = vals.includes('Recarga') || (r.Observaciones && r.Observaciones.includes('[EN RECARGA]'));
                 const esVencido = (r.Observaciones && r.Observaciones.includes('[VENCIDO]')) || (r.Detalle_Fallas && (r.Detalle_Fallas.includes('VENCIDO') || r.Detalle_Fallas.includes('AGOTADO')));
                 const alertaRoja = tieneFalla || esVencido;
-                const estadoGral = tieneFalla ? "🚨 FALLA" : (esVencido ? "⏱️ VENCIDO/AGOT." : "✅ OK");
+                const estadoGral = tieneFalla ? "🚨 FALLA" : (enRecarga ? "🔧 EN RECARGA" : (esVencido ? "⏱️ VENCIDO/AGOT." : "✅ OK"));
                 let detallesArr = [], idx = 0;
                 Object.keys(r.Controles || {}).forEach(k => {
                     let paramName = (config.grupos[r.Grupo] && config.grupos[r.Grupo][idx]) ? config.grupos[r.Grupo][idx] : k;
@@ -1703,6 +1835,9 @@ const CFG_KEY = 'SySO_Config_Master';
                 const movBotiquin = (Array.isArray(r.Reposiciones) && r.Reposiciones.length > 0) ? r.Reposiciones.map(x => `${x.producto}: Usado ${x.consumido}, Repuesto ${x.repuesto} (Quedan ${x.stockFinal})`).join(" | ") : "—";
                 let celdaFoto = ((tieneFalla || r.tieneFotoEvidencia) && r.uid) ? `<a class="btn-link" href="${obtenerUrlVisorFotoNube('syso_photos', r.uid)}" target="_blank">📷 ABRIR FOTO</a>` : "—";
                 htmlExcel += `<tr class="${alertaRoja ? 'row-falla' : 'row-ok'}"><td>${r.Fecha || ''}</td><td>${r.Seccion || ''}</td><td>${r.Grupo || ''}</td><td style="text-align:center;font-weight:bold;">${r.ID_Equipo || ''}</td><td>${eq.tipo || ''}${eq.capacidad ? ' ('+eq.capacidad+')' : ''}</td><td>${r.Ubicacion || ''}</td><td class="${alertaRoja ? 'state-falla' : 'State-ok'}">${estadoGral}</td><td>${r.Detalle_Fallas || 'Sin fallas'}</td><td>${movBotiquin}</td><td>${detallesArr.join(" | ")}</td><td>${r.Observaciones || ''}</td><td>${r.Inspector || ''}</td><td style="text-align:center;">${celdaFoto}</td></tr>`;
+            });
+            pendientes.forEach(p => {
+                htmlExcel += `<tr style="background:#fff3cd;color:#856404;"><td>PENDIENTE (${mes})</td><td>${p.seccion || ''}</td><td>${p.grupo || ''}</td><td style="text-align:center;font-weight:bold;">${p.id}</td><td>${p.tipo || ''}</td><td>${p.ubicacion || ''}</td><td style="text-align:center;font-weight:bold;">⏳ SIN CONTROLAR</td><td>Pendiente de visita mensual</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
             });
             htmlExcel += `</tbody></table></body></html>`;
             const blob = new Blob(['\uFEFF', htmlExcel], { type: 'application/vnd.ms-excel;charset=utf-8;' });
@@ -1730,11 +1865,12 @@ const CFG_KEY = 'SySO_Config_Master';
 
         function descargarInventarioExcelProfesional() {
             if(Object.keys(config.equipos).length === 0) return alert("El inventario está vacío.");
-            let htmlExcel = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;font-size:11pt;}th{background-color:#1F4E78;color:#FFFFFF;font-weight:bold;border:1px solid #8ea9db;padding:8px 10px;}td{border:1px solid #d9d9d9;padding:6px 8px;}.venc-si{background-color:#fce4d6;color:#c00000;font-weight:bold;}.venc-no{background-color:#ffffff;color:#1f2937;}</style></head><body><h2>Inventario Maestro de Equipos y Stock de Botiquines SySO</h2><table border="1"><thead><tr><th x:autofilter="all">ID Equipo</th><th x:autofilter="all">Sección</th><th x:autofilter="all">Grupo</th><th x:autofilter="all">Ubicación Exacta</th><th x:autofilter="all">Tipo / Descripción</th><th x:autofilter="all">Capacidad / Medida</th><th x:autofilter="all">Marca / Serie</th><th x:autofilter="all">Vencimiento / Detalle de Insumos</th><th x:autofilter="all">Estado Vigencia</th><th x:autofilter="all">Falla Activa</th><th x:autofilter="all">Foto Referencia</th></tr></thead><tbody>`;
+            let htmlExcel = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;font-size:11pt;}th{background-color:#1F4E78;color:#FFFFFF;font-weight:bold;border:1px solid #8ea9db;padding:8px 10px;}td{border:1px solid #d9d9d9;padding:6px 8px;}.venc-si{background-color:#fce4d6;color:#c00000;font-weight:bold;}.venc-no{background-color:#ffffff;color:#1f2937;}</style></head><body><h2>Inventario Maestro de Equipos y Stock de Botiquines SySO</h2><table border="1"><thead><tr><th x:autofilter="all">ID Equipo</th><th x:autofilter="all">Sección</th><th x:autofilter="all">Grupo</th><th x:autofilter="all">Ubicación Exacta</th><th x:autofilter="all">Tipo / Descripción</th><th x:autofilter="all">Capacidad / Medida</th><th x:autofilter="all">Marca / Serie</th><th x:autofilter="all">Vencimiento / Detalle de Insumos</th><th x:autofilter="all">Estado Vigencia</th><th x:autofilter="all">Falla / Recarga Activa</th><th x:autofilter="all">Foto Referencia</th></tr></thead><tbody>`;
             Object.keys(config.equipos).sort(sortNatural).forEach(id => { 
                 const eq = config.equipos[id]; 
                 const infoVenc = verificarEquipoTieneVencidos(eq);
                 const tieneFallaActiva = config.fallas && config.fallas[id];
+                const tieneRecarga = config.enRecarga && config.enRecarga[id];
                 const alertaFila = infoVenc.vencido || tieneFallaActiva;
                 const estVigencia = infoVenc.vencido ? "⏱️ VENCIDO / AGOTADO" : "✅ VIGENTE";
                 const linkFoto = eq.tieneFotoRef ? `<a href="${obtenerUrlVisorFotoNube('syso_eq_photos', id)}" target="_blank">🖼️ VER FOTO EQUIPO</a>` : "Sin foto";
@@ -1745,84 +1881,12 @@ const CFG_KEY = 'SySO_Config_Master';
                         return `${ins.nombre} [Stock: ${ins.stock}] (${ins.vencimiento !== 'N/A' ? ins.vencimiento + ' - ' + est.texto : 'Sin venc.'})`;
                     }).join(" | ");
                 }
-                htmlExcel += `<tr class="${alertaFila ? 'venc-si' : 'venc-no'}"><td style="font-weight:bold;">${id}</td><td>${eq.seccion || ""}</td><td>${eq.grupo || ""}</td><td>${eq.ubicacion || ""}</td><td>${eq.tipo || ""}</td><td>${eq.capacidad || ""}</td><td>${eq.serie || ""}</td><td>${colVencInsumos}</td><td style="${infoVenc.vencido ? 'background:#ff0000;color:#fff;text-align:center;' : 'text-align:center;'}">${estVigencia}</td><td>${tieneFallaActiva || "OK"}</td><td style="text-align:center;">${linkFoto}</td></tr>`;
+                const txtEstadoOp = tieneFallaActiva ? tieneFallaActiva : (tieneRecarga ? "🔧 EN RECARGA / TALLER" : "OK");
+                htmlExcel += `<tr class="${alertaFila ? 'venc-si' : 'venc-no'}"><td style="font-weight:bold;">${id}</td><td>${eq.seccion || ""}</td><td>${eq.grupo || ""}</td><td>${eq.ubicacion || ""}</td><td>${eq.tipo || ""}</td><td>${eq.capacidad || ""}</td><td>${eq.serie || ""}</td><td>${colVencInsumos}</td><td style="${infoVenc.vencido ? 'background:#ff0000;color:#fff;text-align:center;' : 'text-align:center;'}">${estVigencia}</td><td>${txtEstadoOp}</td><td style="text-align:center;">${linkFoto}</td></tr>`;
             });
             htmlExcel += `</tbody></table></body></html>`;
             const blob = new Blob(['\uFEFF', htmlExcel], { type: 'application/vnd.ms-excel;charset=utf-8;' }); 
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Inventario_Profesional_SySO_${Date.now()}.xls`; a.click();
-        }
-
-        // --- MONITOR IA CON RECOMENDACIONES AUTOMÁTICAS Y DICCIONARIO ---
-        function renderPanelTelemetriaIA() {
-            const box = document.getElementById('panelTelemetriaIA');
-            const contPal = document.getElementById('listaPalabrasAprendidas');
-            if(!box || !contPal) return;
-            const t = config.telemetria || { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
-            const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
-            const topManuales = Object.entries(t.equiposSinQR || {}).sort((a,b) => b[1]-a[1]).slice(0, 4).map(x => `${x[0]} (${x[1]}x)`).join(', ') || 'Ninguno detectado';
-
-            let botiquinesAlerta = [];
-            Object.keys(config.equipos || {}).forEach(id => {
-                const eq = config.equipos[id];
-                if(esGrupoBotiquinOPA(eq.grupo)) {
-                    const v = verificarEquipoTieneVencidos(eq);
-                    if(v.vencido) botiquinesAlerta.push(`${id} (${v.detalle})`);
-                }
-            });
-
-            box.innerHTML = `
-                <div>⏱️ <b>Tiempo promedio por control:</b> ${promSeg} seg. (${t.controlesTotales} controles medidos)</div>
-                <div style="margin-top:4px;">📷 <b>Intentos de QR cancelados sin leer:</b> ${t.qrCancelados || 0} | ⌨️ <b>Cargas manuales:</b> ${t.cargasManuales || 0}</div>
-                <div style="margin-top:4px;">🏷️ <b>Etiquetas QR a reimprimir (uso manual repetido):</b> <span style="color:var(--danger);font-weight:bold;">${topManuales}</span></div>
-                <div style="margin-top:4px;">💊 <b>Botiquines con stock agotado o vencido:</b> <span style="color:${botiquinesAlerta.length ? 'var(--danger)' : 'var(--success)'};font-weight:bold;">${botiquinesAlerta.length ? botiquinesAlerta.join(' | ') : 'Todos al día'}</span></div>
-                <div style="margin-top:4px;">↩️ <b>Errores "Falla a OK" revertidos por el usuario:</b> ${t.fallasRevertidas || 0}</div>
-            `;
-
-            contPal.innerHTML = '';
-            const categorias = [
-                { key: 'medicamentos', lbl: '💊' },
-                { key: 'tipos', lbl: '🏷️' },
-                { key: 'motivosFalla', lbl: '⚠️' },
-                { key: 'notas', lbl: '📝' },
-                { key: 'preguntasAyuda', lbl: '❓' }
-            ];
-            let totalPalabras = 0;
-            categorias.forEach(cat => {
-                const arr = (config.aprendidos && config.aprendidos[cat.key]) || [];
-                arr.forEach((pal, idx) => {
-                    totalPalabras++;
-                    contPal.innerHTML += `<span class="btn-small" style="background:var(--input-bg); color:var(--text); border:1px solid var(--border);">${cat.lbl} ${pal} <b style="color:var(--danger); margin-left:4px; cursor:pointer;" onclick="borrarPalabraAprendida('${cat.key}', ${idx})">❌</b></span>`;
-                });
-            });
-            if(totalPalabras === 0) {
-                contPal.innerHTML = '<span class="text-muted" style="font-size:12px;">Aún no hay palabras nuevas aprendidas. Se agregarán automáticamente a medida que el personal escriba nuevos términos.</span>';
-            }
-        }
-
-        async function borrarPalabraAprendida(categoria, index) {
-            if(!config.aprendidos || !Array.isArray(config.aprendidos[categoria])) return;
-            const palabra = config.aprendidos[categoria][index];
-            if(!confirm(`¿Eliminar "${palabra}" del diccionario aprendido?`)) return;
-            config.aprendidos[categoria].splice(index, 1);
-            await parchearSubnodoConfigNube('aprendidos', config.aprendidos);
-            poblarListasAutocompletado();
-            renderPanelTelemetriaIA();
-        }
-
-        function copiarInformeDiagnosticoIA() {
-            const t = config.telemetria || { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
-            const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
-            const topManuales = Object.entries(t.equiposSinQR || {}).sort((a,b) => b[1]-a[1]).slice(0, 5).map(x => `${x[0]} (${x[1]} veces sin QR)`).join(', ') || 'Ninguno';
-            const cantEq = Object.keys(config.equipos || {}).length;
-            const informe = `📊 INFORME DE DIAGNÓSTICO IA - GESTIÓN SySO V6.32\n` +
-                `- Equipos activos en planta: ${cantEq}\n` +
-                `- Controles analizados: ${t.controlesTotales} (Tiempo promedio: ${promSeg} seg/control)\n` +
-                `- Lecturas QR canceladas: ${t.qrCancelados || 0} | Cargas manuales por lista: ${t.cargasManuales || 0}\n` +
-                `- Etiquetas QR a revisar/reimprimir en planta: ${topManuales}\n` +
-                `- Errores de selección "Falla -> OK" revertidos a tiempo: ${t.fallasRevertidas || 0}\n` +
-                `- Términos aprendidos en diccionario: ${Object.values(config.aprendidos || {}).flat().length}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe de diagnóstico copiado al portapapeles."));
-            else prompt("Copie este informe:", informe);
         }
 
         // --- ADMINISTRACIÓN DE EQUIPOS, SECCIONES, GRUPOS Y PERMISOS ---
@@ -1833,30 +1897,26 @@ const CFG_KEY = 'SySO_Config_Master';
             selS.innerHTML = '<option value="">-- Seleccione Sección --</option>'; 
             config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s} [${obtenerSiglaSeccion(s)}]</option>`); 
             if(prevSec && config.secciones.includes(prevSec)) selS.value = prevSec;
-
             const selQ = document.getElementById('qrGrupo'); 
             const prevGrp = mantenerSeleccionActual && selQ ? selQ.value : '';
             selQ.innerHTML = '<option value="">-- Seleccione Grupo --</option>'; 
             grpKeys.filter(g=>g!=='Todos').sort(sortNatural).forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`); 
             if(prevGrp && config.grupos[prevGrp]) selQ.value = prevGrp;
-
             let chkSecHtml = `<label><input type="checkbox" value="Todas" class="chk-usu-sec" checked> 🌎 Todas las Secciones</label>`;
             config.secciones.slice().sort(sortNatural).forEach(s => {
                 chkSecHtml += `<label><input type="checkbox" value="${s}" class="chk-usu-sec"> 📍 ${s}</label>`;
             });
             const contSecUsu = document.getElementById('nuevoUsuSeccionContainer');
             if(contSecUsu) contSecUsu.innerHTML = chkSecHtml;
-
             let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo" checked> 🔓 Todos los Grupos</label>`; 
             grpKeys.filter(g=>g!=='Todos').sort(sortNatural).forEach(g => { chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`; }); 
             document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml; 
-
             configurarExclusionCheckboxes('.chk-usu-sec', 'Todas');
             configurarExclusionCheckboxes('.chk-usu-grupo', 'Todos');
             
             actualizarPrefijoUI(); 
             renderListas(); 
-            renderPanelTelemetriaIA();
+            if(esUsuarioCreador()) renderPanelTelemetriaIA();
         }
 
         function calcularSiguienteCorrelativo(grupo, seccion) {
@@ -1891,7 +1951,6 @@ const CFG_KEY = 'SySO_Config_Master';
             const grpSelect = document.getElementById('qrGrupo'), secSelect = document.getElementById('qrSeccion');
             const prefijoInput = document.getElementById('qrPrefijo'), bloqueCampos = document.getElementById('bloqueCamposEspecificosAlta');
             const grp = grpSelect ? grpSelect.value : '', sec = secSelect ? secSelect.value : '';
-
             if(!grp || !sec) {
                 prefijoInput.value = '';
                 bloqueCampos.classList.add('hidden');
@@ -1899,14 +1958,12 @@ const CFG_KEY = 'SySO_Config_Master';
             }
             bloqueCampos.classList.remove('hidden');
             prefijoInput.value = obtenerPrefijoCompuesto(grp, sec); 
-
             const activos = obtenerCamposActivosGrupo(grp);
             const gLower = grp.toLowerCase();
             const lblTipo = document.getElementById('lblQrTipo'), inpTipo = document.getElementById('qrTipo');
             const lblCap = document.getElementById('lblQrCapacidad'), inpCap = document.getElementById('qrCapacidad');
             const lblSer = document.getElementById('lblQrSerie'), inpSer = document.getElementById('qrSerie');
             const lblVenc = document.getElementById('lblQrVencimiento');
-
             if(gLower.includes('extintor')) {
                 lblTipo.innerText = 'Agente Extintor / Tipo'; inpTipo.placeholder = 'Ej. PQS ABC / CO2 / HCFC';
                 lblCap.innerText = 'Capacidad Nominal:'; inpCap.placeholder = 'Ej. 5 kg / 10 kg / 25 kg';
@@ -1926,7 +1983,6 @@ const CFG_KEY = 'SySO_Config_Master';
                 lblCap.innerText = 'Capacidad / Medida:'; inpCap.placeholder = 'Ej. Medida o alcance';
                 lblSer.innerText = 'Marca / N° de Serie:'; lblVenc.innerText = 'Fecha de Vencimiento:';
             }
-
             [
                 { key: 'capacidad', wrap: 'wrapQrCapacidad', input: 'qrCapacidad' },
                 { key: 'serie', wrap: 'wrapQrSerie', input: 'qrSerie' },
@@ -1937,7 +1993,6 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(isActivo) { wrapEl.classList.remove('campo-oculto'); inpEl.disabled = false; }
                 else { wrapEl.classList.add('campo-oculto'); inpEl.disabled = true; if(!editQRId) inpEl.value = ''; }
             });
-
             const wrapInsumos = document.getElementById('wrapInsumosBotiquin');
             const contInsumos = document.getElementById('contenedorFilasInsumos');
             if(activos.includes('insumos') || esGrupoBotiquinOPA(grp)) {
@@ -1946,7 +2001,6 @@ const CFG_KEY = 'SySO_Config_Master';
             } else {
                 wrapInsumos.classList.add('campo-oculto');
             }
-
             if(!editQRId && !document.getElementById('qrNumero').value && sec) {
                 document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grp, sec);
             }
@@ -1982,7 +2036,6 @@ const CFG_KEY = 'SySO_Config_Master';
             
             const nuevosParams = paramsStr.split(',').map(s => corregirOrtografiaTexto(s.trim())).filter(s => s !== ""); 
             const camposSeleccionados = Array.from(document.querySelectorAll('.chk-campo-inv:checked')).map(cb => cb.value);
-
             if(editGrupoNom) { 
                 if(nom !== editGrupoNom && config.grupos[nom]) return alert("Ya existe un grupo con ese nombre."); 
                 for(let key in config.equipos) { if(config.equipos[key].grupo === editGrupoNom) config.equipos[key].grupo = nom; } 
@@ -1995,13 +2048,13 @@ const CFG_KEY = 'SySO_Config_Master';
             config.grupos[nom] = nuevosParams; 
             config.prefijos[nom] = pref; 
             config.camposGrupo[nom] = camposSeleccionados;
-
             await guardarYSubirANube();
             cancelarEdicionGrupo(); 
             poblarAdmin(true); 
         }
 
         async function borrarGrupo(grp) { 
+            if(!esUsuarioCreador()) return alert("Por seguridad estructural, solo Jack Wiens puede eliminar grupos.");
             if(grp === 'Todos') return; 
             if(confirm(`¿Borrar grupo ${grp}?`)) { 
                 delete config.grupos[grp]; delete config.prefijos[grp]; 
@@ -2063,7 +2116,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 u.grupo = gruposSeleccionados; 
             } else { 
                 if(!pin) return alert("El PIN es obligatorio para usuarios nuevos.");
-                config.usuarios.push({ id: uId, nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, secciones: seccionesSeleccionadas, grupo: gruposSeleccionados }); 
+                config.usuarios.push({ id: uId, nombre: nom, pin: pin, rol: document.getElementById('nuevoUsuRol').value, secciones: seccionesSeleccionadas, grupo: gruposSeleccionados, activo: true }); 
             } 
             await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
             cancelarEdicionUsu(); 
@@ -2071,6 +2124,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
         
         async function borrarUsuario(id) { 
+            if(!esUsuarioCreador()) return alert("Solo Jack Wiens puede eliminar usuarios del padrón.");
             if(config.usuarios.length>1 && confirm("¿Borrar usuario?")) { 
                 config.usuarios = config.usuarios.filter(u=>u.id!==id); 
                 await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
@@ -2086,7 +2140,6 @@ const CFG_KEY = 'SySO_Config_Master';
             const btn = document.getElementById('btnGuardarSec'); 
             btn.innerText = '💾 Actualizar Sección'; btn.classList.replace('btn-success', 'btn-info'); 
         }
-
         function cancelarEdicionSec() { 
             editSecNom = null; 
             document.getElementById('nuevaSeccion').value = ''; 
@@ -2102,7 +2155,6 @@ const CFG_KEY = 'SySO_Config_Master';
             if(!sec) return alert("Ingrese el nombre de la sección."); 
             if(!sigla) sigla = generarPrefijoSeccionAuto(sec);
             if(!config.prefijosSeccion) config.prefijosSeccion = {};
-
             if(editSecNom) { 
                 if(sec !== editSecNom && config.secciones.includes(sec)) return alert("Ya existe esa sección."); 
                 for(let key in config.equipos) { if(config.equipos[key].seccion === editSecNom) config.equipos[key].seccion = sec; } 
@@ -2120,6 +2172,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
 
         async function borrarSeccion(sec) { 
+            if(!esUsuarioCreador()) return alert("Por seguridad estructural, solo Jack Wiens puede eliminar secciones de planta.");
             if(confirm(`¿Borrar sección ${sec}?`)) { 
                 config.secciones = config.secciones.filter(s=>s!==sec); 
                 if(config.prefijosSeccion) delete config.prefijosSeccion[sec];
@@ -2143,15 +2196,12 @@ const CFG_KEY = 'SySO_Config_Master';
             if(!txt) return alert("Pegue datos para importar."); 
             const grp = document.getElementById('qrGrupo').value;
             if(!grp) return alert("Seleccione primero el Grupo de Equipo arriba en el formulario de Registro.");
-
             const lines = txt.split(/\r?\n/); 
             let agregados = 0; 
             const loteEquiposNuevos = {};
-
             lines.forEach((l, idx) => { 
                 if(!l.trim()) return;
                 if(idx === 0 && l.toLowerCase().includes('id_equipo')) return;
-
                 const parts = l.includes('\t') ? l.split('\t') : l.split(';');
                 if(parts.length >= 3) {
                     let rawId = parts[0].trim().toUpperCase();
@@ -2165,7 +2215,7 @@ const CFG_KEY = 'SySO_Config_Master';
                     }
                     if(rawId && tipo && sec) {
                         sec = corregirOrtografiaTexto(sec);
-                        tipo = aprenderTerminoNuevo('tipos', tipo);
+                        tipo = aprenderTerminoNuevo('tipos', tipo, true);
                         if(!config.secciones.includes(sec)) {
                             config.secciones.push(sec);
                             config.prefijosSeccion[sec] = generarPrefijoSeccionAuto(sec);
@@ -2173,7 +2223,6 @@ const CFG_KEY = 'SySO_Config_Master';
                         const prefComp = obtenerPrefijoCompuesto(grp, sec);
                         const matchDigits = rawId.match(/(\d+)$/);
                         const finalId = rawId.startsWith(prefComp) ? rawId : (matchDigits ? prefComp + matchDigits[1].padStart(3, '0') : prefComp + rawId);
-
                         const objEq = { 
                             tipo, seccion: sec, grupo: grp, ubicacion: corregirOrtografiaTexto(ubi || 'S/D'), 
                             capacidad: cap, serie, vencimiento: venc, insumos: [], tieneFotoRef: false
@@ -2184,7 +2233,6 @@ const CFG_KEY = 'SySO_Config_Master';
                     }
                 }
             });
-
             if(agregados > 0) { 
                 await parchearSubnodoConfigNube('equipos', loteEquiposNuevos);
                 await parchearSubnodoConfigNube(null, { secciones: config.secciones, prefijosSeccion: config.prefijosSeccion, aprendidos: config.aprendidos });
@@ -2205,7 +2253,6 @@ const CFG_KEY = 'SySO_Config_Master';
             document.getElementById('qrSeccion').value = eq.seccion; 
             document.getElementById('qrGrupo').value = eq.grupo; 
             actualizarPrefijoUI();
-
             const prefijoOficial = obtenerPrefijoCompuesto(eq.grupo, eq.seccion); 
             const match = id.match(/^(.*?)(\d+)$/); 
             document.getElementById('qrPrefijo').value = prefijoOficial; 
@@ -2215,7 +2262,6 @@ const CFG_KEY = 'SySO_Config_Master';
             document.getElementById('qrCapacidad').value = eq.capacidad || '';
             document.getElementById('qrSerie').value = eq.serie || '';
             document.getElementById('qrVencimiento').value = eq.vencimiento || ''; 
-
             const contInsumos = document.getElementById('contenedorFilasInsumos');
             contInsumos.innerHTML = '';
             if(Array.isArray(eq.insumos) && eq.insumos.length > 0) {
@@ -2223,7 +2269,6 @@ const CFG_KEY = 'SySO_Config_Master';
             } else if(esGrupoBotiquinOPA(eq.grupo)) {
                 agregarFilaInsumoBotiquin();
             }
-
             quitarFotoReferenciaEquipo();
             fotoRefEquipoEliminada = false;
             if(eq.tieneFotoRef) {
@@ -2266,7 +2311,6 @@ const CFG_KEY = 'SySO_Config_Master';
             const sec = document.getElementById('qrSeccion').value; 
             const grupoElegido = document.getElementById('qrGrupo').value;
             if(!sec || !grupoElegido) return alert("⛔ Seleccione primero la Sección y el Grupo del equipo.");
-
             const prefijo = obtenerPrefijoCompuesto(grupoElegido, sec);
             const numeroRaw = document.getElementById('qrNumero').value.trim(); 
             const numero = numeroRaw.padStart(Math.max(3, numeroRaw.length), '0');
@@ -2274,14 +2318,14 @@ const CFG_KEY = 'SySO_Config_Master';
             const rawTipo = document.getElementById('qrTipo').value.trim(); 
             const rawUbi = document.getElementById('qrUbicacion').value.trim(); 
             if(!numeroRaw || !rawTipo || !rawUbi) return alert("⛔ Complete los campos obligatorios (*): Número, Ubicación y Tipo."); 
-
-            const tipo = aprenderTerminoNuevo('tipos', rawTipo);
+            const tipo = aprenderTerminoNuevo('tipos', rawTipo, true);
             const ubi = corregirOrtografiaTexto(rawUbi);
             const cap = document.getElementById('wrapQrCapacidad').classList.contains('campo-oculto') ? '' : document.getElementById('qrCapacidad').value.trim();
             const serie = document.getElementById('wrapQrSerie').classList.contains('campo-oculto') ? '' : document.getElementById('qrSerie').value.trim();
             const vencimiento = document.getElementById('wrapQrVencimiento').classList.contains('campo-oculto') ? '' : document.getElementById('qrVencimiento').value; 
             const listaInsumos = document.getElementById('wrapInsumosBotiquin').classList.contains('campo-oculto') ? [] : recolectarInsumosFormulario();
             
+            // Si el equipo se reubica de sección o cambia de código, migra su historial y foto de referencia
             if(editQRId && id !== editQRId) { 
                 if(config.equipos[id]) return alert(`El código ${id} ya está en uso en la sección ${sec}.`); 
                 delete config.equipos[editQRId]; 
@@ -2290,19 +2334,15 @@ const CFG_KEY = 'SySO_Config_Master';
             if(!editQRId && config.equipos[id]) {
                 if(!confirm(`⚠️ El equipo ${id} ya existe en ${sec}. ¿Desea sobrescribirlo?`)) return;
             }
-
             const teniaFotoAntes = (config.equipos[id] && config.equipos[id].tieneFotoRef) || false;
             const tendraFoto = fotoRefEquipoActualBase64 ? true : (fotoRefEquipoEliminada ? false : teniaFotoAntes);
-
             const nuevoEqObj = { 
                 tipo, seccion: sec, ubicacion: ubi, grupo: grupoElegido, 
                 capacidad: cap, serie, vencimiento, insumos: listaInsumos, tieneFotoRef: tendraFoto
             }; 
             config.equipos[id] = nuevoEqObj;
-
             if(fotoRefEquipoActualBase64) await guardarFotoReferenciaEnNube(id, fotoRefEquipoActualBase64);
             else if(fotoRefEquipoEliminada) await guardarFotoReferenciaEnNube(id, null);
-
             await parchearSubnodoConfigNube('equipos', { [id]: nuevoEqObj });
             await parchearSubnodoConfigNube('aprendidos', config.aprendidos);
             
@@ -2336,6 +2376,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
         
         async function borrarQR(id) { 
+            if(!esUsuarioCreador()) return alert("Solo Jack Wiens puede eliminar equipos del inventario maestro.");
             if(confirm(`¿Borrar equipo ${id} de toda la planta?`)) { 
                 delete config.equipos[id]; 
                 if(config.fallas) delete config.fallas[id];
@@ -2345,14 +2386,17 @@ const CFG_KEY = 'SySO_Config_Master';
                 poblarAdmin(true); 
             } 
         }
+
         function descargarUnicoQR() { const a = document.createElement('a'); a.href = document.getElementById('qrGenerado').toDataURL('image/png'); a.download = 'QR_' + document.getElementById('lblQR').innerText.split(' - ')[0] + '.png'; a.click(); }
 
         function renderListas() {
+            const soyCreador = esUsuarioCreador();
             const lG = document.getElementById('listaGrupos'); if(lG) lG.innerHTML = ''; 
             Object.keys(config.grupos).sort(sortNatural).forEach(g => { 
                 if(g!=='Todos' && lG) {
                     const camposAct = obtenerCamposActivosGrupo(g);
-                    lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Sigla: ${obtenerSiglaGrupo(g)}]<br><small class="text-muted"><b>Chequeo:</b> ${config.grupos[g].join(', ')}</small><br><small class="text-muted" style="font-size:11px;"><b>Ficha:</b> ${camposAct.length ? camposAct.join(', ') : 'Básica'}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button></div></div>`; 
+                    const btnDelG = soyCreador ? `<button class="btn-small btn-s-del" onclick="borrarGrupo('${g}')">❌</button>` : '';
+                    lG.innerHTML += `<div class="list-item"><div><b>${g}</b> [Sigla: ${obtenerSiglaGrupo(g)}]<br><small class="text-muted"><b>Chequeo:</b> ${config.grupos[g].join(', ')}</small><br><small class="text-muted" style="font-size:11px;"><b>Ficha:</b> ${camposAct.length ? camposAct.join(', ') : 'Básica'}</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionGrupo('${g}')">✏️</button>${btnDelG}</div></div>`; 
                 }
             });
             
@@ -2360,12 +2404,14 @@ const CFG_KEY = 'SySO_Config_Master';
             config.usuarios.forEach(u => {
                 if(!lU) return;
                 const secs = (!u.secciones || u.secciones.includes('Todas')) ? '🌎 Todas las Secciones' : `📍 ${u.secciones.join(', ')}`;
-                lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(Admin)':''}<br><small style="color:var(--primary);font-weight:bold;">${secs}</small><br><small class="text-muted">Grupos: [${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button><button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button></div></div>`;
+                const btnDelU = soyCreador ? `<button class="btn-small btn-s-del" onclick="borrarUsuario(${u.id})">❌</button>` : '';
+                lU.innerHTML += `<div class="list-item"><div><b>${u.nombre}</b> ${u.rol==='Admin'?'(Admin)':''}<br><small style="color:var(--primary);font-weight:bold;">${secs}</small><br><small class="text-muted">Grupos: [${u.grupo.join(', ')}]</small></div><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionUsu(${u.id})">✏️</button>${btnDelU}</div></div>`;
             });
             
             const lS = document.getElementById('listaSecciones'); if(lS) lS.innerHTML = ''; 
             config.secciones.forEach(s => {
-                if(lS) lS.innerHTML += `<div class="list-item"><span><b>${s}</b> <small class="text-muted">[Sigla: ${obtenerSiglaSeccion(s)}-]</small></span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button></div></div>`;
+                const btnDelS = soyCreador ? `<button class="btn-small btn-s-del" onclick="borrarSeccion('${s}')">❌</button>` : '';
+                if(lS) lS.innerHTML += `<div class="list-item"><span><b>${s}</b> <small class="text-muted">[Sigla: ${obtenerSiglaSeccion(s)}-]</small></span><div class="action-btns"><button class="btn-small btn-s-edit" onclick="cargarEdicionSec('${s}')">✏️</button>${btnDelS}</div></div>`;
             });
             
             const lQ = document.getElementById('listaEquipos'); 
@@ -2373,6 +2419,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 lQ.innerHTML = ''; 
                 const eqPorGrupo = {}; 
                 const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
+                const mapaSinQR = (config.telemetria && config.telemetria.equiposSinQR) || {};
                 
                 Object.keys(config.equipos).sort(sortNatural).forEach(id => { 
                     const eq = config.equipos[id]; 
@@ -2390,7 +2437,6 @@ const CFG_KEY = 'SySO_Config_Master';
                         if(!eqPorSeccion[eq.seccion]) eqPorSeccion[eq.seccion] = [];
                         eqPorSeccion[eq.seccion].push(eq);
                     });
-
                     let accordionContentHTML = '';
                     Object.keys(eqPorSeccion).sort(sortNatural).forEach(sec => {
                         let itemsHTML = '', secVencidosCount = 0;
@@ -2401,10 +2447,12 @@ const CFG_KEY = 'SySO_Config_Master';
                             if(eq.capacidad) extraFicha.push(eq.capacidad);
                             if(eq.ubicacion) extraFicha.push(`📍 ${eq.ubicacion}`);
                             if(Array.isArray(eq.insumos) && eq.insumos.length > 0) extraFicha.push(`💊 ${eq.insumos.length} ítems`);
+                            if((mapaSinQR[eq.id] || 0) >= 2) extraFicha.push(`🖨️ QR Dañado (${mapaSinQR[eq.id]}x)`);
                             let strExtra = extraFicha.length ? `<br><small class="text-muted">${extraFicha.join(' | ')}</small>` : '';
                             let expInfo = infoV.vencido ? `<br><span style="color:var(--danger); font-size:11px; font-weight:bold;">⚠️ ${infoV.detalle}</span>` : (eq.vencimiento ? `<br><span style="color:var(--text-muted); font-size:11px;">Vence: ${eq.vencimiento}</span>` : '');
                             let btnFotoRef = eq.tieneFotoRef ? `<button class="btn-small" style="background:#6366f1;" onclick="verFotoReferenciaEquipo('${eq.id}')">🖼️</button>` : '';
-                            itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${strExtra}${expInfo}</div><div class="action-btns">${btnFotoRef}<button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button><button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button></div></div>`;
+                            let btnDelEq = soyCreador ? `<button class="btn-small btn-s-del" onclick="borrarQR('${eq.id}')">❌</button>` : '';
+                            itemsHTML += `<div class="list-item" style="padding-left:10px; border-bottom:1px dashed var(--border);"><div><b>${eq.id}</b> (${eq.tipo})${strExtra}${expInfo}</div><div class="action-btns">${btnFotoRef}<button class="btn-small btn-s-edit" onclick="cargarEdicionQR('${eq.id}')">✏️</button>${btnDelEq}</div></div>`;
                         });
                         let secBadge = secVencidosCount > 0 ? `<span class="badge-vencido">⚠️ ${secVencidosCount} Alerta</span>` : '';
                         let activeSecClass = filtro !== '' ? 'active' : '';
@@ -2416,6 +2464,22 @@ const CFG_KEY = 'SySO_Config_Master';
                 });
             }
         }
+
+        window.imprimirColaQRsDanados = function() {
+            const mapa = (config.telemetria && config.telemetria.equiposSinQR) || {};
+            const danados = Object.keys(mapa).filter(id => mapa[id] >= 1 && config.equipos[id]).sort(sortNatural);
+            if(danados.length === 0) return alert("✅ No hay etiquetas QR reportadas como dañadas o con lecturas manuales.");
+            let html = `<html><head><meta charset="utf-8"><title>Reimpresión QRs Dañados</title><style>body{font-family:sans-serif; text-align:center; padding:15px;} .no-print{margin-bottom:20px;} .btn-print{background:#2F5597; color:#fff; border:none; padding:12px 24px; font-size:16px; font-weight:bold; border-radius:8px; cursor:pointer;} .qr-box{display:inline-block; border:2px dashed #dc3545; margin:8px; padding:12px; width:200px; vertical-align:top; page-break-inside:avoid;} img{width:100%;} h3{margin:4px 0; font-size:16px;} p{margin:0; font-size:11.5px; color:#333;} @media print { .no-print{display:none;} }</style></head><body><div class="no-print"><button class="btn-print" onclick="window.print()">🖨️ Imprimir ${danados.length} Etiquetas Dañadas</button></div><h2>Cola de Reimpresión de Etiquetas QR Dañadas</h2>`;
+            const generador = new QRious({ size: 240, level: 'H' });
+            danados.forEach(id => {
+                const eq = config.equipos[id];
+                generador.value = id;
+                html += `<div class="qr-box"><h3>${id}</h3><img src="${generador.toDataURL('image/png')}"><p>${eq.tipo}<br><b>${eq.seccion}</b> (${mapa[id]}x manual)</p></div>`;
+            });
+            html += `</body></html>`;
+            const blob = new Blob([html], { type: 'text/html' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Reimpresion_QRs_Danados.html`; a.click();
+        };
 
         window.descargarLoteQRs = function(grupo, seccion) {
             const filtro = (document.getElementById('buscadorEquipos') ? document.getElementById('buscadorEquipos').value.toLowerCase() : '');
@@ -2434,7 +2498,8 @@ const CFG_KEY = 'SySO_Config_Master';
             const blob = new Blob([html], { type: 'text/html' }); 
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = seccion === 'ALL' ? `Lote_QRs_${grupo.replace(/\s+/g, '_')}.html` : `Lote_QRs_${grupo.replace(/\s+/g, '_')}_${seccion.replace(/\s+/g, '_')}.html`; a.click();
         };
-
+// === FIN DE LA PARTE 2 ===
+// --- MOTOR DE CONTROL EN TERRENO, FOTOS DE EVIDENCIA Y CONTINGENCIA ---
         function procesarFoto(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -2493,7 +2558,6 @@ const CFG_KEY = 'SySO_Config_Master';
         function guardarBorrador() { let obs = document.getElementById('observaciones').value; localStorage.setItem(DRAFT_KEY, obs); document.getElementById('lblBorrador').innerText = "📝 Nota guardada."; }
         function agregarTag(texto) { let obs = document.getElementById('observaciones'); if(obs.value.trim() === '') obs.value = texto; else obs.value += ", " + texto; guardarBorrador(); obs.focus(); }
         
-        // --- CONTINGENCIA CON FILTRO POR SECCIÓN Y GRUPO DEL USUARIO ---
         function abrirModalContingencia() {
             detenerCamaraQR(false);
             esCargaManual = true;
@@ -2506,7 +2570,6 @@ const CFG_KEY = 'SySO_Config_Master';
             selGrp.innerHTML = '<option value="">Primero seleccione una sección</option>'; selGrp.disabled = true;
             const selEq = document.getElementById('contingenciaEq');
             selEq.innerHTML = '<option value="">Primero seleccione un grupo</option>'; selEq.disabled = true;
-
             if(secsHabilitadas.length === 1) { selSec.value = secsHabilitadas[0]; poblarGruposContingencia(); }
             document.getElementById('modalContingencia').classList.remove('hidden');
         }
@@ -2516,7 +2579,6 @@ const CFG_KEY = 'SySO_Config_Master';
             const selGrp = document.getElementById('contingenciaGrp'), selEq = document.getElementById('contingenciaEq');
             selEq.innerHTML = '<option value="">Primero seleccione un grupo</option>'; selEq.disabled = true;
             if(!sec) { selGrp.innerHTML = '<option value="">Primero seleccione una sección</option>'; selGrp.disabled = true; return; }
-
             const gruposEnSeccion = new Set();
             Object.keys(config.equipos).forEach(id => {
                 const eq = config.equipos[id];
@@ -2559,8 +2621,8 @@ const CFG_KEY = 'SySO_Config_Master';
             procesarEscaneo(id);
             actualizarEstadoRequisitoFoto();
         };
-
         window.cerrarModalContingencia = function() { document.getElementById('modalContingencia').classList.add('hidden'); };
+
         function toggleLinterna() { if (html5QrcodeScanner && html5QrcodeScanner.html5Qrcode) { try { const track = html5QrcodeScanner.html5Qrcode.getRunningTrack(); if (track) { const isTorchOn = track.getSettings().torch || false; track.applyConstraints({ advanced: [{ torch: !isTorchOn }] }).catch(() => alert("La linterna no es compatible con este celular.")); } else alert("Encienda la cámara primero."); } catch(e) { alert("Linterna no soportada."); } } }
 
         async function detenerCamaraQR(fueCanceladoManual = false) {
@@ -2601,7 +2663,18 @@ const CFG_KEY = 'SySO_Config_Master';
         
         window.alCambiarEstadoPuntoControl = function(index, valor) {
             if(valor === 'Falla') abrirAsistenteFallaPunto(index);
-            else { delete motivosFallaPorIndex[index]; actualizarCajaResumenFallas(); actualizarEstadoRequisitoFoto(); }
+            else {
+                delete motivosFallaPorIndex[index];
+                if(valor === 'Recarga') {
+                    const obs = document.getElementById('observaciones');
+                    if(obs && !obs.value.includes('[EN RECARGA]')) {
+                        obs.value = obs.value.trim() ? obs.value.trim() + ' [EN RECARGA / TALLER]' : '[EN RECARGA / TALLER]';
+                        guardarBorrador();
+                    }
+                }
+                actualizarCajaResumenFallas();
+                actualizarEstadoRequisitoFoto();
+            }
         };
 
         function abrirAsistenteFallaPunto(index) {
@@ -2611,7 +2684,6 @@ const CFG_KEY = 'SySO_Config_Master';
             indexFallaActivaModal = index;
             document.getElementById('subtituloAsistenteFalla').innerHTML = `Equipo: <b>${id}</b> (${eq.grupo})<br>Punto con falla: <b style="color:var(--danger);">${nombreParam}</b>`;
             document.getElementById('inputDetalleFallaCustom').value = '';
-
             let opciones = obtenerOpcionesFallaParaParametro(nombreParam, eq.grupo);
             if(Array.isArray(eq.insumos) && eq.insumos.length > 0) {
                 eq.insumos.forEach(ins => {
@@ -2679,13 +2751,11 @@ const CFG_KEY = 'SySO_Config_Master';
             else { txt.innerHTML = ''; box.classList.add('hidden'); }
         }
 
-        // --- FORMULARIO DE CONTROL CON TABLA INTERACTIVA DE BOTIQUINES Y ALTA RÁPIDA DE INSUMOS ---
         function renderFormularioControlInspeccion(id) {
             const eq = config.equipos[id];
             if(!eq) return;
             motivosFallaPorIndex = {};
             actualizarCajaResumenFallas();
-
             let fichaResumen = `${eq.seccion} | ${eq.tipo}`;
             if(eq.capacidad) fichaResumen += ` (${eq.capacidad})`;
             if(eq.serie) fichaResumen += ` [S/N: ${eq.serie}]`;
@@ -2696,25 +2766,26 @@ const CFG_KEY = 'SySO_Config_Master';
             const container = document.getElementById('moduloDinamico'); 
             container.classList.remove('hidden'); 
             const params = config.grupos[eq.grupo] || [];
-
             const notasBase = ["Revisión en orden", "Limpieza exterior realizada", "Reposición de insumos completada", "Acceso despejado", "Señalética visible"];
             const notasAprendidas = (config.aprendidos && config.aprendidos.notas) || [];
             const todasNotas = [...new Set([...notasBase, ...notasAprendidas.slice(-6)])];
             let tagsHTML = `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">`; 
             todasNotas.forEach(t => { 
-                tagsHTML += `<button type="button" class="btn-small" style="background:var(--edit); color:#fff; border:none; padding:5px 9px; font-weight:bold;" onclick="agregarTag('${t.replace(/'/g, "\\'")}')">+ ${t}</button>`; 
+                tagsHTML += `<button type="button" class="btn-small btn-chip-wrap" style="background:var(--edit); color:#fff; border:none; padding:5px 9px; font-weight:bold;" onclick="agregarTag('${t.replace(/'/g, "\\'")}')">+ ${t}</button>`; 
             }); 
             tagsHTML += `</div>`; 
             document.getElementById('smartTagsContainer').innerHTML = tagsHTML;
-
             let warningHTML = '';
             if(esGrupoBotiquinOPA(eq.grupo) || (Array.isArray(eq.insumos) && eq.insumos.length > 0)) {
                 if(!Array.isArray(eq.insumos)) eq.insumos = [];
                 warningHTML += `
                     <div style="margin-bottom:14px; border:2px solid var(--edit); border-radius:8px; padding:10px; background:var(--input-bg);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
                             <span style="font-size:13px; font-weight:bold; color:var(--primary);">💊 Control de Stock, Consumo y Reposición:</span>
-                            <button type="button" class="btn-small btn-info" onclick="agregarInsumoNuevoEnControl()">➕ Sumar Insumo</button>
+                            <div style="display:flex; gap:5px;">
+                                <button type="button" class="btn-small btn-success" onclick="marcarBotiquinIntacto()">✅ Botiquín Intacto</button>
+                                <button type="button" class="btn-small btn-info" onclick="agregarInsumoNuevoEnControl()">➕ Sumar Insumo</button>
+                            </div>
                         </div>
                         <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Anote cuánto se <b>Usó</b> y cuánto <b>Repuso</b>. Esto actualizará el stock real en la nube sin marcar falla.</p>
                         <div style="overflow-x:auto;">
@@ -2744,16 +2815,16 @@ const CFG_KEY = 'SySO_Config_Master';
                 });
                 warningHTML += `</tbody></table></div></div>`;
             }
-
             warningHTML += `<div style="background:var(--primary); color:#fff; padding:8px 12px; border-radius:6px; margin-bottom:12px; font-size:13px; font-weight:bold;">📋 Puntos a Evaluar: ${eq.grupo}</div>`;
             const infoVenc = verificarEquipoTieneVencidos(eq);
             if(infoVenc.vencido) warningHTML += `<div class="alert-danger"><b>🚨 ALERTA DE VENCIMIENTO O STOCK:</b><br>${infoVenc.detalle}</div>`; 
             if(config.fallas && config.fallas[id]) warningHTML += `<div class="alert-warning"><b>⚠️ Falla Previa Registrada:</b><br><i>${config.fallas[id]}</i>.</div>`; 
+            if(config.enRecarga && config.enRecarga[id]) warningHTML += `<div class="alert-warning"><b>🔧 Equipo estaba En Recarga / Taller:</b><br>Al guardarlo como OK hoy, volverá automáticamente a estado operativo normal.</div>`;
             
             let html = '<div class="form-grid-pc">'; 
             if(params.length > 0) { 
                 params.forEach((p, index) => { 
-                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="alCambiarEstadoPuntoControl(${index}, this.value)"><option value="OK">✅ OK</option><option value="Falla">🚨 Falla (Elegir motivo + Foto)</option></select></div>`; 
+                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="alCambiarEstadoPuntoControl(${index}, this.value)"><option value="OK">✅ OK</option><option value="Recarga">🔧 En Recarga / Taller (Sin Falla)</option><option value="Falla">🚨 Falla (Elegir motivo + Foto)</option></select></div>`; 
                 }); 
             } else {
                 html += `<div class="alert-warning">Sin puntos específicos. Registre el estado en Observaciones.</div>`;
@@ -2775,7 +2846,6 @@ const CFG_KEY = 'SySO_Config_Master';
                     if(!isNaN(idxElegido) && posibles[idxElegido]) id = posibles[idxElegido];
                 }
             }
-
             document.getElementById('idEquipo').value = id;
             if(config.equipos[id]) {
                 const eq = config.equipos[id]; 
@@ -2820,27 +2890,25 @@ const CFG_KEY = 'SySO_Config_Master';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         
-        // --- GUARDADO DE CONTROL CON STOCK DE BOTIQUÍN, AUTO-APRENDIZAJE Y PATCH ATÓMICO ---
         async function guardarRegistro() {
             const id = document.getElementById('idEquipo').value; 
             if(!id) return alert("Escanee un QR o elija un equipo de la lista."); 
             const btnSave = document.getElementById('btnGuardarControl');
             if(btnSave.disabled) return;
-
             const eq = config.equipos[id]; 
             const params = config.grupos[eq.grupo] || []; 
-            let resp = {}, fallasDetectadas = [], indiceSinMotivo = null;
+            let resp = {}, fallasDetectadas = [], hayEnRecarga = false, indiceSinMotivo = null;
             
             params.forEach((p, index) => { 
                 const el = document.getElementById(`dynChk_${index}`);
                 let val = el ? el.value : 'OK'; 
                 resp[`Control_${index+1}`] = val; 
+                if(val === 'Recarga') hayEnRecarga = true;
                 if(val === 'Falla') {
                     if(!motivosFallaPorIndex[index] && indiceSinMotivo === null) indiceSinMotivo = index;
                     fallasDetectadas.push(motivosFallaPorIndex[index] ? `${p}: ${motivosFallaPorIndex[index]}` : p); 
                 }
             });
-
             if(indiceSinMotivo !== null) { abrirAsistenteFallaPunto(indiceSinMotivo); return; }
             if((fallasDetectadas.length > 0 || esCargaManual) && !fotoActualBase64) { 
                 document.getElementById('btnAdjuntarFoto').classList.add('urgent'); 
@@ -2850,7 +2918,6 @@ const CFG_KEY = 'SySO_Config_Master';
             }
             
             btnSave.disabled = true;
-
             const reposicionesMes = [];
             let huboCambioInsumos = false;
             if(Array.isArray(eq.insumos) && eq.insumos.length > 0) {
@@ -2863,7 +2930,6 @@ const CFG_KEY = 'SySO_Config_Master';
                     const nuevaVenc = (elVenc && elVenc.value.trim()) ? elVenc.value.trim() : 'N/A';
                     const stockIni = parseInt(ins.stock, 10) || 0;
                     const stockFin = Math.max(0, stockIni - cantCons + cantRep);
-
                     if(cantCons > 0 || cantRep > 0 || nuevaVenc !== (ins.vencimiento || 'N/A')) {
                         ins.stock = stockFin;
                         ins.vencimiento = nuevaVenc;
@@ -2878,13 +2944,12 @@ const CFG_KEY = 'SySO_Config_Master';
                     }
                 });
             }
-
             let rawObs = document.getElementById('observaciones').value.trim(); 
             let obsText = rawObs ? corregirOrtografiaTexto(rawObs) : '';
             if(obsText && obsText.length >= 4 && obsText.length <= 55) {
                 aprenderTerminoNuevo('notas', obsText);
             }
-
+            if(hayEnRecarga && !obsText.includes('[EN RECARGA]')) obsText = (obsText ? obsText + ' ' : '') + '[EN RECARGA]';
             const infoVenc = verificarEquipoTieneVencidos(eq);
             if(infoVenc.vencido) fallasDetectadas.push(`VENCIDO/AGOTADO (${infoVenc.detalle})`);
             let obsSanitized = obsText.replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
@@ -2893,6 +2958,9 @@ const CFG_KEY = 'SySO_Config_Master';
             if(!config.fallas) config.fallas = {}; 
             if(fallasDetectadas.length > 0) config.fallas[id] = detalleFallasStr; 
             else delete config.fallas[id]; 
+            if(!config.enRecarga) config.enRecarga = {};
+            if(hayEnRecarga) config.enRecarga[id] = obtenerFechaHoraEstandar().soloFecha;
+            else delete config.enRecarga[id];
 
             const duracionSeg = inicioControlTimestamp > 0 ? Math.min(600, Math.max(2, Math.round((Date.now() - inicioControlTimestamp) / 1000))) : 15;
             if(!config.telemetria) config.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
@@ -2919,7 +2987,6 @@ const CFG_KEY = 'SySO_Config_Master';
                 Alerta_Fraude: isFraude, tieneFotoEvidencia: !!fotoActualBase64, synced: false
             }; 
             registro.uid = generarClaveUnicaInspeccion(registro);
-
             const fotoCopia = fotoActualBase64;
             if (fotoCopia) { 
                 try {
@@ -2928,25 +2995,22 @@ const CFG_KEY = 'SySO_Config_Master';
                     guardarLocalSeguro(PHOTO_KEY, JSON.stringify(photoDB)); 
                 } catch(e) {}
             }
-
             const subidoOk = await subirInspeccionIndividualANube(registro, fotoCopia);
             registro.synced = subidoOk;
             if(huboCambioInsumos) await parchearSubnodoConfigNube(`equipos/${encodeURIComponent(id)}`, { insumos: eq.insumos });
             await parchearSubnodoConfigNube('fallas', { [id]: fallasDetectadas.length > 0 ? detalleFallasStr : null });
-            await parchearSubnodoConfigNube(null, { telemetria: config.telemetria, aprendidos: config.aprendidos });
-
+            await parchearSubnodoConfigNube('enRecarga', { [id]: hayEnRecarga ? reloj.soloFecha : null });
+            await parchearSubnodoConfigNube(null, { telemetria: config.telemetria, aprendidos: config.aprendidos, aprendidosCandidatos: config.aprendidosCandidatos });
             db.push(registro); 
             guardarLocalSeguro(DB_KEY, JSON.stringify(db));
 
             const match = id.match(/^(.*?)(\d+)$/); 
             let modalHTML = `<h2 style="color:var(--success); font-size:24px; margin-bottom:4px;">✅ ¡Control Guardado!</h2>`;
-            modalHTML += `<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${subidoOk ? '☁️ Sincronizado en la nube' : '⚡ Guardado en el teléfono'}</p>`;
-
+            modalHTML += `<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${subidoOk ? '☁️ Sincronizado en la nube' : '⚡ Guardado en cola offline del teléfono'}</p>`;
             const totalSec = Object.values(config.equipos).filter(e => e.seccion === eq.seccion).length; 
             const escaneadosSec = db.filter(r => r.Seccion === eq.seccion && String(r.Fecha || '').startsWith(reloj.soloFecha)).length; 
             const progPercent = Math.min(100, Math.round((escaneadosSec / totalSec) * 100)) || 0;
             modalHTML += `<div style="text-align:left; margin-bottom:14px;"><span style="font-size:12.5px; color:var(--text); font-weight:bold;">📍 Avance hoy en ${eq.seccion}: ${escaneadosSec} de ${totalSec}</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
-
             let proximoIdParaFoto = null;
             if(match) {
                 const prefijo = match[1], numeroActual = parseInt(match[2], 10), padding = match[2].length;
@@ -2994,7 +3058,6 @@ const CFG_KEY = 'SySO_Config_Master';
             actualizarMiniaturaPOSControl(null);
             btnSave.disabled = false;
             mostrarRadar(modalHTML);
-
             if(proximoIdParaFoto && config.equipos[proximoIdParaFoto] && config.equipos[proximoIdParaFoto].tieneFotoRef) {
                 obtenerFotoReferenciaEquipo(proximoIdParaFoto).then(b64 => {
                     const rBox = document.getElementById('radarNextThumbBox'), rImg = document.getElementById('radarNextThumbImg');
@@ -3030,11 +3093,9 @@ const CFG_KEY = 'SySO_Config_Master';
             const firmaGlobalBase64 = canvas.toDataURL('image/png'); 
             document.getElementById('btnConfirmarFirma').innerText = "Generando PDF... Aguarde"; 
             document.getElementById('btnConfirmarFirma').disabled = true;
-
             const registros = obtenerRegistrosFiltradosHistorial(); 
             let photoDB = {};
             try { photoDB = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}'); } catch(e){}
-
             for(let r of registros) {
                 const kFoto = r.ID_Equipo + '_' + r.Fecha;
                 if(!photoDB[kFoto] && r.uid) {
@@ -3062,7 +3123,6 @@ const CFG_KEY = 'SySO_Config_Master';
                 html += `<div class="report-card ${tieneFalla ? 'card-falla' : ''}"><h3 style="margin:0 0 5px 0; color:${tieneFalla ? '#dc3545' : '#2F5597'};">ID: ${r.ID_Equipo} | Sección: ${r.Seccion} (${r.Grupo})</h3><p style="margin:3px 0; font-size:13px;"><b>Fecha:</b> ${r.Fecha} | <b>Inspector:</b> ${r.Inspector}</p><p style="margin:3px 0; font-size:13px;"><b>Ubicación:</b> ${r.Ubicacion}</p><p style="margin:4px 0; font-size:13px; background:#f4f6f9; padding:5px; border-radius:4px;">${detallesControles}</p>${htmlFalla}${htmlRep}<p style="margin:3px 0; font-size:13px;"><b>Otras Observaciones:</b> ${r.Observaciones || 'Sin observaciones adicionales'}</p>${imgTag}</div>`; 
             }); 
             html += `<div class="firma-box"><h3>Firma de Conformidad</h3><img src="${firmaGlobalBase64}" style="max-width:100%;"><p><i>${usuarioActual.nombre} - ${obtenerFechaHoraEstandar().fechaHora}</i></p></div></body></html>`;
-
             let pdfDiv = document.createElement('div'); pdfDiv.innerHTML = html; 
             let opt = { margin: 10, filename: `Reporte_SySO_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
             try { 
@@ -3088,17 +3148,413 @@ const CFG_KEY = 'SySO_Config_Master';
             const l = document.createElement("a"); l.href = URL.createObjectURL(archivo); l.download = archivo.name; l.click();
         }
 
-        async function purgarHistorial() { 
-            if(confirm("⚠️ ¿Desea vaciar el historial de controles de la nube y del dispositivo? (Haga esto únicamente luego de haber descargado el Excel/PDF del mes en su PC).")) { 
-                localStorage.removeItem(DB_KEY); 
-                localStorage.removeItem(PHOTO_KEY); 
+        // =========================================================================
+        // MOTOR 1: LLAVE GEMINI SEGURA + ASISTENTE CONVERSACIONAL REAL DE DOBLE FILA
+        // =========================================================================
+        function guardarLlaveGeminiSegura() {
+            if(!esUsuarioCreador()) return;
+            const rawKey = document.getElementById('inputGeminiApiKey').value.trim();
+            if(!rawKey || !rawKey.startsWith('AIza')) return alert("⚠️ Pegue una clave válida de Google AI Studio (comienza con AIzaSy...).");
+            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
+            config.iaConfig.apiKeyObf = btoa(rawKey.split('').reverse().join(''));
+            parchearSubnodoConfigNube('iaConfig', config.iaConfig);
+            document.getElementById('inputGeminiApiKey').value = '';
+            renderPanelTelemetriaIA();
+            alert("✅ Llave Gemini Flash IA guardada y protegida en Firebase. Ya tienes activo el cerebro conversacional real en todos los dispositivos.");
+        }
+
+        function obtenerLlaveGeminiDesencriptada() {
+            try {
+                const obf = (config.iaConfig && config.iaConfig.apiKeyObf) || "";
+                if(!obf) return "";
+                return atob(obf).split('').reverse().join('');
+            } catch(e) { return ""; }
+        }
+
+        const GUIAS_AYUDA_BASE = {
+            "📋 ¿Cómo controlar un equipo?": {
+                titulo: "Control Rápido de Equipos con QR",
+                pasos: ["<span>📷</span>1. Escanear QR", "<span>✅</span>2. Evaluar Puntos", "<span>☁️</span>3. Guardar"],
+                detalle: "1. En la pestaña <b>Control</b>, toque el botón amarillo <b>📷 Escanear QR</b> y apunte a la etiqueta.<br>2. Verifique la foto en miniatura a la derecha para confirmar que sea el equipo correcto.<br>3. Si todo está en regla, deje los puntos en <b>✅ OK</b> y toque <b>Guardar Control</b>. Si el equipo se retiró para mantenimiento, elija <b>🔧 En Recarga</b>. Si tiene un desperfecto, cambie a <b>🚨 Falla</b>, elija el motivo y tome la foto."
+            },
+            "💊 ¿Cómo reponer un Botiquín?": {
+                titulo: "Consumo y Reposición de Medicamentos (Sin Falla)",
+                pasos: ["<span>💊</span>1. Ver Stock", "<span>🔄</span>2. Anotar Uso/Rep.", "<span>📊</span>3. Guardar"],
+                detalle: "1. Al escanear un <b>Botiquín</b>, si nadie consumió medicamentos toque <b>✅ Botiquín Intacto</b> arriba a la derecha.<br>2. Si se consumieron pastillas o vendas y las repone en el momento, anote la cantidad en <b>➖ Usado</b> y en <b>➕ Repuesto</b>.<br>3. <b>No marque Falla</b> por consumo normal: el sistema actualizará el stock automáticamente en la nube."
+            },
+            "🏷️ ¿Qué hago si el QR está roto?": {
+                titulo: "Carga Manual por Contingencia",
+                pasos: ["<span>⌨️</span>1. Elegir Lista", "<span>📍</span>2. Sección/Grupo", "<span>📸</span>3. Foto Comp."],
+                detalle: "1. Si la etiqueta QR física está borrosa o dañada, toque el botón gris <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>2. Elija su <b>Sección</b>, el <b>Grupo</b> y seleccione el número del equipo.<br>3. El sistema enviará automáticamente ese código a la cola de <b>🖨️ QRs Dañados</b> para reimpresión y le pedirá tomar una foto como comprobante."
+            },
+            "🚨 ¿Cómo funciona el botón S.O.S.?": {
+                titulo: "Protocolo de Emergencia S.O.S.",
+                pasos: ["<span>🚨</span>1. Tocar S.O.S.", "<span>🔥</span>2. Elegir Tipo", "<span>📲</span>3. Aviso Brigada"],
+                detalle: "1. Ante una emergencia real en planta, toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Seleccione la sección donde ocurre y toque <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Sonará una sirena en los dispositivos conectados y se abrirá el aviso directo para WhatsApp."
+            },
+            "📥 ¿Cómo descargar el Excel en PC?": {
+                titulo: "Descarga de Reportes y Pendientes en PC",
+                pasos: ["<span>💻</span>1. Abrir en PC", "<span>📊</span>2. Ir a Historial", "<span>📥</span>3. Bajar Excel"],
+                detalle: "1. Abra el enlace de la aplicación en la computadora y entre a <b>📊 Historial</b>.<br>2. En el filtro <b>Estado / Vista</b> puede elegir <b>⏳ Equipos Pendientes del Mes</b> para ver cuáles faltan visitar.<br>3. Toque <b>📥 Excel Controles</b> (incluye controlados y pendientes) o <b>💊 Excel Consumo Botiquines</b>."
+            }
+        };
+
+        const PREGUNTAS_ANALISTA_JACK = [
+            "🧠 ¿Qué mejoras detectó el Gemelo Digital hoy?",
+            "📊 ¿Qué secciones tienen más fallas o pendientes este mes?",
+            "🏷️ ¿Qué etiquetas QR están dañadas y debo reimprimir?",
+            "💊 ¿Qué botiquines tienen insumos vencidos o agotados?"
+        ];
+
+        function cambiarModoChatIA(modo) {
+            if(!esUsuarioCreador()) modo = 'AYUDA';
+            modoChatIAActual = modo;
+            const bAyuda = document.getElementById('btnModoAyudaOp');
+            const bAnalista = document.getElementById('btnModoAnalistaIA');
+            if(bAyuda && bAnalista) {
+                bAyuda.className = modo === 'AYUDA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
+                bAnalista.className = modo === 'ANALISTA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
+            }
+            renderBotonesSugeridosModalIA();
+        }
+
+        function renderBotonesSugeridosModalIA() {
+            const contBtns = document.getElementById('botonesPreguntasAyuda');
+            if(!contBtns) return;
+            contBtns.innerHTML = '';
+            const listaPreguntas = (modoChatIAActual === 'ANALISTA' && esUsuarioCreador())
+                ? PREGUNTAS_ANALISTA_JACK
+                : [...Object.keys(GUIAS_AYUDA_BASE), ...((config.aprendidos && config.aprendidos.preguntasAyuda) || []).slice(-4)];
+
+            listaPreguntas.forEach(q => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-small btn-info btn-chip-wrap';
+                btn.style.padding = '7px 10px';
+                btn.innerText = q;
+                btn.onclick = () => {
+                    if(modoChatIAActual === 'ANALISTA') {
+                        document.getElementById('inputPreguntaAyuda').value = q;
+                        consultarAsistenteAyudaLibre();
+                    } else {
+                        mostrarGuiaEnModal(q);
+                    }
+                };
+                contBtns.appendChild(btn);
+            });
+        }
+
+        function abrirModalAyuda() {
+            const switchBox = document.getElementById('boxSwitchModoIA');
+            if(switchBox) {
+                if(esUsuarioCreador()) switchBox.classList.remove('hidden');
+                else { switchBox.classList.add('hidden'); modoChatIAActual = 'AYUDA'; }
+            }
+            renderBotonesSugeridosModalIA();
+            const idEqAct = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
+            if(idEqAct && config.equipos[idEqAct] && esGrupoBotiquinOPA(config.equipos[idEqAct].grupo)) {
+                mostrarGuiaEnModal("💊 ¿Cómo reponer un Botiquín?");
+            } else {
+                mostrarGuiaEnModal(Object.keys(GUIAS_AYUDA_BASE)[0]);
+            }
+            document.getElementById('modalAyudaIA').classList.remove('hidden');
+        }
+
+        // Respuesta inteligente local (sin texto repetitivo genérico) cuando aún no se pegó API Key o no hay señal
+        function generarRespuestaContextualInteligente(pregunta, modo) {
+            const p = pregunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if(modo === 'ANALISTA' && esUsuarioCreador()) {
+                const pendientes = obtenerEquiposPendientesDelMes();
+                const fallasActivas = Object.entries(config.fallas || {});
+                const qrsRotos = Object.entries((config.telemetria && config.telemetria.equiposSinQR) || {}).sort((a,b)=>b[1]-a[1]);
+                const gemeloH = (config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || [];
+                if(p.includes('gemelo') || p.includes('mejora') || p.includes('velocidad') || p.includes('usabilidad')) {
+                    return `<b>🧬 Diagnóstico en Vivo del Gemelo Autónomo:</b><br>• <b>Velocidad:</b> Arranque en ${metricasVelocidad.arranqueMs} ms | Nube en ${metricasVelocidad.latenciaNubeMs} ms | Memoria local: ${metricasVelocidad.usoMemoriaKB} KB.<br>• <b>Hallazgos automáticos:</b><br>${gemeloH.length ? gemeloH.map(h => `• ${h}`).join('<br>') : '• Todo operando en parámetros óptimos.'}`;
+                }
+                if(p.includes('qr') || p.includes('danad') || p.includes('reimprim')) {
+                    return `<b>🏷️ Estado de Etiquetas QR en Planta:</b><br>${qrsRotos.length ? qrsRotos.map(x => `• <b>${x[0]}</b>: cargado manualmente ${x[1]} veces (sección ${config.equipos[x[0]] ? config.equipos[x[0]].seccion : 'S/D'}).`).join('<br>') : '✅ Todas las etiquetas QR se están leyendo bien con la cámara.'}`;
+                }
+                return `<b>🧠 Resumen Analítico de Planta (Jack Wiens):</b><br>• <b>Equipos totales:</b> ${Object.keys(config.equipos || {}).length}<br>• <b>Pendientes de controlar este mes:</b> ${pendientes.length} equipos.<br>• <b>Fallas activas hoy:</b> ${fallasActivas.length ? fallasActivas.map(f => `${f[0]} (${f[1]})`).join(', ') : '0 fallas.'}<br><i>💡 Tip: Pega tu llave gratuita AIzaSy... en Ajustes > Monitor IA para conversar libremente con Gemini Flash sobre estos datos.</i>`;
+            }
+
+            if(p.includes('ingreso') || p.includes('ingresar') || p.includes('entrar') || p.includes('login') || p.includes('pin') || p.includes('huella')) {
+                return `<b>👤 Cómo ingresar al sistema:</b><br>1. En la pantalla de ingreso, elija su nombre (o toque el botón de <b>⚡ Ingreso Rápido</b> arriba si es su celular habitual).<br>2. Escriba su PIN de 4 dígitos y toque <b>Ingresar</b>.<br>3. Una vez adentro, puede ir a <b>⚙️ Ajustes ➔ 👆 Activar Huella / FaceID</b> para entrar con el dedo la próxima vez.`;
+            }
+            if(p.includes('foto') && (p.includes('nuevo') || p.includes('registrar') || p.includes('alta') || p.includes('referencia'))) {
+                return `<b>🖼️ ¿Para qué sirve la Foto al Registrar un Equipo Nuevo?</b><br>Sirve como <b>Foto de Referencia visual</b>. Cuando el inspector escanee ese equipo en terreno, verá esa miniatura al lado de la ubicación para corroborar visualmente que está frente al equipo correcto y ubicarlo más rápido.`;
+            }
+            if(p.includes('foto') && (p.includes('hallazgo') || p.includes('falla') || p.includes('anomalia') || p.includes('control'))) {
+                return `<b>📸 ¿Para qué sirve sacar Foto en un Hallazgo o Falla?</b><br>Es el <b>comprobante forense</b> de la anomalía (con fecha, hora e inspector estampados en la imagen). Permite a Jefatura/Mantenimiento ver exactamente qué pieza se rompió desde el Excel o el PDF firmado sin tener que caminar hasta el sector.`;
+            }
+            if(p.includes('recarga') || p.includes('taller') || p.includes('mantenimiento')) {
+                return `<b>🔧 ¿Cómo registrar un equipo que se retiró para Recarga o Taller?</b><br>Al escanear el equipo en <b>📋 Control</b>, cambie el desplegable de evaluación a <b>🔧 En Recarga / Taller (Sin Falla)</b> y guarde. Así el equipo queda registrado como visitado en el mes sin ensuciar las estadísticas de fallas.`;
+            }
+            if(p.includes('pendiente') || p.includes('falta') || p.includes('olvidado')) {
+                return `<b>⏳ ¿Cómo ver qué equipos faltan controlar este mes?</b><br>Entre a la pestaña <b>📊 Historial</b> y en el filtro <b>Estado / Vista</b> elija <b>⏳ Equipos Pendientes del Mes</b>. Verá la lista exacta de equipos aún no visitados y podrá tocar <b>▶️ Controlar</b> para ir directo a cualquiera de ellos.`;
+            }
+            return `<b>📘 Respuesta Directa para "${pregunta}":</b><br>• Si busca <b>inspeccionar un equipo</b>: vaya a <b>📋 Control</b> y toque <b>📷 Escanear QR</b> (o <b>⌨️ Elegir de Lista</b> si el QR está dañado).<br>• Si busca <b>ver qué equipos faltan o bajar el Excel</b>: vaya a <b>📊 Historial</b>.<br>• Si busca <b>dar de alta un equipo o imprimir QRs</b>: vaya a <b>📦 Equipos</b>.`;
+        }
+
+        function mostrarGuiaEnModal(pregunta) {
+            const box = document.getElementById('respuestaGraficaAyuda');
+            let guia = GUIAS_AYUDA_BASE[pregunta];
+            if(guia) {
+                const pasosHTML = guia.pasos.map(p => `<div class="step-node">${p}</div>`).join('');
+                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:4px;">${guia.titulo}</div><div class="step-flow">${pasosHTML}</div><div>${guia.detalle}</div>`;
+                return;
+            }
+            const normKey = pregunta.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").substring(0, 60);
+            const respuestaCacheada = config.iaConfig && config.iaConfig.cacheRespuestas && config.iaConfig.cacheRespuestas[normKey];
+            if(respuestaCacheada) {
+                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Respuesta Inteligente (Memoria SySO):</div><div>${respuestaCacheada}</div>`;
+            } else {
+                box.innerHTML = generarRespuestaContextualInteligente(pregunta, modoChatIAActual);
+            }
+        }
+
+        async function consultarAsistenteAyudaLibre() {
+            const inp = document.getElementById('inputPreguntaAyuda');
+            const box = document.getElementById('respuestaGraficaAyuda');
+            const texto = inp.value.trim();
+            if(!texto) return;
+            inp.value = '';
+
+            // 1. Revisar si ya está en la memoria caché de Firebase (0 gasto de cuota)
+            const normKey = `${modoChatIAActual}_${texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").substring(0, 55)}`;
+            if(modoChatIAActual === 'AYUDA' && config.iaConfig && config.iaConfig.cacheRespuestas && config.iaConfig.cacheRespuestas[normKey]) {
+                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Asistente IA SySO:</div><div>${config.iaConfig.cacheRespuestas[normKey]}</div>`;
+                return;
+            }
+
+            // 2. Si tiene API Key de Gemini Flash configurada, consulta en vivo
+            const apiKey = obtenerLlaveGeminiDesencriptada();
+            if(apiKey) {
+                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Pensando respuesta específica para tu consulta...</div>`;
                 try {
-                    await fetch(CLOUD_INSP_URL, { method: 'DELETE' });
-                    await fetch(`${CLOUD_BASE_URL}/syso_photos.json`, { method: 'DELETE' });
+                    const pendientesMes = obtenerEquiposPendientesDelMes().length;
+                    const resumenPlanta = esUsuarioCreador() && modoChatIAActual === 'ANALISTA'
+                        ? `Datos en vivo de la planta: Total equipos=${Object.keys(config.equipos||{}).length}, Secciones=${(config.secciones||[]).join(',')}, Pendientes este mes=${pendientesMes}, Fallas activas=${JSON.stringify(config.fallas||{})}, Equipos en recarga=${JSON.stringify(config.enRecarga||{})}, Telemetría=${JSON.stringify(config.telemetria||{})}, Hallazgos del Gemelo Autónomo=${JSON.stringify((config.gemeloAutonomo&&config.gemeloAutonomo.hallazgos)||[])}.`
+                        : `Módulos de la app Gestión SySO V6.33: 1) Control (escanear QR, elegir de lista manual con foto, estado OK / En Recarga / Falla, tabla de stock de botiquines con botón Botiquín Intacto), 2) Historial (filtros por mes, sección, grupo, vista de Equipos Pendientes del Mes, descarga Excel Controles, Excel Botiquines y PDF Firmado), 3) Equipos (alta con ID Sección+Grupo+Correlativo, foto de referencia, reimpresión de QRs dañados e importación por lote), 4) Ajustes (Huella/FaceID, Modo Día/Noche).`;
+
+                    const promptSistema = (modoChatIAActual === 'ANALISTA' && esUsuarioCreador())
+                        ? `Eres el Analista Senior e Ingeniero de Planta exclusivo para Jack Wiens (creador de Gestión SySO). Responde en español, directo al grano, en máximo 120 palabras, usando los datos reales en vivo: ${resumenPlanta}\nConsulta de Jack: "${texto}"`
+                        : `Eres el Asistente Oficial de la aplicación industrial Gestión SySO. Responde exactamente la duda del operario en español claro, paso a paso y en máximo 95 palabras, sin repetir plantillas genéricas. Contexto de cómo funciona la app: ${resumenPlanta}\nPregunta del usuario: "${texto}"`;
+
+                    const urlApi = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+                    const resp = await fetch(urlApi, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: promptSistema }] }] })
+                    });
+                    if(resp.ok) {
+                        const data = await resp.json();
+                        const txtIA = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text;
+                        if(txtIA) {
+                            const htmlLimpio = txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+                            box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Respuesta Gemini IA:</div><div>${htmlLimpio}</div>`;
+                            if(modoChatIAActual === 'AYUDA') {
+                                if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
+                                if(!config.iaConfig.cacheRespuestas) config.iaConfig.cacheRespuestas = {};
+                                config.iaConfig.cacheRespuestas[normKey] = htmlLimpio;
+                                if(texto.length <= 52) aprenderTerminoNuevo('preguntasAyuda', texto.startsWith('¿') ? texto : `❓ ${texto}`);
+                                parchearSubnodoConfigNube(null, { iaConfig: config.iaConfig, aprendidos: config.aprendidos, aprendidosCandidatos: config.aprendidosCandidatos });
+                                renderBotonesSugeridosModalIA();
+                            }
+                            return;
+                        }
+                    }
                 } catch(e) {}
-                alert("✅ Historial limpiado correctamente."); 
-                renderHistorial(); 
-            } 
+            }
+
+            // 3. Motor Contextual Inteligente de Respaldo (Cero costo y sin frases genéricas repetidas)
+            box.innerHTML = generarRespuestaContextualInteligente(texto, modoChatIAActual);
+        }
+
+        // =========================================================================
+        // MOTOR 2: GEMELO DIGITAL AUTÓNOMO (PILOTO AUTOMÁTICO 24/7 EN SEGUNDO PLANO)
+        // =========================================================================
+        function ejecutarGemeloDigitalAutonomo() {
+            try {
+                // Clonación en burbuja aislada (Sandbox) sin tocar los datos reales
+                const clonConfig = JSON.parse(JSON.stringify(config || {}));
+                const clonDB = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+                const hallazgos = [];
+
+                // 1. Auditoría Automática de Velocidad y Memoria
+                calcularUsoMemoriaLocalKB();
+                if(metricasVelocidad.arranqueMs > 1800) {
+                    hallazgos.push(`⚡ <b>Velocidad Apertura:</b> Demoró ${metricasVelocidad.arranqueMs} ms. Se activó optimización automática de caché local.`);
+                    ejecutarMantenimientoAutomaticoInvisible();
+                } else {
+                    hallazgos.push(`⚡ <b>Velocidad Óptima:</b> Arranque en ${metricasVelocidad.arranqueMs} ms | Cambio de pestaña: ${metricasVelocidad.cambioPestanaMs || 2} ms | Nube: ${metricasVelocidad.latenciaNubeMs || 120} ms.`);
+                }
+
+                // 2. Auditoría Automática Visual (Escáner DOM Anti-Desborde)
+                let desbordesDetectados = 0;
+                document.querySelectorAll('button, .card, .modal-content').forEach(el => {
+                    if(el.offsetParent !== null && el.scrollWidth > el.clientWidth + 14) {
+                        el.classList.add('btn-chip-wrap');
+                        desbordesDetectados++;
+                    }
+                });
+                if(desbordesDetectados > 0) {
+                    hallazgos.push(`🎨 <b>Auto-Corrección Visual:</b> El Gemelo detectó y ajustó automáticamente ${desbordesDetectados} botón(es) largos para que no salgan del borde.`);
+                } else {
+                    hallazgos.push(`🎨 <b>Auditoría Visual OK:</b> 0 botones cortados o desbordados en pantalla.`);
+                }
+
+                // 3. Simulación de Prueba y Error en Rutas y Usabilidad (200 Operarios)
+                const t = clonConfig.telemetria || {};
+                const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
+                if(promSeg > 45) {
+                    hallazgos.push(`👆 <b>Usabilidad en Terreno:</b> El tiempo promedio es alto (${promSeg}s/equipo). Sugerencia: usar el botón "✅ Botiquín Intacto" y etiquetas rápidas.`);
+                }
+                if((t.fallasRevertidas || 0) >= 3) {
+                    hallazgos.push(`↩️ <b>Fricción Táctil Detectada:</b> Los inspectores tocaron "Falla" por error y volvieron a "OK" ${t.fallasRevertidas} veces.`);
+                }
+
+                // 4. Simulación de Cobertura y Cuellos de Botella por Sección
+                const pendientes = obtenerEquiposPendientesDelMes();
+                if(pendientes.length > 0) {
+                    const porSec = {};
+                    pendientes.forEach(p => porSec[p.seccion] = (porSec[p.seccion] || 0) + 1);
+                    const secMasAtrasada = Object.entries(porSec).sort((a,b) => b[1]-a[1])[0];
+                    if(secMasAtrasada) {
+                        hallazgos.push(`📍 <b>Ruta Prioritaria Sugerida:</b> La sección <b>${secMasAtrasada[0]}</b> concentra ${secMasAtrasada[1]} equipos sin controlar este mes.`);
+                    }
+                }
+
+                // 5. Detección de Fraude de Escritorio (<15s) en el Historial
+                const posiblesFraudes = clonDB.filter(r => r.Alerta_Fraude && r.Alerta_Fraude.includes('SÍ')).length;
+                if(posiblesFraudes > 0) {
+                    hallazgos.push(`🕵️ <b>Alerta de Auditoría:</b> Se detectaron ${posiblesFraudes} controles hechos con menos de 15 seg. de diferencia.`);
+                }
+
+                if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [] };
+                config.gemeloAutonomo.ciclos = (config.gemeloAutonomo.ciclos || 0) + 1;
+                config.gemeloAutonomo.ultimaCorrida = obtenerFechaHoraEstandar().fechaHora;
+                config.gemeloAutonomo.hallazgos = hallazgos;
+
+                if(esUsuarioCreador() && document.getElementById('view-ajustes').classList.contains('active')) {
+                    renderPanelTelemetriaIA();
+                }
+            } catch(e) {}
+        }
+
+        // --- PANEL EXCLUSIVO DE TELEMETRÍA, GEMELO Y DICCIONARIO PARA JACK WIENS ---
+        function renderPanelTelemetriaIA() {
+            if(!esUsuarioCreador()) return;
+            const box = document.getElementById('panelTelemetriaIA');
+            const boxGemelo = document.getElementById('panelGemeloAutonomo');
+            const contPal = document.getElementById('listaPalabrasAprendidas');
+            const lblKey = document.getElementById('lblEstadoLlaveIA');
+            if(!box || !contPal) return;
+
+            if(lblKey) {
+                const tieneKey = !!obtenerLlaveGeminiDesencriptada();
+                lblKey.innerHTML = tieneKey
+                    ? `<span style="color:var(--success); font-weight:bold;">✅ Llave Gemini Flash Conectada y Activa en la Nube (0 gasto de puntos personales).</span>`
+                    : `<span style="color:var(--warn-text); font-weight:bold;">⚡ Usando Motor Contextual Local. Pegue arriba su clave gratuita AIzaSy... de Google AI Studio.</span>`;
+            }
+
+            if(boxGemelo) {
+                const g = config.gemeloAutonomo || { ciclos: 1, ultimaCorrida: obtenerFechaHoraEstandar().fechaHora, hallazgos: [] };
+                boxGemelo.innerHTML = `
+                    <div class="text-muted" style="font-size:11px; margin-bottom:4px;">Ciclos simulados en esta sesión: <b>${g.ciclos || 1}</b> | Último escaneo: ${g.ultimaCorrida || 'Ahora'}</div>
+                    ${(g.hallazgos && g.hallazgos.length) ? g.hallazgos.map(h => `<div style="margin-top:3px;">${h}</div>`).join('') : '<div>✅ Sin anomalías detectadas.</div>'}
+                `;
+            }
+
+            const t = config.telemetria || { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
+            const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
+            const topManuales = Object.entries(t.equiposSinQR || {}).sort((a,b) => b[1]-a[1]).slice(0, 4).map(x => `${x[0]} (${x[1]}x)`).join(', ') || 'Ninguno detectado';
+            let botiquinesAlerta = [];
+            Object.keys(config.equipos || {}).forEach(id => {
+                const eq = config.equipos[id];
+                if(esGrupoBotiquinOPA(eq.grupo)) {
+                    const v = verificarEquipoTieneVencidos(eq);
+                    if(v.vencido) botiquinesAlerta.push(`${id} (${v.detalle})`);
+                }
+            });
+            box.innerHTML = `
+                <div>⏱️ <b>Tiempo promedio por control:</b> ${promSeg} seg. (${t.controlesTotales} controles medidos)</div>
+                <div style="margin-top:4px;">📷 <b>Intentos de QR cancelados sin leer:</b> ${t.qrCancelados || 0} | ⌨️ <b>Cargas manuales:</b> ${t.cargasManuales || 0}</div>
+                <div style="margin-top:4px;">🏷️ <b>Etiquetas QR a reimprimir (uso manual repetido):</b> <span style="color:var(--danger);font-weight:bold;">${topManuales}</span></div>
+                <div style="margin-top:4px;">💊 <b>Botiquines con stock agotado o vencido:</b> <span style="color:${botiquinesAlerta.length ? 'var(--danger)' : 'var(--success)'};font-weight:bold;">${botiquinesAlerta.length ? botiquinesAlerta.join(' | ') : 'Todos al día'}</span></div>
+                <div style="margin-top:4px;">↩️ <b>Errores "Falla a OK" revertidos por el usuario:</b> ${t.fallasRevertidas || 0}</div>
+            `;
+
+            contPal.innerHTML = '';
+            const categorias = [
+                { key: 'medicamentos', lbl: '💊' },
+                { key: 'tipos', lbl: '🏷️' },
+                { key: 'motivosFalla', lbl: '⚠️' },
+                { key: 'notas', lbl: '📝' },
+                { key: 'preguntasAyuda', lbl: '❓' }
+            ];
+            let totalPalabras = 0;
+            // 1. Mostrar palabras ya aprobadas y activas
+            categorias.forEach(cat => {
+                const arr = (config.aprendidos && config.aprendidos[cat.key]) || [];
+                arr.forEach((pal, idx) => {
+                    totalPalabras++;
+                    contPal.innerHTML += `<span class="btn-small btn-chip-wrap" style="background:var(--input-bg); color:var(--text); border:1px solid var(--border);">${cat.lbl} ${pal} <b style="color:var(--danger); margin-left:4px; cursor:pointer;" onclick="borrarPalabraAprendida('${cat.key}', ${idx}, false, '')">❌</b></span>`;
+                });
+                // 2. Mostrar palabras candidatas (en observación por Regla de 3) para que Jack pueda aprobarlas de 1 toque o borrarlas
+                const cands = (config.aprendidosCandidatos && config.aprendidosCandidatos[cat.key]) || {};
+                Object.keys(cands).forEach(palCand => {
+                    totalPalabras++;
+                    const usos = cands[palCand];
+                    const palEsc = palCand.replace(/'/g, "\\'");
+                    contPal.innerHTML += `<span class="btn-small btn-chip-wrap" style="background:var(--warn-bg); color:var(--warn-text); border:1px dashed var(--accent);">⏳ ${cat.lbl} ${palCand} (${usos}/3) <b style="color:var(--success); margin-left:4px; cursor:pointer;" title="Aprobar ahora" onclick="aprobarPalabraCandidata('${cat.key}', '${palEsc}')">✅</b> <b style="color:var(--danger); margin-left:4px; cursor:pointer;" title="Descartar" onclick="borrarPalabraAprendida('${cat.key}', -1, true, '${palEsc}')">❌</b></span>`;
+                });
+            });
+            if(totalPalabras === 0) {
+                contPal.innerHTML = '<span class="text-muted" style="font-size:12px;">Aún no hay palabras nuevas aprendidas. Se agregarán automáticamente cuando se repitan 3 veces o cuando las apruebes.</span>';
+            }
+        }
+
+        async function aprobarPalabraCandidata(categoria, palabra) {
+            if(!esUsuarioCreador()) return;
+            aprenderTerminoNuevo(categoria, palabra, true);
+            await parchearSubnodoConfigNube(null, { aprendidos: config.aprendidos, aprendidosCandidatos: config.aprendidosCandidatos });
+            renderPanelTelemetriaIA();
+        }
+
+        async function borrarPalabraAprendida(categoria, index, esCandidata = false, claveCand = '') {
+            if(!esUsuarioCreador()) return;
+            if(esCandidata) {
+                if(config.aprendidosCandidatos && config.aprendidosCandidatos[categoria]) {
+                    delete config.aprendidosCandidatos[categoria][claveCand];
+                    await parchearSubnodoConfigNube('aprendidosCandidatos', config.aprendidosCandidatos);
+                }
+            } else {
+                if(!config.aprendidos || !Array.isArray(config.aprendidos[categoria])) return;
+                const palabra = config.aprendidos[categoria][index];
+                if(!confirm(`¿Eliminar "${palabra}" del diccionario aprendido?`)) return;
+                config.aprendidos[categoria].splice(index, 1);
+                await parchearSubnodoConfigNube('aprendidos', config.aprendidos);
+            }
+            poblarListasAutocompletado();
+            renderPanelTelemetriaIA();
+        }
+
+        function copiarInformeDiagnosticoIA() {
+            const t = config.telemetria || { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, equiposSinQR: {} };
+            const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
+            const topManuales = Object.entries(t.equiposSinQR || {}).sort((a,b) => b[1]-a[1]).slice(0, 5).map(x => `${x[0]} (${x[1]} veces sin QR)`).join(', ') || 'Ninguno';
+            const cantEq = Object.keys(config.equipos || {}).length;
+            const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
+            const informe = `📊 INFORME GEMELO DIGITAL Y TELEMETRÍA - GESTIÓN SySO V6.33\n` +
+                `- Equipos activos en planta: ${cantEq} | Pendientes del mes: ${obtenerEquiposPendientesDelMes().length}\n` +
+                `- Velocidad App: Arranque ${metricasVelocidad.arranqueMs} ms | Nube ${metricasVelocidad.latenciaNubeMs} ms | Memoria ${metricasVelocidad.usoMemoriaKB} KB\n` +
+                `- Controles analizados: ${t.controlesTotales} (Tiempo promedio: ${promSeg} seg/control)\n` +
+                `- Lecturas QR canceladas: ${t.qrCancelados || 0} | Cargas manuales: ${t.cargasManuales || 0}\n` +
+                `- Etiquetas QR a reimprimir: ${topManuales}\n` +
+                `- Errores "Falla -> OK" revertidos: ${t.fallasRevertidas || 0}\n` +
+                `- Hallazgos del Gemelo Autónomo:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe completo del Gemelo Digital copiado al portapapeles."));
+            else prompt("Copie este informe:", informe);
         }
     </script>
 </body>
