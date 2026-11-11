@@ -3149,7 +3149,7 @@ const CFG_KEY = 'SySO_Config_Master';
         }
 
         // =========================================================================
-        // MOTOR 1: LLAVE GEMINI SEGURA + ASISTENTE CONVERSACIONAL POR ROL (BRIGADISTA VS ADMIN)
+        // MOTOR 1: LLAVE GEMINI SEGURA + ASISTENTE CONVERSACIONAL ADAPTADO POR PERMISOS
         // =========================================================================
         
         // Hacer obligatoria la Foto de Referencia al registrar un equipo nuevo (Solo Admin)
@@ -3191,31 +3191,114 @@ const CFG_KEY = 'SySO_Config_Master';
             } catch(e) { return ""; }
         }
 
-        const GUIAS_AYUDA_BASE = {
-            "📋 ¿Cómo controlar un equipo?": {
-                titulo: "Control Rápido de Equipos con QR",
-                pasos: ["<span>📷</span>1. Escanear QR", "<span>✅</span>2. Evaluar Puntos", "<span>☁️</span>3. Guardar"],
-                detalle: "1. En la pestaña <b>Control</b>, toque el botón amarillo <b>📷 Escanear QR</b> y apunte a la etiqueta.<br>2. Verifique la foto en miniatura a la derecha para confirmar que sea el equipo correcto.<br>3. Si todo está en regla, deje los puntos en <b>✅ OK</b> y toque <b>Guardar Control</b>. Si el equipo se retiró para mantenimiento, elija <b>🔧 En Recarga</b>. Si tiene un desperfecto, cambie a <b>🚨 Falla</b>, elija el motivo y tome la foto."
+        // Catálogo completo de Guías Paso a Paso realistas segmentadas por Rol y Permisos
+        const GUIAS_AYUDA_CATALOGO = {
+            // --- PREGUNTAS SIN LOGUEAR (PANTALLA DE INGRESO) ---
+            "👤 ¿Cómo ingreso con mi PIN o Huella?": {
+                roles: ["LOGIN"],
+                titulo: "Ingreso Rápido de Personal",
+                pasos: ["<span>👤</span>1. Elegir Nombre", "<span>🔢</span>2. Poner PIN", "<span>👆</span>3. O Usar Huella"],
+                detalle: "1. Escriba las primeras letras de su nombre o toque el botón <b>⚡ Ingreso Rápido</b> si usa su propio celular.<br>2. Ingrese su PIN de 4 dígitos y presione <b>Ingresar</b>.<br>3. Si ya activó su huella en este teléfono, toque directamente <b>👆 Ingresar con Huella / FaceID</b>."
+            },
+            "🔒 ¿Qué hago si olvidé mi PIN o no aparezco?": {
+                roles: ["LOGIN"],
+                titulo: "Asistencia de Acceso y Alta de Usuario",
+                pasos: ["<span>🔄</span>1. Actualizar", "<span>👨‍💼</span>2. Avisar a Admin", "<span>🔑</span>3. Nuevo PIN"],
+                detalle: "1. Primero toque el botón <b>🔄 Actualizar</b> abajo a la derecha por si un Administrador lo acaba de dar de alta.<br>2. Si aún no figura en la lista o no recuerda su PIN, solicite a un <b>Administrador SySO</b> que verifique su usuario en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>."
+            },
+            "📲 ¿Cómo compartir o actualizar la app?": {
+                roles: ["LOGIN"],
+                titulo: "Compartir Enlace o Actualizar Versión",
+                pasos: ["<span>📲</span>1. Compartir App", "<span>📷</span>2. QR o WhatsApp", "<span>🔄</span>3. Actualizar"],
+                detalle: "1. Para pasar la app a un compañero, toque <b>📲 Compartir App</b> para mostrarle el código QR en pantalla o enviarle el link por WhatsApp.<br>2. Para descargar la última versión del sistema sin borrar sus datos, toque <b>🔄 Actualizar</b>."
+            },
+
+            // --- PREGUNTAS OPERATIVAS REALISTAS (BRIGADISTAS Y ADMINS) ---
+            "📋 ¿Cómo controlar un equipo con QR?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Control Rápido de Equipos en Terreno",
+                pasos: ["<span>📷</span>1. Escanear QR", "<span>✅</span>2. Evaluar Puntos", "<span>💾</span>3. Guardar"],
+                detalle: "1. En <b>📋 Control</b>, toque <b>📷 Escanear QR</b> y apunte a la etiqueta (verifique la foto en miniatura a la derecha).<br>2. Si todo está bien, deje los puntos en <b>✅ OK</b>. Si el equipo fue llevado a taller, elija <b>🔧 En Recarga</b>. Si tiene un desperfecto, elija <b>🚨 Falla</b>.<br>3. Toque <b>✅ Guardar Control</b> y el radar le indicará cuál es el siguiente equipo en su ruta."
             },
             "💊 ¿Cómo reponer un Botiquín?": {
-                titulo: "Consumo y Reposición de Medicamentos (Sin Falla)",
-                pasos: ["<span>💊</span>1. Ver Stock", "<span>🔄</span>2. Anotar Uso/Rep.", "<span>📊</span>3. Guardar"],
-                detalle: "1. Al escanear un <b>Botiquín</b>, si nadie consumió medicamentos toque <b>✅ Botiquín Intacto</b> arriba a la derecha.<br>2. Si se consumieron pastillas o vendas y las repone en el momento, anote la cantidad en <b>➖ Usado</b> y en <b>➕ Repuesto</b>.<br>3. <b>No marque Falla</b> por consumo normal: el sistema actualizará el stock automáticamente en la nube."
+                roles: ["BOTIQUIN", "ADMIN"],
+                titulo: "Control de Stock, Consumo y Reposición (Sin Falla)",
+                pasos: ["<span>✅</span>1. Intacto o Uso", "<span>🔄</span>2. Anotar Repuesto", "<span>💾</span>3. Guardar"],
+                detalle: "1. Al escanear un <b>Botiquín</b>, si nadie usó insumos toque <b>✅ Botiquín Intacto</b> arriba a la derecha.<br>2. Si hubo consumo, anote cuánto se usó en <b>➖ Usado</b> y cuánto repuso en <b>➕ Repuesto</b> (si lleva un remedio nuevo, toque <b>➕ Sumar Insumo</b>).<br>3. <b>No marque Falla</b> por consumo normal: al guardar, el stock real se actualiza solo en la nube."
             },
-            "🏷️ ¿Qué hago si el QR está roto?": {
-                titulo: "Carga Manual por Contingencia",
-                pasos: ["<span>⌨️</span>1. Elegir Lista", "<span>📍</span>2. Sección/Grupo", "<span>📸</span>3. Foto Comp."],
-                detalle: "1. Si la etiqueta QR física está borrosa o dañada, toque el botón gris <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>2. Elija su <b>Sección</b>, el <b>Grupo</b> y seleccione el número del equipo.<br>3. El sistema registrará qué etiqueta está dañada para que un Administrador la reimprima y le pedirá tomar una foto como comprobante."
+            "🏷️ ¿Qué hago si el QR está roto o no lee?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Carga Manual por Etiqueta QR Dañada",
+                pasos: ["<span>⌨️</span>1. Elegir Lista", "<span>📍</span>2. Sección/Grupo", "<span>📸</span>3. Foto Oblig."],
+                detalle: "1. En <b>📋 Control</b>, toque el botón gris <b>⌨️ Elegir de Lista</b> arriba a la derecha.<br>2. Seleccione su <b>Sección</b>, el <b>Grupo</b> y el código del equipo en orden numérico.<br>3. El sistema le pedirá <b>📸 Foto de Evidencia obligatoria</b> como comprobante de presencia y avisará al Administrador para reimprimir ese QR."
+            },
+            "📸 ¿Cuándo es obligatorio sacar foto en Control?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Regla de Evidencia Fotográfica en Terreno",
+                pasos: ["<span>🚨</span>1. Si hay Falla", "<span>⌨️</span>2. Si es Sin QR", "<span>✅</span>3. Opcional si OK"],
+                detalle: "• <b>Es OBLIGATORIA en 2 casos:</b><br>1) Cuando marca <b>🚨 Falla</b> en cualquier punto del equipo.<br>2) Cuando selecciona el equipo manualmente desde <b>⌨️ Elegir de Lista</b> (sin escanear QR).<br>• <b>Es OPCIONAL:</b> Cuando escanea el QR con la cámara y el equipo está <b>✅ OK</b> o <b>🔧 En Recarga</b>."
+            },
+            "🔧 ¿Cómo marco un equipo En Recarga o Taller?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Equipos Retirados por Mantenimiento o Recarga",
+                pasos: ["<span>📋</span>1. Cargar Equipo", "<span>🔧</span>2. Elegir Recarga", "<span>✅</span>3. Guardar"],
+                detalle: "1. Si un extintor o equipo se retiró temporalmente para recarga, cárguelo en <b>📋 Control</b>.<br>2. En el selector de estado elija <b>🔧 En Recarga / Taller (Sin Falla)</b> y guarde.<br>3. Así el puesto queda verificado en su ruta del mes sin contarse como una falla en las estadísticas."
+            },
+            "↩️ ¿Cómo corrijo un control si me equivoqué?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Corrección de Errores antes o después de Guardar",
+                pasos: ["<span>↩️</span>1. Volver a OK", "<span>📷</span>2. Re-escanear Hoy", "<span>🔄</span>3. Sobrescribir"],
+                detalle: "• <b>Antes de guardar:</b> Si tocó <i>Falla</i> por error, presione <b>↩️ Fue un error / Volver a OK</b>.<br>• <b>Si ya guardó el control hoy:</b> Vuelva a escanear el mismo equipo hoy mismo; el sistema le preguntará <i>'¿Desea actualizar el control de hoy?'</i>, confirme y reemplazará el registro anterior sin duplicarlo."
+            },
+            "⏳ ¿Cómo veo qué equipos me faltan este mes?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Detector de Equipos Pendientes del Mes",
+                pasos: ["<span>📊</span>1. Ir a Historial", "<span>⏳</span>2. Ver Pendientes", "<span>▶️</span>3. Controlar"],
+                detalle: "1. Entre a la pestaña <b>📊 Historial</b>.<br>2. En el filtro <b>Estado / Vista</b> seleccione <b>⏳ Equipos Pendientes del Mes</b> (puede filtrar también su Sección).<br>3. Verá la lista exacta de equipos que aún no fueron visitados este mes y podrá tocar <b>▶️ Controlar</b> para ir directo a cualquiera de ellos."
+            },
+            "📄 ¿Cómo enviar el PDF firmado o bajar Excel?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Descarga de Reportes Excel y PDF con Firma",
+                pasos: ["<span>📊</span>1. Filtrar Mes", "<span>✍️</span>2. Firmar PDF", "<span>📥</span>3. Bajar Excel"],
+                detalle: "1. En <b>📊 Historial</b>, elija el Mes, Sección o Grupo que desea exportar.<br>2. Toque <b>📄 PDF Firmado</b> para firmar con el dedo en pantalla y compartir el reporte con fotos por WhatsApp.<br>3. En PC o celular, toque <b>📥 Excel Controles</b> o <b>💊 Excel Consumo Botiquines</b>."
+            },
+            "👆 ¿Cómo activo mi Huella o el Modo Día/Noche?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Configuración de Huella Digital y Brillo Solar",
+                pasos: ["<span>⚙️</span>1. Ir a Ajustes", "<span>👆</span>2. Activar Huella", "<span>☀️</span>3. Modo Día/Noche"],
+                detalle: "1. Entre a la pestaña <b>⚙️ Ajustes</b>.<br>2. Toque <b>👆 Activar Huella / FaceID</b> y valide con su dedo para que en el próximo ingreso no necesite escribir su PIN.<br>3. Toque <b>☀️ Modo Día / 🌙 Modo Noche</b> para mejorar la lectura bajo el sol o en sectores oscuros."
             },
             "🚨 ¿Cómo funciona el botón S.O.S.?": {
-                titulo: "Protocolo de Emergencia S.O.S.",
+                roles: ["LOGIN", "BRIGADISTA", "ADMIN"],
+                titulo: "Protocolo de Emergencia S.O.S. en Planta",
                 pasos: ["<span>🚨</span>1. Tocar S.O.S.", "<span>🔥</span>2. Elegir Tipo", "<span>📲</span>3. Aviso Brigada"],
-                detalle: "1. Ante una emergencia real en planta, toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Seleccione la sección donde ocurre y toque <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Sonará una sirena en los dispositivos conectados y se abrirá el aviso directo para WhatsApp."
+                detalle: "1. Ante una emergencia real, toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Elija la sección donde ocurre y presione <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Sonará una sirena en vivo en los celulares conectados y se abrirá el reporte listo para enviar al grupo de Brigada en WhatsApp."
             },
-            "📥 ¿Cómo descargar el Excel en PC?": {
-                titulo: "Descarga de Reportes y Pendientes en PC",
-                pasos: ["<span>💻</span>1. Abrir en PC", "<span>📊</span>2. Ir a Historial", "<span>📥</span>3. Bajar Excel"],
-                detalle: "1. Abra el enlace de la aplicación en la computadora y entre a <b>📊 Historial</b>.<br>2. En el filtro <b>Estado / Vista</b> puede elegir <b>⏳ Equipos Pendientes del Mes</b> para ver cuáles faltan visitar.<br>3. Toque <b>📥 Excel Controles</b> (incluye controlados y pendientes) o <b>💊 Excel Consumo Botiquines</b>."
+
+            // --- PREGUNTAS EXCLUSIVAS PARA ADMINISTRADORES ---
+            "📦 ¿Cómo registrar un equipo nuevo y su foto?": {
+                roles: ["ADMIN"],
+                titulo: "Alta de Nuevo Equipo con Foto de Referencia Obligatoria",
+                pasos: ["<span>📍</span>1. Sección y Grupo", "<span>📸</span>2. Tomar Foto Ref.", "<span>💾</span>3. Guardar y QR"],
+                detalle: "1. En <b>📦 Equipos</b>, abra <b>➕ Registrar Nuevo Equipo / Generar QR</b> y elija Sección y Grupo (el número correlativo se calcula solo).<br>2. Complete Ubicación Exacta, Tipo y tome la <b>📸 Foto de Referencia (obligatoria)</b> para que los brigadistas ubiquen el equipo en Control.<br>3. Toque <b>Guardar Equipo</b> y descargue su etiqueta QR."
+            },
+            "🖨️ ¿Cómo imprimir QRs nuevos o dañados?": {
+                roles: ["ADMIN"],
+                titulo: "Impresión de Etiquetas QR por Lote o Dañadas",
+                pasos: ["<span>📦</span>1. Ir a Equipos", "<span>🖨️</span>2. QRs Dañados", "<span>📍</span>3. O por Sección"],
+                detalle: "• <b>Para reimprimir etiquetas rotas:</b> En <b>📦 Equipos</b> toque arriba <b>🖨️ QRs Dañados</b> (arma una plancha con los equipos que fueron cargados manualmente).<br>• <b>Para imprimir una sección o grupo:</b> Despliegue el grupo en el inventario y toque el botón amarillo <b>🖨️ QR</b> de esa sección."
+            },
+            "👥 ¿Cómo asignar secciones y grupos al personal?": {
+                roles: ["ADMIN"],
+                titulo: "Permisos de Personal por Sección y Grupo",
+                pasos: ["<span>⚙️</span>1. Ir a Ajustes", "<span>👥</span>2. Personal", "<span>☑️</span>3. Marcar Acceso"],
+                detalle: "1. En <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>, cree un usuario o toque <b>✏️</b> en uno existente.<br>2. En <b>1° Secciones Habilitadas</b> marque qué sectores controla (al marcar uno puntual, <i>Todas las Secciones</i> se desmarca sola).<br>3. En <b>2° Grupos Habilitados</b> marque sus grupos (ej. Extintores, Botiquines) y toque <b>Guardar Usuario</b>."
+            },
+            "⚡ ¿Cómo importar muchos equipos desde Excel?": {
+                roles: ["ADMIN"],
+                titulo: "Importación Masiva de Equipos por Lote",
+                pasos: ["<span>📦</span>1. Elegir Grupo", "<span>📄</span>2. Bajar Plantilla", "<span>🚀</span>3. Pegar e Importar"],
+                detalle: "1. En <b>📦 Equipos</b>, seleccione primero el Grupo en el formulario de registro.<br>2. Abajo de todo, abra <b>⚡ Importar Lote desde Excel</b>, pegue las filas copiadas de su planilla y toque <b>🚀 Importar Lote</b>."
             }
         };
 
@@ -3226,6 +3309,33 @@ const CFG_KEY = 'SySO_Config_Master';
             "💊 ¿Qué botiquines tienen insumos vencidos o agotados?"
         ];
 
+        // Determina qué preguntas frecuentes mostrar según quién abrió el botón Ayuda IA
+        function obtenerPreguntasSegunPermisosUsuario() {
+            if(modoChatIAActual === 'ANALISTA' && esUsuarioCreador()) {
+                return PREGUNTAS_ANALISTA_JACK;
+            }
+            if(!usuarioActual) {
+                return Object.keys(GUIAS_AYUDA_CATALOGO).filter(k => GUIAS_AYUDA_CATALOGO[k].roles.includes("LOGIN"));
+            }
+            const esAdmin = usuarioActual.rol === 'Admin';
+            const grpsUsu = Array.isArray(usuarioActual.grupo) ? usuarioActual.grupo : ['Todos'];
+            const controlaBotiquines = esAdmin || grpsUsu.includes('Todos') || grpsUsu.some(g => esGrupoBotiquinOPA(g));
+
+            const preguntas = [];
+            Object.keys(GUIAS_AYUDA_CATALOGO).forEach(k => {
+                const rolesGuia = GUIAS_AYUDA_CATALOGO[k].roles;
+                if(esAdmin && rolesGuia.includes("ADMIN")) {
+                    preguntas.push(k);
+                } else if(!esAdmin) {
+                    if(rolesGuia.includes("BRIGADISTA")) preguntas.push(k);
+                    else if(rolesGuia.includes("BOTIQUIN") && controlaBotiquines) preguntas.push(k);
+                }
+            });
+
+            const aprendidas = ((config.aprendidos && config.aprendidos.preguntasAyuda) || []).slice(-3);
+            return [...preguntas, ...aprendidas];
+        }
+
         function cambiarModoChatIA(modo) {
             if(!esUsuarioCreador()) modo = 'AYUDA';
             modoChatIAActual = modo;
@@ -3235,6 +3345,8 @@ const CFG_KEY = 'SySO_Config_Master';
                 bAyuda.className = modo === 'AYUDA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
                 bAnalista.className = modo === 'ANALISTA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
             }
+            const box = document.getElementById('respuestaGraficaAyuda');
+            if(box) { box.innerHTML = ''; box.classList.add('hidden'); }
             renderBotonesSugeridosModalIA();
         }
 
@@ -3242,9 +3354,7 @@ const CFG_KEY = 'SySO_Config_Master';
             const contBtns = document.getElementById('botonesPreguntasAyuda');
             if(!contBtns) return;
             contBtns.innerHTML = '';
-            const listaPreguntas = (modoChatIAActual === 'ANALISTA' && esUsuarioCreador())
-                ? PREGUNTAS_ANALISTA_JACK
-                : [...Object.keys(GUIAS_AYUDA_BASE), ...((config.aprendidos && config.aprendidos.preguntasAyuda) || []).slice(-4)];
+            const listaPreguntas = obtenerPreguntasSegunPermisosUsuario();
 
             listaPreguntas.forEach(q => {
                 const btn = document.createElement('button');
@@ -3253,7 +3363,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 btn.style.padding = '7px 10px';
                 btn.innerText = q;
                 btn.onclick = () => {
-                    if(modoChatIAActual === 'ANALISTA' || !GUIAS_AYUDA_BASE[q]) {
+                    if(modoChatIAActual === 'ANALISTA' || !GUIAS_AYUDA_CATALOGO[q]) {
                         document.getElementById('inputPreguntaAyuda').value = q;
                         consultarAsistenteAyudaLibre();
                     } else {
@@ -3264,28 +3374,30 @@ const CFG_KEY = 'SySO_Config_Master';
             });
         }
 
+        // Al abrir el modal de Ayuda IA, la caja de respuesta inicia OCULTA hasta que el usuario elija o pregunte algo
         function abrirModalAyuda() {
             const switchBox = document.getElementById('boxSwitchModoIA');
             if(switchBox) {
                 if(esUsuarioCreador()) switchBox.classList.remove('hidden');
                 else { switchBox.classList.add('hidden'); modoChatIAActual = 'AYUDA'; }
             }
-            renderBotonesSugeridosModalIA();
-            const idEqAct = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
-            if(idEqAct && config.equipos[idEqAct] && esGrupoBotiquinOPA(config.equipos[idEqAct].grupo)) {
-                mostrarGuiaEnModal("💊 ¿Cómo reponer un Botiquín?");
-            } else {
-                mostrarGuiaEnModal(Object.keys(GUIAS_AYUDA_BASE)[0]);
+            const boxResp = document.getElementById('respuestaGraficaAyuda');
+            if(boxResp) {
+                boxResp.innerHTML = '';
+                boxResp.classList.add('hidden');
             }
+            const inp = document.getElementById('inputPreguntaAyuda');
+            if(inp) inp.value = '';
+            renderBotonesSugeridosModalIA();
             document.getElementById('modalAyudaIA').classList.remove('hidden');
         }
 
-        // Motor Razonador Contextual consciente del Rol (Brigadista vs Admin) y de los datos reales
+        // Motor Razonador Contextual consciente del Rol (Brigadista vs Admin) y de los permisos reales
         function generarRespuestaContextualInteligente(pregunta, modo) {
             const p = pregunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
             const nombreUsu = usuarioActual ? usuarioActual.nombre : 'Compañero';
-            const rolTexto = esAdmin ? 'Administrador' : 'Brigadista / Inspector';
+            const rolTexto = !usuarioActual ? 'Ingreso' : (esAdmin ? 'Administrador' : 'Brigadista / Inspector');
             const secsUsu = (usuarioActual && Array.isArray(usuarioActual.secciones) && !usuarioActual.secciones.includes('Todas')) ? usuarioActual.secciones.join(', ') : 'Todas las secciones';
             const grpsUsu = (usuarioActual && Array.isArray(usuarioActual.grupo) && !usuarioActual.grupo.includes('Todos')) ? usuarioActual.grupo.join(', ') : 'Todos los grupos';
             const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px;">🤖 Respuesta para "${pregunta}" <small class="text-muted">(${rolTexto})</small>:</div>`;
@@ -3302,10 +3414,21 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(p.includes('qr') || p.includes('danad') || p.includes('reimprim')) {
                     return encabezado + `${qrsRotos.length ? qrsRotos.map(x => `• <b>${x[0]}</b>: cargado manualmente ${x[1]} veces (sección ${config.equipos[x[0]] ? config.equipos[x[0]].seccion : 'S/D'}). Puedes reimprimirlos todos juntos en <b>📦 Equipos ➔ 🖨️ QRs Dañados</b>.`).join('<br>') : '✅ Todas las etiquetas QR se están leyendo bien con la cámara.'}`;
                 }
+                if(p.includes('botiqu') || p.includes('vencid') || p.includes('agotad')) {
+                    let botAlertas = [];
+                    Object.keys(config.equipos || {}).forEach(id => {
+                        const eq = config.equipos[id];
+                        if(esGrupoBotiquinOPA(eq.grupo)) {
+                            const v = verificarEquipoTieneVencidos(eq);
+                            if(v.vencido) botAlertas.push(`• <b>${id}</b> (${eq.seccion}): ${v.detalle}`);
+                        }
+                    });
+                    return encabezado + (botAlertas.length ? botAlertas.join('<br>') : '✅ Todos los botiquines tienen stock y fechas al día.');
+                }
                 return encabezado + `• <b>Equipos totales en planta:</b> ${Object.keys(config.equipos || {}).length}<br>• <b>Pendientes de controlar este mes:</b> ${pendientes.length} equipos.<br>• <b>Fallas activas hoy:</b> ${fallasActivas.length ? fallasActivas.map(f => `${f[0]} (${f[1]})`).join(', ') : '0 fallas.'}`;
             }
 
-            // 2. Consultas sobre REGISTRAR / DAR DE ALTA UN EQUIPO NUEVO, CREAR QR o EDITAR INVENTARIO (Diferenciado por Rol)
+            // 2. Consultas sobre REGISTRAR / DAR DE ALTA UN EQUIPO NUEVO, CREAR QR o EDITAR INVENTARIO
             if((p.includes('registrar') || p.includes('nuevo') || p.includes('alta') || p.includes('crear qr') || p.includes('agregar equipo') || p.includes('inventario')) && (p.includes('equipo') || p.includes('extintor') || p.includes('botiquin') || p.includes('hidrante') || p.includes('qr') || p.includes('foto'))) {
                 if(!esAdmin) {
                     return encabezado +
@@ -3328,10 +3451,10 @@ const CFG_KEY = 'SySO_Config_Master';
                 }
             }
 
-            // 3. Consultas sobre QUÉ PASA SI NO CONTROLO TODOS LOS EQUIPOS EN EL MES / PENDIENTES / FALTANTES
+            // 3. Consultas sobre QUÉ PASA SI NO CONTROLO TODOS LOS EQUIPOS EN EL MES / PENDIENTES
             if((p.includes('no controlo') || p.includes('falta') || p.includes('pendiente') || p.includes('olvid') || p.includes('sin controlar') || p.includes('que pasa si no')) && (p.includes('mes') || p.includes('equipo') || p.includes('todo'))) {
                 const todosPend = obtenerEquiposPendientesDelMes();
-                const misPend = todosPend.filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq));
+                const misPend = usuarioActual ? todosPend.filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)) : todosPend;
                 return encabezado +
                     `Si no se controlan todos los equipos antes de fin de mes ocurre lo siguiente en el sistema:<br>` +
                     `1. <b>Quedan detectados en Historial:</b> La barra de cobertura mensual no llega al 100% y el sistema los enlista automáticamente en <b>📊 Historial ➔ Estado/Vista: ⏳ Equipos Pendientes del Mes</b>.<br>` +
@@ -3339,7 +3462,7 @@ const CFG_KEY = 'SySO_Config_Master';
                     `📌 <b>Estado actual en tus sectores (${secsUsu}):</b> Hoy quedan <b>${misPend.length} equipos pendientes</b> de controlar en este mes. Puedes ir a <b>📊 Historial</b>, filtrar <b>⏳ Equipos Pendientes del Mes</b> y tocar <b>▶️ Controlar</b> para ir directo a ellos.`;
             }
 
-            // 4. Consultas sobre CUÁNDO ES OBLIGATORIA LA FOTO EN UN CONTROL / INSPECCIÓN / FALLA
+            // 4. Consultas sobre CUÁNDO ES OBLIGATORIA LA FOTO EN UN CONTROL
             if(p.includes('foto') && (p.includes('obligatori') || p.includes('si o si') || p.includes('cuando') || p.includes('falla') || p.includes('hallazgo') || p.includes('control'))) {
                 return encabezado +
                     `Durante una inspección en la pestaña <b>📋 Control</b>, sacar foto de evidencia:<br>` +
@@ -3349,7 +3472,7 @@ const CFG_KEY = 'SySO_Config_Master';
                     `• <b>Es OPCIONAL:</b> Cuando escaneas el código QR con la cámara y todos los puntos del equipo están <b>✅ OK</b> (o cuando anotas consumo normal de un botiquín).`;
             }
 
-            // 5. Consultas sobre PERMISOS / POR QUÉ NO VEO UNA SECCIÓN O UN EQUIPO
+            // 5. Consultas sobre PERMISOS / SECCIONES ASIGNADAS
             if(p.includes('permiso') || p.includes('no me deja') || p.includes('no puedo ver') || p.includes('otra seccion') || p.includes('asignad')) {
                 return encabezado +
                     `Tu usuario <b>${nombreUsu}</b> (${rolTexto}) tiene asignados actualmente:<br>` +
@@ -3358,7 +3481,7 @@ const CFG_KEY = 'SySO_Config_Master';
                     `${esAdmin ? 'Puedes modificar los permisos de cualquier brigadista en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>.' : 'Si necesitas controlar equipos de otra sección o grupo, pídele a un <b>Administrador</b> que los marque dentro de tu perfil en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>.'}`;
             }
 
-            // 6. Consultas sobre RECARGA / TALLER / MANTENIMIENTO DE EXTINTORES
+            // 6. Consultas sobre RECARGA / TALLER
             if(p.includes('recarga') || p.includes('taller') || p.includes('mantenimiento') || p.includes('retirad')) {
                 return encabezado +
                     `Si un extintor o equipo fue retirado temporalmente para recarga o taller:<br>` +
@@ -3367,29 +3490,29 @@ const CFG_KEY = 'SySO_Config_Master';
                     `3. Así el equipo queda cumplido en tu ruta del mes sin contarse como una falla en las estadísticas.`;
             }
 
-            // 7. Consultas sobre VENCIMIENTOS / MEDICAMENTOS AGOTADOS / BOTIQUINES
+            // 7. Consultas sobre VENCIMIENTOS / BOTIQUINES
             if(p.includes('vencid') || p.includes('vencimiento') || p.includes('agotad') || p.includes('stock') || p.includes('botiqu') || p.includes('medicamento') || p.includes('repon')) {
                 return encabezado +
                     `• <b>Si solo hubo uso normal y reposición en un Botiquín:</b> En <b>📋 Control</b> anota cuánto se usó en <b>➖ Usado</b> y cuánto agregaste en <b>➕ Repuesto</b> (o toca <b>✅ Botiquín Intacto</b> si no se usó nada) y deja el estado en <b>✅ OK</b>.<br>` +
                     `• <b>Si un medicamento venció o quedó en Stock 0 y no tienes repuesto:</b> El sistema mostrará una alerta roja automática para que se reponga a la brevedad.`;
             }
 
-            // 8. Consultas sobre LOGIN / PIN / HUELLA / FACEID / TEMA DÍA-NOCHE
+            // 8. Consultas sobre LOGIN / PIN / HUELLA
             if(p.includes('ingreso') || p.includes('ingresar') || p.includes('entrar') || p.includes('pin') || p.includes('huella') || p.includes('faceid') || p.includes('contrasena') || p.includes('modo noche') || p.includes('sol')) {
                 return encabezado +
                     `• <b>Ingreso rápido y Huella:</b> Puedes activar tu huella digital en <b>⚙️ Ajustes ➔ 👆 Activar Huella / FaceID</b> para entrar en 1 toque sin escribir tu PIN.<br>` +
                     `• <b>Pantalla bajo el sol:</b> En <b>⚙️ Ajustes</b> puedes alternar entre <b>🌙 Modo Noche</b> y <b>☀️ Modo Día</b> según la iluminación del sector.`;
             }
 
-            // 9. Consultas sobre BORRAR / EQUIVOCACIÓN AL CARGAR UN CONTROL
+            // 9. Consultas sobre EQUIVOCACIÓN / CORREGIR REGISTRO
             if(p.includes('equivoc') || p.includes('error') || p.includes('corregir') || p.includes('mal') || p.includes('borrar')) {
                 return encabezado +
                     `• <b>Si marcaste "Falla" por error antes de guardar:</b> Toca el botón <b>↩️ Fue un error / Volver a OK</b> en la ventana emergente.<br>` +
                     `• <b>Si ya guardaste el control hoy y quieres corregirlo:</b> Simplemente vuelve a escanear el mismo código QR hoy mismo; la app te preguntará <i>"¿Desea actualizar el control de hoy?"</i>, dale <b>Aceptar</b> y sobrescribirá el registro anterior sin duplicarlo.`;
             }
 
-            // 10. Respuesta guiada inteligente según el rol real del usuario
-            const misPendientesHoy = obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length;
+            // 10. Respuesta guiada según el rol real del usuario
+            const misPendientesHoy = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : 0;
             return encabezado +
                 `Hola <b>${nombreUsu}</b> (${rolTexto} — Secciones: <b>${secsUsu}</b>):<br>` +
                 `• Tienes acceso a <b>📋 Control</b> (para inspeccionar equipos; hoy quedan <b>${misPendientesHoy} equipos pendientes</b> en tus sectores), <b>📊 Historial</b> (para filtrar pendientes del mes o descargar reportes) y <b>⚙️ Ajustes</b>.${esAdmin ? '<br>• Como <b>Administrador</b>, también tienes habilitado <b>📦 Equipos</b> para dar de alta equipos nuevos (con foto de referencia obligatoria) y reimprimir etiquetas QR.' : '<br>• <i>Recuerda que con perfil de Brigadista el alta de equipos nuevos (📦 Equipos) y los cambios de permisos los realiza únicamente un Administrador.</i>'}`;
@@ -3397,7 +3520,9 @@ const CFG_KEY = 'SySO_Config_Master';
 
         function mostrarGuiaEnModal(pregunta) {
             const box = document.getElementById('respuestaGraficaAyuda');
-            let guia = GUIAS_AYUDA_BASE[pregunta];
+            if(!box) return;
+            box.classList.remove('hidden');
+            let guia = GUIAS_AYUDA_CATALOGO[pregunta];
             if(guia) {
                 const pasosHTML = guia.pasos.map(p => `<div class="step-node">${p}</div>`).join('');
                 box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:4px;">${guia.titulo}</div><div class="step-flow">${pasosHTML}</div><div>${guia.detalle}</div>`;
@@ -3417,8 +3542,9 @@ const CFG_KEY = 'SySO_Config_Master';
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
             const texto = inp.value.trim();
-            if(!texto) return;
+            if(!texto || !box) return;
             inp.value = '';
+            box.classList.remove('hidden');
 
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
             const rolActual = esAdmin ? 'Admin' : 'Inspector';
@@ -3439,7 +3565,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando tu consulta según tu perfil (${esAdmin ? 'Administrador' : 'Brigadista'})...</div>`;
                 try {
                     const pendientesMes = obtenerEquiposPendientesDelMes().length;
-                    const misPendientes = obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length;
+                    const misPendientes = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : pendientesMes;
                     const reglasExactasApp = `
 REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
 - Usuario que hace la pregunta: Nombre="${nombreUsu}", Rol="${esAdmin ? 'Administrador (Admin)' : 'Brigadista / Inspector (NO es Admin)'}", Secciones asignadas="${secsUsu}", Grupos asignados="${grpsUsu}".
@@ -3486,7 +3612,6 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
             // 3. Si aún no guardaste la llave o no hay señal, responde con el Razonador Contextual por Rol
             box.innerHTML = generarRespuestaContextualInteligente(texto, modoChatIAActual);
         }
-
         // =========================================================================
         // MOTOR 2: GEMELO DIGITAL AUTÓNOMO (PILOTO AUTOMÁTICO 24/7 EN SEGUNDO PLANO)
         // =========================================================================
