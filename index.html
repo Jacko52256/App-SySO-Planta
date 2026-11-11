@@ -2750,11 +2750,44 @@ const CFG_KEY = 'SySO_Config_Master';
             if(lineas.length > 0) { txt.innerHTML = lineas.join('<br>'); box.classList.remove('hidden'); }
             else { txt.innerHTML = ''; box.classList.add('hidden'); }
         }
-
 // --- LIMPIADOR DE EQUIPO ACTIVO Y MONITOR DE CONTINUIDAD DE RUTA MENSUAL ---
+        window.filtroRutaSec = '';
+        window.filtroRutaGrp = '';
+
+        function mostrarCamposInferioresControl(visible) {
+            const zObs = document.getElementById('zonaObservaciones');
+            const zFoto = document.getElementById('inputFoto') ? document.getElementById('inputFoto').closest('.form-group') : null;
+            const bSave = document.getElementById('btnGuardarControl');
+            if(zObs) zObs.classList.toggle('hidden', !visible);
+            if(zFoto) zFoto.classList.toggle('hidden', !visible);
+            if(bSave) bSave.classList.toggle('hidden', !visible);
+        }
+
+        window.cambiarFiltroHiloRecorrido = function(tipo, valor) {
+            if(tipo === 'SEC') window.filtroRutaSec = valor;
+            if(tipo === 'GRP') window.filtroRutaGrp = valor;
+            renderPanelContinuidadRecorrido();
+        };
+
+        window.abrirListaEnSectorActual = function() {
+            abrirModalContingencia();
+            if(window.filtroRutaSec) {
+                const sEl = document.getElementById('contingenciaSec');
+                if(sEl) {
+                    sEl.value = window.filtroRutaSec;
+                    poblarGruposContingencia();
+                    if(window.filtroRutaGrp) {
+                        const gEl = document.getElementById('contingenciaGrp');
+                        if(gEl) { gEl.value = window.filtroRutaGrp; poblarEquiposContingencia(); }
+                    }
+                }
+            }
+        };
+
         window.limpiarEquipoEnControl = function(confirmarSiHayCambios = false) {
             const idAct = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
             if(!idAct) {
+                mostrarCamposInferioresControl(false);
                 renderPanelContinuidadRecorrido();
                 return;
             }
@@ -2775,31 +2808,64 @@ const CFG_KEY = 'SySO_Config_Master';
             if(document.getElementById('lblBorrador')) document.getElementById('lblBorrador').innerText = '';
             quitarFotoEvidenciaControl();
             actualizarMiniaturaPOSControl(null);
+            mostrarCamposInferioresControl(false);
             renderPanelContinuidadRecorrido();
         };
 
-        // Muestra en la pantalla de Control el hilo del recorrido mensual cuando no hay equipo abierto
+        // Muestra en la pantalla de Control el hilo del recorrido mensual adaptado a Brigadista o Admin
         window.renderPanelContinuidadRecorrido = function() {
             const container = document.getElementById('moduloDinamico');
             const idAct = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
             const btnSalirTop = document.getElementById('btnSalirEquipoTop');
             if(btnSalirTop) btnSalirTop.classList.toggle('hidden', !idAct);
             if(!container || !usuarioActual) return;
-            if(idAct && config.equipos[idAct]) return;
+            if(idAct && config.equipos[idAct]) {
+                mostrarCamposInferioresControl(true);
+                return;
+            }
+            mostrarCamposInferioresControl(false);
 
             const mesActual = obtenerFechaHoraEstandar().mesISO;
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            const controlesMes = db.filter(r => parsearMesDeRegistro(r) === mesActual && config.equipos[r.ID_Equipo] && usuarioTienePermisoEquipo(usuarioActual, config.equipos[r.ID_Equipo]));
-            const visitadosSet = new Set(controlesMes.map(r => r.ID_Equipo));
 
-            const misEquiposIds = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => usuarioTienePermisoEquipo(usuarioActual, config.equipos[id]));
-            const pendientesIds = misEquiposIds.filter(id => !visitadosSet.has(id));
-            const totalMisEq = misEquiposIds.length;
-            const totalHechos = visitadosSet.size;
-            const pctMes = totalMisEq > 0 ? Math.min(100, Math.round((totalHechos / totalMisEq) * 100)) : 0;
+            // Secciones y grupos habilitados para el usuario activo
+            const secsHabilitadas = (config.secciones || []).filter(s => usuarioActual.rol === 'Admin' || !usuarioActual.secciones || usuarioActual.secciones.includes('Todas') || usuarioActual.secciones.includes(s)).sort(sortNatural);
+            const grpsHabilitados = Object.keys(config.grupos || {}).filter(g => g !== 'Todos' && (usuarioActual.rol === 'Admin' || !usuarioActual.grupo || usuarioActual.grupo.includes('Todos') || usuarioActual.grupo.includes(g))).sort(sortNatural);
 
-            // Determinar el último equipo controlado en el mes y calcular el siguiente pendiente en esa misma sección/grupo
-            const ultimoReg = controlesMes.length > 0 ? controlesMes[controlesMes.length - 1] : null;
+            // Si el brigadista solo tiene 1 sección o 1 grupo, se autoselecciona
+            if(secsHabilitadas.length === 1) window.filtroRutaSec = secsHabilitadas[0];
+            if(grpsHabilitados.length === 1) window.filtroRutaGrp = grpsHabilitados[0];
+
+            const controlesMesUsuario = db.filter(r => parsearMesDeRegistro(r) === mesActual && config.equipos[r.ID_Equipo] && usuarioTienePermisoEquipo(usuarioActual, config.equipos[r.ID_Equipo]));
+            const ultimoRegGlobal = controlesMesUsuario.length > 0 ? controlesMesUsuario[controlesMesUsuario.length - 1] : null;
+
+            // Si no eligió filtro manual pero ya venía controlando una sección/grupo en este mes, sugerir ese mismo hilo
+            if(!window.filtroRutaSec && ultimoRegGlobal && secsHabilitadas.length === 1) {
+                window.filtroRutaSec = ultimoRegGlobal.Seccion;
+            }
+
+            const visitadosSet = new Set(controlesMesUsuario.map(r => r.ID_Equipo));
+            const misEquiposFiltrados = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => {
+                const eq = config.equipos[id];
+                if(!usuarioTienePermisoEquipo(usuarioActual, eq)) return false;
+                if(window.filtroRutaSec && eq.seccion !== window.filtroRutaSec) return false;
+                if(window.filtroRutaGrp && eq.grupo !== window.filtroRutaGrp) return false;
+                return true;
+            });
+
+            const pendientesIds = misEquiposFiltrados.filter(id => !visitadosSet.has(id));
+            const totalFiltro = misEquiposFiltrados.length;
+            const hechosFiltro = totalFiltro - pendientesIds.length;
+            const pctMes = totalFiltro > 0 ? Math.min(100, Math.round((hechosFiltro / totalFiltro) * 100)) : 0;
+
+            // Buscar último controlado dentro del filtro activo
+            const controlesEnFiltro = controlesMesUsuario.filter(r => {
+                if(window.filtroRutaSec && r.Seccion !== window.filtroRutaSec) return false;
+                if(window.filtroRutaGrp && r.Grupo !== window.filtroRutaGrp) return false;
+                return true;
+            });
+            const ultimoReg = controlesEnFiltro.length > 0 ? controlesEnFiltro[controlesEnFiltro.length - 1] : ultimoRegGlobal;
+
             let siguienteSugeridoId = pendientesIds[0] || null;
             if(ultimoReg && pendientesIds.length > 0) {
                 const pendMismaSecGrp = pendientesIds.filter(id => {
@@ -2809,56 +2875,93 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(pendMismaSecGrp.length > 0) {
                     const posteriores = pendMismaSecGrp.filter(id => sortNatural(id, ultimoReg.ID_Equipo) > 0);
                     siguienteSugeridoId = posteriores.length > 0 ? posteriores[0] : pendMismaSecGrp[0];
-                } else {
-                    const pendMismaSec = pendientesIds.filter(id => config.equipos[id].seccion === ultimoReg.Seccion);
-                    if(pendMismaSec.length > 0) siguienteSugeridoId = pendMismaSec[0];
                 }
             }
 
+            // Selectores rápidos para Admin o usuarios con más de 1 sección/grupo
+            const tieneMultiplesOpciones = secsHabilitadas.length > 1 || grpsHabilitados.length > 1;
+            let selectoresHTML = '';
+            if(tieneMultiplesOpciones) {
+                const optsSec = `<option value="">🌎 Todas mis Secciones (${secsHabilitadas.length})</option>` + secsHabilitadas.map(s => `<option value="${s}" ${window.filtroRutaSec === s ? 'selected' : ''}>📍 ${s}</option>`).join('');
+                const optsGrp = `<option value="">📑 Todos mis Grupos (${grpsHabilitados.length})</option>` + grpsHabilitados.map(g => `<option value="${g}" ${window.filtroRutaGrp === g ? 'selected' : ''}>🔧 ${g}</option>`).join('');
+                selectoresHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border);">
+                        <div>
+                            <label style="font-size:11px; margin-bottom:3px;">1° Filtrar Sección a recorrer:</label>
+                            <select onchange="cambiarFiltroHiloRecorrido('SEC', this.value)" style="padding:7px 8px; font-size:13px;">${optsSec}</select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; margin-bottom:3px;">2° Filtrar Grupo a recorrer:</label>
+                            <select onchange="cambiarFiltroHiloRecorrido('GRP', this.value)" style="padding:7px 8px; font-size:13px;">${optsGrp}</select>
+                        </div>
+                    </div>
+                `;
+            }
+
             container.classList.remove('hidden');
-            if(totalMisEq === 0) {
-                container.innerHTML = `<div class="alert-warning">No hay equipos asignados a sus secciones o grupos actuales.</div>`;
-                return;
-            }
-            if(pendientesIds.length === 0) {
-                container.innerHTML = `
-                    <div style="border:2px solid var(--success); border-radius:10px; padding:12px; background:var(--input-bg); text-align:center;">
-                        <div style="font-size:15px; font-weight:bold; color:var(--success);">🎉 ¡Recorrido Mensual Completado (${totalHechos}/${totalMisEq})!</div>
-                        <p class="text-muted" style="font-size:12px; margin-top:4px;">Todos los equipos de sus sectores ya fueron verificados este mes.</p>
+            const tituloAmbito = (window.filtroRutaSec || window.filtroRutaGrp)
+                ? `${window.filtroRutaSec || 'Todas'} • ${window.filtroRutaGrp || 'Todos'}`
+                : 'Planta Asignada';
+
+            let cuerpoSugerenciaHTML = '';
+            if(totalFiltro === 0) {
+                cuerpoSugerenciaHTML = `<div class="alert-warning" style="margin-bottom:0;">No hay equipos registrados para la combinación <b>${tituloAmbito}</b>. Cambie la Sección o el Grupo arriba.</div>`;
+            } else if(pendientesIds.length === 0) {
+                cuerpoSugerenciaHTML = `
+                    <div style="border:1.5px solid var(--success); border-radius:8px; padding:10px; background:var(--card-bg); text-align:center;">
+                        <div style="font-size:14px; font-weight:bold; color:var(--success);">🎉 ¡Sector Completado (${hechosFiltro}/${totalFiltro})!</div>
+                        <p class="text-muted" style="font-size:11.5px; margin-top:2px;">Todos los equipos de <b>${tituloAmbito}</b> ya fueron verificados este mes.</p>
                     </div>`;
-                return;
-            }
+            } else if(tieneMultiplesOpciones && !window.filtroRutaSec && !window.filtroRutaGrp && !ultimoReg) {
+                // Si es Administrador y aún no eligió qué sección/grupo quiere ver hoy, no le impone Agrochaco por defecto
+                cuerpoSugerenciaHTML = `
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:12.5px;">
+                        <div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">👆 ¿Qué sector o grupo desea controlar hoy?</div>
+                        <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">Seleccione arriba la <b>Sección</b> (ej. <i>Balanceados</i>) y el <b>Grupo</b> (ej. <i>PA Botiquines</i>) para seguir el hilo de ese sector, o escanee directamente cualquier QR.</p>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn btn-primary" style="margin:0; padding:9px; font-size:13px; flex:1;" onclick="activarQR()">📷 Escanear QR</button>
+                            <button type="button" class="btn btn-outline" style="margin:0; padding:9px; font-size:13px; flex:1;" onclick="abrirListaEnSectorActual()">⌨️ Elegir de Lista (${pendientesIds.length})</button>
+                        </div>
+                    </div>`;
+            } else {
+                const eqSig = config.equipos[siguienteSugeridoId];
+                const infoUltimo = ultimoReg
+                    ? `<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">📍 <b>Último verificado:</b> ${ultimoReg.ID_Equipo} (${ultimoReg.Seccion}) por ${ultimoReg.Inspector}</div>`
+                    : `<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">📍 <b>Sector seleccionado:</b> ${tituloAmbito} (${pendientesIds.length} pendientes este mes)</div>`;
 
-            const eqSig = config.equipos[siguienteSugeridoId];
-            const infoUltimo = ultimoReg
-                ? `<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">📍 <b>Último verificado:</b> ${ultimoReg.ID_Equipo} (${ultimoReg.Seccion}) por ${ultimoReg.Inspector}</div>`
-                : `<div style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">📍 <b>Inicio de ciclo mensual:</b> Ningún equipo verificado aún este mes.</div>`;
-
-            container.innerHTML = `
-                <div style="border:2px solid var(--primary); border-radius:10px; padding:12px; background:var(--input-bg); margin-bottom:6px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:13px; font-weight:bold; color:var(--primary);">🧭 Hilo de Recorrido del Mes (${mesActual})</span>
-                        <span style="font-size:12px; font-weight:bold;">${totalHechos} / ${totalMisEq} (${pctMes}%)</span>
-                    </div>
-                    <div class="progress-bar-container" style="height:9px; margin-bottom:8px;">
-                        <div class="progress-bar-fill" style="width:${pctMes}%;"></div>
-                    </div>
+                cuerpoSugerenciaHTML = `
                     ${infoUltimo}
                     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px;">
                         <div style="font-size:11px; font-weight:bold; color:var(--edit); text-transform:uppercase;">⏭️ Siguiente Equipo Pendiente en Ruta:</div>
                         <div style="font-size:16px; font-weight:bold; margin-top:2px;">${siguienteSugeridoId} — ${eqSig.seccion} <small class="text-muted">(${eqSig.grupo})</small></div>
                         <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">📍 ${eqSig.ubicacion || 'Sin ubicación'} | ${eqSig.tipo || ''} ${eqSig.capacidad ? '('+eqSig.capacidad+')' : ''}</div>
-                        <div style="display:flex; gap:8px; margin-top:10px;">
-                            <button type="button" class="btn btn-primary" style="margin:0; padding:10px; font-size:13.5px; flex:2;" onclick="activarQR()">📷 Escanear QR</button>
-                            <button type="button" class="btn btn-outline" style="margin:0; padding:10px; font-size:13px; flex:1.3;" onclick="abrirModalContingencia()">⌨️ Ver Pendientes (${pendientesIds.length})</button>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-success" style="margin:0; padding:10px; font-size:13px; flex:1.5;" onclick="esCargaManual=true; procesarEscaneo('${siguienteSugeridoId}'); actualizarEstadoRequisitoFoto();">▶️ Cargar ${siguienteSugeridoId}</button>
+                            <button type="button" class="btn btn-primary" style="margin:0; padding:10px; font-size:13px; flex:1.2;" onclick="activarQR()">📷 Escanear QR</button>
+                            <button type="button" class="btn btn-outline" style="margin:0; padding:10px; font-size:12.5px; flex:1;" onclick="abrirListaEnSectorActual()">⌨️ Lista (${pendientesIds.length})</button>
                         </div>
+                    </div>`;
+            }
+
+            container.innerHTML = `
+                <div style="border:2px solid var(--primary); border-radius:10px; padding:12px; background:var(--input-bg); margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:13px; font-weight:bold; color:var(--primary);">🧭 Hilo de Recorrido (${mesActual}) — ${tituloAmbito}</span>
+                        <span style="font-size:12px; font-weight:bold;">${hechosFiltro} / ${totalFiltro} (${pctMes}%)</span>
                     </div>
+                    <div class="progress-bar-container" style="height:9px; margin-bottom:10px;">
+                        <div class="progress-bar-fill" style="width:${pctMes}%;"></div>
+                    </div>
+                    ${selectoresHTML}
+                    ${cuerpoSugerenciaHTML}
                 </div>
             `;
         };
 
-        // Inyectar botón de cierre rápido arriba al lado del código del equipo y cierre de modales al tocar afuera
+        // Inyectar controles limpios sin superposición de líneas
         document.addEventListener('DOMContentLoaded', () => {
+            mostrarCamposInferioresControl(false);
+
             const btnCamQR = document.getElementById('btnToggleCamaraQR');
             if(btnCamQR && btnCamQR.parentElement && !document.getElementById('btnSalirEquipoTop')) {
                 const btnCancel = document.createElement('button');
@@ -2872,20 +2975,17 @@ const CFG_KEY = 'SySO_Config_Master';
                 btnCamQR.parentElement.appendChild(btnCancel);
             }
 
-            // Agregar botón para limpiar borrador de observaciones si quedó texto viejo
-            const lblBorr = document.getElementById('lblBorrador');
-            if(lblBorr && lblBorr.parentElement) {
-                const btnClearObs = document.createElement('button');
-                btnClearObs.type = 'button';
-                btnClearObs.className = 'btn-small btn-s-del';
-                btnClearObs.style.cssText = 'padding:2px 7px; font-size:10px; float:right; margin-top:2px;';
-                btnClearObs.innerHTML = '🗑️ Limpiar nota';
-                btnClearObs.onclick = () => {
-                    document.getElementById('observaciones').value = '';
-                    localStorage.removeItem(DRAFT_KEY);
-                    lblBorr.innerText = '';
-                };
-                lblBorr.parentElement.appendChild(btnClearObs);
+            // Alinear el título de Observaciones con el botón "Borrar nota" arriba a la derecha (sin cruzar la línea inferior)
+            const zObs = document.getElementById('zonaObservaciones');
+            if(zObs) {
+                const lblObs = zObs.querySelector('label');
+                if(lblObs) {
+                    lblObs.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;';
+                    lblObs.innerHTML = `
+                        <span>📝 Observaciones o Notas Preventivas (Opcional):</span>
+                        <button type="button" class="btn-small btn-s-del" style="padding:3px 8px; font-size:10.5px;" onclick="document.getElementById('observaciones').value=''; localStorage.removeItem(DRAFT_KEY); if(document.getElementById('lblBorrador')) document.getElementById('lblBorrador').innerText='';">🗑️ Borrar nota</button>
+                    `;
+                }
             }
 
             // Permitir cerrar modales tocando el fondo oscuro exterior
@@ -2899,9 +2999,10 @@ const CFG_KEY = 'SySO_Config_Master';
             });
         });
 
-        // Sobrescribir cerrarSesion y nav para que limpien siempre el equipo abierto y muestren la continuidad
         cerrarSesion = function(manual = false) { 
             if(manual && !confirm("¿Desea cerrar su sesión?")) return; 
+            window.filtroRutaSec = '';
+            window.filtroRutaGrp = '';
             limpiarEquipoEnControl(false);
             usuarioActual = null; 
             modoChatIAActual = 'AYUDA';
@@ -2921,9 +3022,15 @@ const CFG_KEY = 'SySO_Config_Master';
                 if(!currentId || !config.equipos[currentId]) renderPanelContinuidadRecorrido();
             }
         };
+
         function renderFormularioControlInspeccion(id) {
             const eq = config.equipos[id];
             if(!eq) return;
+            mostrarCamposInferioresControl(true);
+            // Memorizar la sección y el grupo del equipo actual para mantener el hilo en esa misma ruta
+            window.filtroRutaSec = eq.seccion;
+            window.filtroRutaGrp = eq.grupo;
+
             const btnSalirTop = document.getElementById('btnSalirEquipoTop');
             if(btnSalirTop) btnSalirTop.classList.remove('hidden');
 
@@ -2951,7 +3058,6 @@ const CFG_KEY = 'SySO_Config_Master';
             tagsHTML += `</div>`; 
             document.getElementById('smartTagsContainer').innerHTML = tagsHTML;
 
-            // Solo abre automáticamente el editor si realmente falta la Ubicación o el Tipo (creado vacío en oficina)
             const faltaUbi = !eq.ubicacion || eq.ubicacion === 'S/D' || eq.ubicacion === 'Pendiente en terreno';
             const faltaTipo = !eq.tipo || eq.tipo === 'Pendiente en terreno';
             const faltaFotoRef = !eq.tieneFotoRef;
@@ -3086,7 +3192,6 @@ const CFG_KEY = 'SySO_Config_Master';
             detenerCamaraQR(false);
             esCargaManual = true;
             const modalC = document.getElementById('modalContingencia');
-            // Inyectar casilla "Mostrar solo pendientes de este mes" si no existe
             if(modalC && !document.getElementById('chkSoloPendientesContingencia')) {
                 const eqGroup = document.getElementById('contingenciaEq').parentElement;
                 const divFiltroPend = document.createElement('div');
@@ -3328,7 +3433,6 @@ const CFG_KEY = 'SySO_Config_Master';
                 await guardarActualizacionFichaTerreno(true);
             }
 
-            // Solo exigir si realmente le falta Ubicación o Tipo
             const sigueSinUbi = !eq.ubicacion || eq.ubicacion === 'S/D' || eq.ubicacion === 'Pendiente en terreno';
             const sigueSinTipo = !eq.tipo || eq.tipo === 'Pendiente en terreno';
             if(sigueSinUbi || sigueSinTipo) {
@@ -3447,15 +3551,14 @@ const CFG_KEY = 'SySO_Config_Master';
             db.push(registro); 
             guardarLocalSeguro(DB_KEY, JSON.stringify(db));
 
-            // Radar inteligente mensual: salta equipos que ya fueron controlados este mes
             const controladosMesSet = new Set(db.filter(r => parsearMesDeRegistro(r) === reloj.mesISO).map(r => r.ID_Equipo));
-            const totalSec = Object.keys(config.equipos).filter(k => config.equipos[k].seccion === eq.seccion).length; 
-            const controladosSecMes = Object.keys(config.equipos).filter(k => config.equipos[k].seccion === eq.seccion && controladosMesSet.has(k)).length;
+            const totalSec = Object.keys(config.equipos).filter(k => config.equipos[k].seccion === eq.seccion && config.equipos[k].grupo === eq.grupo).length; 
+            const controladosSecMes = Object.keys(config.equipos).filter(k => config.equipos[k].seccion === eq.seccion && config.equipos[k].grupo === eq.grupo && controladosMesSet.has(k)).length;
             const progPercent = Math.min(100, Math.round((controladosSecMes / totalSec) * 100)) || 0;
 
             let modalHTML = `<h2 style="color:var(--success); font-size:24px; margin-bottom:4px;">✅ ¡Control Guardado!</h2>`;
             modalHTML += `<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">${subidoOk ? '☁️ Sincronizado en la nube' : '⚡ Guardado en cola offline del teléfono'}</p>`;
-            modalHTML += `<div style="text-align:left; margin-bottom:14px;"><span style="font-size:12.5px; color:var(--text); font-weight:bold;">📍 Avance del Mes en ${eq.seccion}: ${controladosSecMes} de ${totalSec} (${progPercent}%)</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
+            modalHTML += `<div style="text-align:left; margin-bottom:14px;"><span style="font-size:12.5px; color:var(--text); font-weight:bold;">📍 Avance ${eq.grupo} en ${eq.seccion}: ${controladosSecMes} de ${totalSec} (${progPercent}%)</span><div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${progPercent}%;"></div></div></div>`;
 
             let proximoIdParaFoto = null;
             const pendientesMismoGrupoSec = Object.keys(config.equipos).sort(sortNatural).filter(k => {
@@ -3718,14 +3821,14 @@ const CFG_KEY = 'SySO_Config_Master';
             "📋 ¿Cómo controlar un equipo y seguir el hilo?": {
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Control en Terreno y Continuidad Mensual",
-                pasos: ["<span>🧭</span>1. Ver Hilo Mes", "<span>📷</span>2. Escanear QR", "<span>❌</span>3. O Salir"],
-                detalle: "1. En <b>📋 Control</b> verá el tablero <b>🧭 Hilo de Recorrido del Mes</b> que le indica cuál fue el último equipo verificado y cuál es el <b>⏭️ Siguiente Pendiente</b>.<br>2. Si abre un equipo por error y no desea controlarlo, toque el botón rojo <b>✖ Salir / Cerrar Equipo</b>.<br>3. Si un equipo ya fue controlado este mes, la app le avisará para no controlarlo dos veces."
+                pasos: ["<span>🧭</span>1. Elegir Sector", "<span>📷</span>2. Escanear QR", "<span>❌</span>3. O Salir"],
+                detalle: "1. En <b>📋 Control</b> verá el tablero <b>🧭 Hilo de Recorrido</b>: si tiene varias secciones o grupos habilitados, elija cuál desea recorrer hoy (ej. <i>Balanceados + PA Botiquines</i>) para ver el siguiente equipo pendiente de ese sector.<br>2. Si abre un equipo y no desea controlarlo, toque el botón rojo <b>✖ Salir / Cerrar Equipo</b>."
             },
             "✏️ ¿Qué hago si un equipo se mudó o no tiene foto?": {
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Actualizar Ubicación, Foto de Referencia o Vencimiento en Terreno",
                 pasos: ["<span>📋</span>1. Cargar Equipo", "<span>✏️</span>2. Tocar Actualizar", "<span>💾</span>3. Guardar Ficha"],
-                detalle: "1. Si durante el recorrido nota que un equipo cambió de ubicación, volvió de recarga con nueva fecha de vencimiento o desea subirle su Foto de Referencia, toque el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> en <b>📋 Control</b>.<br>2. Edite el dato y toque <b>💾 Guardar Actualización de Ficha</b> (o <b>✖ Cerrar Editor</b> si no desea cambiar nada)."
+                detalle: "1. Si durante el recorrido nota que un equipo cambió de ubicación, volvió de recarga con nueva fecha de vencimiento o desea subirle su Foto de Referencia, toque el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> en <b>📋 Control</b>.<br>2. Edite el dato y toque <b>💾 Guardar Actualización de Ficha</b>."
             },
             "💊 ¿Cómo reponer un Botiquín?": {
                 roles: ["BOTIQUIN", "ADMIN"],
@@ -3755,7 +3858,7 @@ const CFG_KEY = 'SySO_Config_Master';
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Detector de Equipos Pendientes del Mes",
                 pasos: ["<span>📊</span>1. Ir a Historial", "<span>⏳</span>2. Ver Pendientes", "<span>▶️</span>3. Controlar"],
-                detalle: "1. En la misma pestaña <b>📋 Control</b> verá arriba el resumen <b>🧭 Hilo de Recorrido del Mes</b>.<br>2. También puede ir a <b>📊 Historial</b> y en <b>Estado / Vista</b> elegir <b>⏳ Equipos Pendientes del Mes</b> para ver el listado completo."
+                detalle: "1. En la misma pestaña <b>📋 Control</b> puede filtrar su Sección y Grupo en el cuadro <b>🧭 Hilo de Recorrido</b>.<br>2. También puede ir a <b>📊 Historial</b> y en <b>Estado / Vista</b> elegir <b>⏳ Equipos Pendientes del Mes</b>."
             },
             "📦 ¿Cómo registrar un equipo nuevo desde oficina?": {
                 roles: ["ADMIN"],
@@ -3898,6 +4001,11 @@ const CFG_KEY = 'SySO_Config_Master';
                 return encabezado + `• <b>Equipos totales en planta:</b> ${Object.keys(config.equipos || {}).length}<br>• <b>Pendientes de controlar este mes:</b> ${pendientes.length} equipos.<br>• <b>Fallas activas hoy:</b> ${fallasActivas.length ? fallasActivas.map(f => `${f[0]} (${f[1]})`).join(', ') : '0 fallas.'}`;
             }
 
+            if(p.includes('observacion') || p.includes('nota') || p.includes('auto-aprendizaje') || p.includes('autoaprendizaje')) {
+                return encabezado +
+                    `El campo <b>📝 Observaciones o Notas Preventivas</b> es un cuadro opcional que aparece al escanear un equipo para anotar detalles que no son una falla técnica (ej. <i>"Se limpió polvo exterior"</i> o <i>"Acceso despejado"</i>). Cuando una nota corta se usa 3 veces, se convierte sola en un botón de toque rápido arriba del cuadro.`;
+            }
+
             if(p.includes('salir') || p.includes('cerrar') || p.includes('cancelar') || p.includes('descartar')) {
                 return encabezado +
                     `Si abriste un equipo en <b>📋 Control</b> solo para mirarlo y no deseas guardarlo ni editarlo, toca el botón rojo <b>✖ Salir</b> (arriba junto al código) o <b>❌ Cerrar / Salir de este Equipo</b> para limpiar la pantalla y volver al tablero de recorrido mensual.`;
@@ -3918,7 +4026,7 @@ const CFG_KEY = 'SySO_Config_Master';
             const misPendientesHoy = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : 0;
             return encabezado +
                 `Hola <b>${nombreUsu}</b> (${rolTexto} — Secciones: <b>${secsUsu}</b>):<br>` +
-                `• En <b>📋 Control</b> tienes el tablero <b>🧭 Hilo de Recorrido del Mes</b> (te quedan <b>${misPendientesHoy} equipos pendientes</b> este mes), el botón <b>✖ Salir</b> para cerrar cualquier equipo sin guardar, y el botón <b>✏️ Actualizar</b> si un equipo se mudó o volvió de recarga.`;
+                `• En <b>📋 Control</b> tienes el tablero <b>🧭 Hilo de Recorrido</b> donde puedes elegir qué <b>Sección y Grupo</b> deseas revisar hoy (te quedan <b>${misPendientesHoy} equipos pendientes</b> este mes), el botón <b>✖ Salir</b> para cerrar cualquier equipo sin guardar, y el botón <b>✏️ Actualizar</b> si un equipo se mudó o volvió de recarga.`;
         }
 
         function mostrarGuiaEnModal(pregunta) {
@@ -3971,8 +4079,8 @@ const CFG_KEY = 'SySO_Config_Master';
 REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
 - Usuario actual: Nombre="${nombreUsu}", Rol="${esAdmin ? 'Administrador (Admin)' : 'Brigadista / Inspector'}", Secciones="${secsUsu}", Grupos="${grpsUsu}".
 - CONTINUIDAD MENSUAL Y CIERRE DE EQUIPO:
-  1) Si el usuario abre un equipo en "📋 Control" y quiere salir sin guardar, tiene el botón rojo "✖ Salir / Cerrar Equipo". Al cerrar sesión también se limpia automáticamente.
-  2) Para no perder el hilo del mes ni controlar 2 veces el mismo equipo, "📋 Control" muestra el tablero "🧭 Hilo de Recorrido del Mes" con el último equipo controlado y el siguiente pendiente. Además, "⌨️ Elegir de Lista" filtra solo los pendientes del mes, y si escanean un QR ya verificado este mes, el sistema avisa antes.
+  1) Si el usuario tiene acceso a varias secciones o grupos (ej. Administrador), en el cuadro "🧭 Hilo de Recorrido" tiene dos desplegables ("1° Filtrar Sección" y "2° Filtrar Grupo") para elegir qué sector quiere recorrer hoy (ej. Balanceados + PA Botiquines).
+  2) Si abre un equipo y quiere salir sin guardar, tiene el botón rojo "✖ Salir / Cerrar Equipo". Mientras no haya un equipo cargado, los campos de Observaciones, Foto y Guardar permanecen ocultos.
 - FLUJO OFICINA VS TERRENO: El Administrador crea equipos en "📦 Equipos". El Brigadista puede actualizar Ubicación, Foto de Referencia o Vencimiento post-recarga desde el botón "✏️ Actualizar" en "📋 Control".
 - PENDIENTES DEL MES: Hoy faltan ${pendientesMes} equipos en planta (${misPendientes} en sectores de este usuario).`;
 
