@@ -5179,6 +5179,486 @@ Responde en español claro y directo en máximo 85 palabras, o responde NO_SOPOR
                 } catch(e) {}
             }
         });
+// =========================================================================
+        // ACTUALIZACIÓN V6.37:
+        // 1) MÓDULO CONTROL ADAPTATIVO PARA COMUNICACIÓN (SIN PESTAÑA EXTRA ABAJO)
+        // 2) HISTORIAL DESPLEGABLE POR SECCIÓN -> PORCENTAJE (%) POR CADA GRUPO
+        // =========================================================================
+        window.seccionesAbiertasHistorial = {};
+        window.verResumenGruposPlantaHist = false;
+
+        function aplicarActualizacionV637() {
+            document.title = "Gestión SySO V6.37 - Industrial Cloud IA";
+            const badgeVer = document.querySelector('.version-badge');
+            if(badgeVer) badgeVer.innerText = 'V6.37';
+        }
+
+        // 1. La pestaña inferior "📦 Equipos" queda exclusiva para Administradores (Rosana usa solo 📋 Control)
+        configurarVistaPestanaEquiposSegunRol = function() {
+            const tabBtnEq = document.getElementById('tabBtnEquipos');
+            const lblTabEq = document.getElementById('lblTabEquipos');
+            const bloqueCom = document.getElementById('bloqueGestionComunicacionEquipos');
+            const bloqueFis = document.getElementById('bloqueInventarioFisicoEquipos');
+            if(!usuarioActual) return;
+
+            const esAdmin = usuarioActual.rol === 'Admin';
+            if(tabBtnEq) tabBtnEq.classList.toggle('hidden', !esAdmin);
+            if(lblTabEq) lblTabEq.innerText = 'Equipos';
+            if(bloqueCom) bloqueCom.classList.add('hidden');
+            if(bloqueFis) bloqueFis.classList.toggle('hidden', !esAdmin);
+        };
+
+        // 2. Transformar "📋 Control" cuando se carga una unidad del grupo Comunicación
+        const _renderFormControlV636 = renderFormularioControlInspeccion;
+        renderFormularioControlInspeccion = function(id) {
+            const eq = config.equipos[id];
+            if(!eq) return;
+
+            if(!esEquipoVirtualComunicacion(id)) {
+                return _renderFormControlV636(id);
+            }
+
+            // Modo Control de Comunicación integrado directamente dentro de 📋 Control
+            mostrarCamposInferioresControl(true);
+            window.filtroRutaSec = eq.seccion;
+            window.filtroRutaGrp = eq.grupo;
+            motivosFallaPorIndex = {};
+            actualizarCajaResumenFallas();
+
+            const boxThumb = document.getElementById('boxThumbControl');
+            if(boxThumb) boxThumb.classList.add('hidden');
+
+            document.getElementById('seccionEquipo').value = `${eq.seccion} | ${eq.grupo}`;
+            document.getElementById('ubicacionEquipo').value = `Contactos S.O.S. y Nómina Activa de ${eq.seccion}`;
+
+            const container = document.getElementById('moduloDinamico');
+            container.classList.remove('hidden');
+
+            const notasBase = ["Números S.O.S. verificados", "Teléfonos de sección al día", "Nómina para bomberos actualizada"];
+            document.getElementById('smartTagsContainer').innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">` +
+                notasBase.map(t => `<button type="button" class="btn-small btn-chip-wrap" style="background:var(--edit); color:#fff; border:none; padding:5px 9px; font-weight:bold;" onclick="agregarTag('${t.replace(/'/g, "\\'")}')">+ ${t}</button>`).join('') +
+                `</div>`;
+
+            asegurarEstructuraEmergencias();
+            const params = config.grupos[eq.grupo] || ["Números de Emergencia S.O.S.", "Teléfonos de Empleados y Familiares", "Nómina de Evacuación para Bomberos"];
+
+            // Renderizar números de emergencia con edición directa en Control
+            const htmlEmergencias = (config.contactosEmergencia || []).map(c => {
+                const icono = c.categoria === 'INCENDIO' ? '🔥' : '🚑';
+                const telLimpio = limpiarTelefonoParaLlamada(c.telefono);
+                const telWA = limpiarTelefonoParaWhatsApp(c.telefono);
+                const badgeVig = calcularSemaforoVigencia30Dias(c.verificadoTS, c.verificadoFecha, !!telLimpio);
+                const btnWA = telWA.length >= 8 ? `<a href="https://wa.me/${telWA}?text=${encodeURIComponent('Hola, nos comunicamos de la Brigada SySO para verificar si este número de emergencia sigue vigente.')}" target="_blank" class="btn-small btn-success" style="text-decoration:none;">💬 WA</a>` : '';
+                const btnDel = esUsuarioCreador() || (usuarioActual && usuarioActual.rol === 'Admin') ? `<button type="button" class="btn-small btn-s-del" onclick="borrarContactoEmergenciaEnControl('${c.id}', '${id}')">❌</button>` : '';
+                return `
+                    <div style="padding:7px 4px; border-bottom:1px solid var(--border); font-size:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <div><b>${icono} ${c.nombre}:</b> <a href="tel:${telLimpio}" style="color:var(--primary); font-weight:bold; text-decoration:underline;">📞 ${c.telefono}</a> ${badgeVig}</div>
+                        <div class="action-btns">
+                            <a href="tel:${telLimpio}" class="btn-small btn-primary" style="text-decoration:none;">📞 Llamar</a>
+                            ${btnWA}
+                            <button type="button" class="btn-small btn-info" onclick="marcarEmergenciaVigenteEnControl('${c.id}', '${id}')">✅ Vigente</button>
+                            <button type="button" class="btn-small btn-s-edit" onclick="abrirEditorEmergenciaEnControl('${c.id}')">✏️</button>
+                            ${btnDel}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            // Filtrar empleados de la sección actual (o mostrar todos si el usuario cambia el filtro)
+            const verTodaPlanta = window.verTodosEmpleadosEnControlCom === true;
+            const listaEmpleados = (config.usuarios || []).filter(u => {
+                if(verTodaPlanta) return true;
+                return !u.secciones || u.secciones.includes('Todas') || u.secciones.includes(eq.seccion);
+            });
+
+            const htmlEmpleados = listaEmpleados.map(u => {
+                const tieneAlgunTel = !!(String(u.telefono || '').trim() || String(u.familiarTel || '').trim());
+                const badgeVig = calcularSemaforoVigencia30Dias(u.telVerificadoTS, u.telVerificadoFecha, tieneAlgunTel);
+                const telP = limpiarTelefonoParaLlamada(u.telefono);
+                const waP = limpiarTelefonoParaWhatsApp(u.telefono);
+                const telF = limpiarTelefonoParaLlamada(u.familiarTel);
+                const estadoAct = u.activo !== false ? `<span style="color:var(--success);font-weight:bold;">🟢 Activo</span>` : `<span style="color:var(--danger);font-weight:bold;">🔴 Baja</span>`;
+                const btnVig = tieneAlgunTel ? `<button type="button" class="btn-small btn-info" onclick="marcarUsuarioVigenteEnControl(${u.id}, '${id}')">✅ Vigente</button>` : '';
+                return `
+                    <div style="padding:8px 4px; border-bottom:1px solid var(--border); font-size:12px; opacity:${u.activo !== false ? '1' : '0.6'};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                            <div><b>👷 ${u.nombre}</b> (${estadoAct}) — <small style="color:var(--primary);font-weight:bold;">📍 ${(u.secciones||['Todas']).join(', ')}</small> ${badgeVig}</div>
+                            <div class="action-btns">
+                                <button type="button" class="btn-small btn-s-edit" onclick="abrirEditorEmpleadoEnControl(${u.id})">✏️ Editar</button>
+                                ${btnVig}
+                            </div>
+                        </div>
+                        <div style="margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                            ${u.telefono ? `<a href="tel:${telP}" class="btn-small btn-primary" style="text-decoration:none;">📞 Personal: ${u.telefono}</a>` : `<span class="text-muted">Sin tel. personal</span>`}
+                            ${waP.length >= 8 ? `<a href="https://wa.me/${waP}?text=${encodeURIComponent('Hola ' + u.nombre + ', verificamos desde la Brigada de Comunicación que tu teléfono personal y contacto familiar sigan vigentes.')}" target="_blank" class="btn-small btn-success" style="text-decoration:none;">💬 WA</a>` : ''}
+                            ${u.familiarTel ? `<a href="tel:${telF}" class="btn-small btn-warning" style="text-decoration:none; color:#000;">👪 Familiar (${u.familiarNombre || 'Urgencia'}): ${u.familiarTel}</a>` : `<span class="text-muted">| Sin contacto familiar</span>`}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            let htmlChecks = '<div class="form-grid-pc">';
+            params.forEach((p, index) => {
+                htmlChecks += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="alCambiarEstadoPuntoControl(${index}, this.value)"><option value="OK">✅ OK / Verificado</option><option value="Falla">🚨 Con Falla / Pendiente</option></select></div>`;
+            });
+            htmlChecks += '</div>';
+
+            container.innerHTML = `
+                <div style="border:2px solid #0284c7; border-radius:10px; padding:12px; background:var(--input-bg); margin-bottom:14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+                        <b style="color:#0284c7; font-size:14px;">📞 Panel de Control y Gestión de Comunicación (${eq.seccion})</b>
+                        <div class="action-btns">
+                            <button type="button" class="btn-small btn-success" onclick="marcarTodosContactosSeccionVigentes('${eq.seccion}')">✅ Marcar Todos Vigentes Hoy</button>
+                            <button type="button" class="btn-small btn-info" onclick="descargarExcelEmpleadosActivos()">📥 Excel Empleados</button>
+                            <button type="button" class="btn-small btn-primary" onclick="imprimirListaEvacuacionBomberos()">🚒 Planilla Bomberos</button>
+                        </div>
+                    </div>
+
+                    <!-- 1. Números de Emergencia S.O.S. -->
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px;">
+                        <div style="font-weight:bold; color:var(--danger); font-size:12.5px; margin-bottom:6px;">🚨 1. Números de Emergencia (Accidente / Incendio):</div>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
+                            <select id="ctrlEmCat" style="flex:1; min-width:120px; padding:7px; font-size:12.5px;">
+                                <option value="ACCIDENTE">🚑 Accidente Médico</option>
+                                <option value="INCENDIO">🔥 Incendio / Bomberos</option>
+                            </select>
+                            <input type="text" id="ctrlEmNom" placeholder="Entidad (Ej. Bomberos)" style="flex:1.3; min-width:130px; padding:7px; font-size:12.5px;">
+                            <input type="text" id="ctrlEmTel" placeholder="Teléfono (Ej. 132)" style="flex:1; min-width:110px; padding:7px; font-size:12.5px;">
+                            <button type="button" id="btnCtrlGuardarEm" class="btn-small btn-success" style="padding:7px 12px;" onclick="guardarEmergenciaEnControl('${id}')">➕ Guardar</button>
+                            <button type="button" id="btnCtrlCancelEm" class="btn-small btn-s-del hidden" style="padding:7px 10px;" onclick="cancelarEmergenciaEnControl()">✖ Cancelar</button>
+                        </div>
+                        <div>${htmlEmergencias}</div>
+                    </div>
+
+                    <!-- 2. Teléfonos de Empleados y Familiares -->
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+                            <b style="color:var(--primary); font-size:12.5px;">👨‍🚒 2. Empleados y Contacto Familiar (${verTodaPlanta ? 'Planta Completa' : eq.seccion}):</b>
+                            <button type="button" class="btn-small btn-dark" onclick="window.verTodosEmpleadosEnControlCom=!window.verTodosEmpleadosEnControlCom; renderFormularioControlInspeccion('${id}');">
+                                ${verTodaPlanta ? '📍 Ver solo ' + eq.seccion : '🌎 Ver Toda la Planta'}
+                            </button>
+                        </div>
+
+                        <!-- Editor inline de empleado con botón Cancelar -->
+                        <div id="boxCtrlEditorEmpleado" class="hidden" style="border:2px solid var(--edit); border-radius:8px; padding:10px; background:var(--input-bg); margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <b id="lblCtrlEditorEmpleado" style="color:var(--edit); font-size:12.5px;">✏️ Editando Contacto</b>
+                                <button type="button" class="btn-small btn-s-del" onclick="cerrarEditorEmpleadoEnControl()">✖ Cancelar</button>
+                            </div>
+                            <div class="form-grid-pc">
+                                <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">📞 Tel. Personal:</label><input type="text" id="ctrlUsuTel" style="padding:7px; font-size:12.5px;"></div>
+                                <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">👪 Nombre Familiar:</label><input type="text" id="ctrlUsuFamNom" style="padding:7px; font-size:12.5px;"></div>
+                                <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">📞 Tel. Familiar:</label><input type="text" id="ctrlUsuFamTel" style="padding:7px; font-size:12.5px;"></div>
+                                <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">Estado:</label><select id="ctrlUsuAct" style="padding:7px; font-size:12.5px;"><option value="true">🟢 Activo</option><option value="false">🔴 Baja / Inactivo</option></select></div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn btn-info" style="margin:0; padding:8px; font-size:12.5px; flex:2;" onclick="guardarEditorEmpleadoEnControl('${id}')">💾 Guardar Contacto</button>
+                                <button type="button" class="btn btn-outline" style="margin:0; padding:8px; font-size:12.5px; flex:1;" onclick="cerrarEditorEmpleadoEnControl()">✖ Cancelar</button>
+                            </div>
+                        </div>
+
+                        <div style="max-height:280px; overflow-y:auto;">${htmlEmpleados}</div>
+                    </div>
+
+                    <!-- 3. Importar Excel mensual de RRHH directamente desde Control -->
+                    <details style="background:var(--card-bg); border:1px solid var(--success); border-radius:8px; padding:8px;">
+                        <summary style="font-weight:bold; font-size:12.5px; color:var(--success); cursor:pointer;">📤 3. Alzar / Actualizar Nómina de Empleados desde Excel de Planta (Altas y Bajas)</summary>
+                        <div style="margin-top:8px;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                                <button type="button" class="btn-small btn-info" onclick="descargarPlantillaExcelPersonal()">📄 Bajar Plantilla</button>
+                                <input type="file" id="ctrlFileExcelPersonal" accept=".csv,.txt,.tsv" style="display:none;" onchange="cargarArchivoExcelPersonalEnControl(event)">
+                                <button type="button" class="btn-small btn-primary" onclick="document.getElementById('ctrlFileExcelPersonal').click()">📂 Subir Archivo CSV/Excel</button>
+                            </div>
+                            <textarea id="ctrlTxtBulkPersonal" style="height:70px; font-size:11.5px; font-family:monospace; margin-bottom:6px;" placeholder="Nombre y Apellido ; Seccion ; Telefono ; Familiar Nombre ; Familiar Telefono"></textarea>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:11.5px; margin-bottom:6px;">
+                                <input type="checkbox" id="ctrlChkBajaAuto" style="width:auto;">
+                                <span>Marcar como <b>Inactivo (Baja)</b> a quienes ya no figuren en la lista</span>
+                            </label>
+                            <button type="button" class="btn btn-success" style="margin:0; padding:8px; font-size:12.5px;" onclick="procesarImportacionPersonalDesdeControl('${id}')">🚀 Sincronizar Nómina Ahora</button>
+                        </div>
+                    </details>
+                </div>
+
+                <div style="background:var(--primary); color:#fff; padding:8px 12px; border-radius:6px; margin-bottom:12px; font-size:13px; font-weight:bold;">📋 Cierre de Verificación Mensual: ${eq.grupo} (${eq.seccion})</div>
+                ${htmlChecks}
+            `;
+            actualizarEstadoRequisitoFoto();
+        };
+
+        // Funciones auxiliares de edición rápida de Comunicación dentro de Control
+        window.ctrlEditEmId = null;
+        window.ctrlEditUsuId = null;
+
+        window.abrirEditorEmergenciaEnControl = function(emId) {
+            const item = (config.contactosEmergencia || []).find(x => String(x.id) === String(emId));
+            if(!item) return;
+            edicionActivaLock = true;
+            window.ctrlEditEmId = item.id;
+            document.getElementById('ctrlEmCat').value = item.categoria;
+            document.getElementById('ctrlEmNom').value = item.nombre;
+            document.getElementById('ctrlEmTel').value = item.telefono;
+            document.getElementById('btnCtrlGuardarEm').innerText = '💾 Actualizar';
+            document.getElementById('btnCtrlCancelEm').classList.remove('hidden');
+        };
+
+        window.cancelarEmergenciaEnControl = function() {
+            edicionActivaLock = false;
+            window.ctrlEditEmId = null;
+            if(document.getElementById('ctrlEmNom')) document.getElementById('ctrlEmNom').value = '';
+            if(document.getElementById('ctrlEmTel')) document.getElementById('ctrlEmTel').value = '';
+            if(document.getElementById('btnCtrlGuardarEm')) document.getElementById('btnCtrlGuardarEm').innerText = '➕ Guardar';
+            if(document.getElementById('btnCtrlCancelEm')) document.getElementById('btnCtrlCancelEm').classList.add('hidden');
+        };
+
+        window.guardarEmergenciaEnControl = async function(idEqAct) {
+            const cat = document.getElementById('ctrlEmCat').value;
+            const nom = corregirOrtografiaTexto(document.getElementById('ctrlEmNom').value.trim());
+            const tel = document.getElementById('ctrlEmTel').value.trim();
+            if(!nom || !tel) return alert("⚠️ Complete Entidad y Teléfono, o toque '✖ Cancelar'.");
+            const hoy = obtenerFechaHoraEstandar().soloFecha;
+            if(window.ctrlEditEmId) {
+                const item = config.contactosEmergencia.find(x => String(x.id) === String(window.ctrlEditEmId));
+                if(item) {
+                    if(item.categoria === cat && item.nombre === nom && item.telefono === tel) {
+                        cancelarEmergenciaEnControl();
+                        return;
+                    }
+                    item.categoria = cat; item.nombre = nom; item.telefono = tel; item.verificadoFecha = hoy; item.verificadoTS = Date.now();
+                }
+            } else {
+                config.contactosEmergencia.push({ id: 'em_' + Date.now(), categoria: cat, nombre: nom, telefono: tel, verificadoFecha: hoy, verificadoTS: Date.now() });
+            }
+            cancelarEmergenciaEnControl();
+            await parchearSubnodoConfigNube(null, { contactosEmergencia: config.contactosEmergencia });
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        window.marcarEmergenciaVigenteEnControl = async function(emId, idEqAct) {
+            const item = (config.contactosEmergencia || []).find(x => String(x.id) === String(emId));
+            if(!item || !String(item.telefono || '').trim()) return;
+            item.verificadoFecha = obtenerFechaHoraEstandar().soloFecha;
+            item.verificadoTS = Date.now();
+            await parchearSubnodoConfigNube(null, { contactosEmergencia: config.contactosEmergencia });
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        window.borrarContactoEmergenciaEnControl = async function(emId, idEqAct) {
+            if(!confirm("¿Eliminar este número de emergencia?")) return;
+            config.contactosEmergencia = (config.contactosEmergencia || []).filter(x => String(x.id) !== String(emId));
+            await parchearSubnodoConfigNube(null, { contactosEmergencia: config.contactosEmergencia });
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        window.abrirEditorEmpleadoEnControl = function(uId) {
+            const u = (config.usuarios || []).find(x => String(x.id) === String(uId));
+            if(!u) return;
+            edicionActivaLock = true;
+            window.ctrlEditUsuId = u.id;
+            document.getElementById('lblCtrlEditorEmpleado').innerText = `✏️ Editando a: ${u.nombre}`;
+            document.getElementById('ctrlUsuTel').value = u.telefono || '';
+            document.getElementById('ctrlUsuFamNom').value = u.familiarNombre || '';
+            document.getElementById('ctrlUsuFamTel').value = u.familiarTel || '';
+            document.getElementById('ctrlUsuAct').value = (u.activo === false) ? 'false' : 'true';
+            const box = document.getElementById('boxCtrlEditorEmpleado');
+            box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        window.cerrarEditorEmpleadoEnControl = function() {
+            edicionActivaLock = false;
+            window.ctrlEditUsuId = null;
+            const box = document.getElementById('boxCtrlEditorEmpleado');
+            if(box) box.classList.add('hidden');
+        };
+
+        window.guardarEditorEmpleadoEnControl = async function(idEqAct) {
+            if(window.ctrlEditUsuId === null) return;
+            const u = (config.usuarios || []).find(x => String(x.id) === String(window.ctrlEditUsuId));
+            if(!u) return cerrarEditorEmpleadoEnControl();
+            const nTel = document.getElementById('ctrlUsuTel').value.trim();
+            const nFamNom = corregirOrtografiaTexto(document.getElementById('ctrlUsuFamNom').value.trim());
+            const nFamTel = document.getElementById('ctrlUsuFamTel').value.trim();
+            const nAct = document.getElementById('ctrlUsuAct').value === 'true';
+
+            if(nTel === (u.telefono || '') && nFamNom === (u.familiarNombre || '') && nFamTel === (u.familiarTel || '') && nAct === (u.activo !== false)) {
+                cerrarEditorEmpleadoEnControl();
+                return;
+            }
+            u.telefono = nTel; u.familiarNombre = nFamNom; u.familiarTel = nFamTel; u.activo = nAct;
+            if(nTel || nFamTel) { u.telVerificadoFecha = obtenerFechaHoraEstandar().soloFecha; u.telVerificadoTS = Date.now(); }
+            else { u.telVerificadoFecha = 'Sin verificar'; u.telVerificadoTS = 0; }
+            cerrarEditorEmpleadoEnControl();
+            await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        window.marcarUsuarioVigenteEnControl = async function(uId, idEqAct) {
+            const u = (config.usuarios || []).find(x => String(x.id) === String(uId));
+            if(!u || (!u.telefono && !u.familiarTel)) return;
+            u.telVerificadoFecha = obtenerFechaHoraEstandar().soloFecha;
+            u.telVerificadoTS = Date.now();
+            await parchearSubnodoConfigNube(null, { usuarios: config.usuarios });
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        window.cargarArchivoExcelPersonalEnControl = function(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('ctrlTxtBulkPersonal').value = e.target.result || '';
+            };
+            reader.readAsText(file, 'UTF-8');
+        };
+
+        window.procesarImportacionPersonalDesdeControl = async function(idEqAct) {
+            const txt = document.getElementById('ctrlTxtBulkPersonal').value.trim();
+            if(!txt) return alert("⚠️ Suba un archivo o pegue las filas desde Excel.");
+            document.getElementById('txtBulkPersonal').value = txt;
+            if(document.getElementById('chkBajaAutomaticaNoListados') && document.getElementById('ctrlChkBajaAuto')) {
+                document.getElementById('chkBajaAutomaticaNoListados').checked = document.getElementById('ctrlChkBajaAuto').checked;
+            }
+            await procesarImportacionMasivaPersonal();
+            renderFormularioControlInspeccion(idEqAct);
+        };
+
+        // 3. Historial Desplegable por Sección -> Muestra el Porcentaje (%) de cada Grupo (incluyendo Comunicación)
+        window.toggleSeccionDesplegableHistorial = function(sec) {
+            window.seccionesAbiertasHistorial[sec] = !window.seccionesAbiertasHistorial[sec];
+            renderGraficosAvancePlanta(obtenerRegistrosFiltradosHistorial());
+        };
+
+        window.toggleResumenGruposPlantaHist = function() {
+            window.verResumenGruposPlantaHist = !window.verResumenGruposPlantaHist;
+            renderGraficosAvancePlanta(obtenerRegistrosFiltradosHistorial());
+        };
+
+        renderGraficosAvancePlanta = function(filtrados) {
+            asegurarUnidadesVerificacionComunicacion();
+            const panel = document.getElementById('panelGraficosHistorial');
+            if(!panel) return;
+            const fSec = document.getElementById('filtroHistSec') ? document.getElementById('filtroHistSec').value : 'ALL';
+            const fGrp = document.getElementById('filtroHistGrp') ? document.getElementById('filtroHistGrp').value : 'ALL';
+
+            const idsUniverso = Object.keys(config.equipos || {}).filter(id => {
+                const eq = config.equipos[id];
+                if(fSec !== 'ALL' && eq.seccion !== fSec) return false;
+                if(fGrp !== 'ALL' && eq.grupo !== fGrp) return false;
+                return true;
+            });
+            const totalUniverso = idsUniverso.length;
+            const equiposControladosSet = new Set(), fallasPorSec = {};
+            filtrados.forEach(r => {
+                if(config.equipos[r.ID_Equipo]) {
+                    equiposControladosSet.add(r.ID_Equipo);
+                    const s = r.Seccion || 'S/D';
+                    if(Object.values(r.Controles || {}).includes('Falla')) fallasPorSec[s] = (fallasPorSec[s] || 0) + 1;
+                }
+            });
+
+            const cantControlados = idsUniverso.filter(id => equiposControladosSet.has(id)).length;
+            const faltantesMes = Math.max(0, totalUniverso - cantControlados);
+            const pctGlobal = totalUniverso > 0 ? Math.min(100, Math.round((cantControlados / totalUniverso) * 100)) : 0;
+
+            let html = `
+                <div class="chart-row" style="margin-bottom:8px;">
+                    <div class="chart-lbl-line">
+                        <span style="color:var(--primary);">📈 Cobertura Total del Mes (Faltan ${faltantesMes})</span>
+                        <span>${cantControlados} / ${totalUniverso} (${pctGlobal}%)</span>
+                    </div>
+                    <div class="progress-bar-container" style="height:12px;">
+                        <div class="progress-bar-fill" style="width:${pctGlobal}%;"></div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:11px; color:var(--text-muted);">
+                    <span>👆 <b>Toque una Sección</b> para desplegar el % por Grupo:</span>
+                    <button type="button" class="btn-small btn-dark" style="padding:3px 8px; font-size:10.5px;" onclick="toggleResumenGruposPlantaHist()">
+                        ${window.verResumenGruposPlantaHist ? '▲ Ocultar Resumen Grupos' : '📑 Ver % Global por Grupo ▼'}
+                    </button>
+                </div>
+            `;
+
+            // Resumen Global por Grupo en toda la planta (incluye Comunicación)
+            if(window.verResumenGruposPlantaHist) {
+                const gruposPlanta = Object.keys(config.grupos || {}).filter(g => g !== 'Todos').sort(sortNatural);
+                let filasGrpGlobal = '';
+                gruposPlanta.forEach(g => {
+                    const idsG = idsUniverso.filter(id => config.equipos[id].grupo === g);
+                    if(idsG.length === 0) return;
+                    const ctrlG = idsG.filter(id => equiposControladosSet.has(id)).length;
+                    const pctG = Math.round((ctrlG / idsG.length) * 100);
+                    const iconoG = esGrupoComunicacionNombre(g) ? '📞' : (esGrupoBotiquinOPA(g) ? '💊' : '🔧');
+                    filasGrpGlobal += `
+                        <div style="margin-bottom:6px;">
+                            <div class="chart-lbl-line" style="font-size:11.5px;">
+                                <span>${iconoG} ${g}</span>
+                                <span>${ctrlG}/${idsG.length} (${pctG}%)</span>
+                            </div>
+                            <div class="progress-bar-container" style="height:6px;">
+                                <div class="progress-bar-fill" style="width:${pctG}%; background:var(--edit);"></div>
+                            </div>
+                        </div>`;
+                });
+                html += `<div style="background:var(--card-bg); border:1px solid var(--primary); border-radius:8px; padding:10px; margin-bottom:10px;">
+                    <div style="font-size:11.5px; font-weight:bold; color:var(--primary); margin-bottom:6px;">📑 Avance Global por Grupo en Planta:</div>
+                    ${filasGrpGlobal}
+                </div>`;
+            }
+
+            // Secciones clicables con desglose interno por Grupo (incluyendo Comunicación)
+            const seccionesAMostrar = fSec === 'ALL' ? config.secciones.slice().sort(sortNatural) : [fSec];
+            seccionesAMostrar.forEach(sec => {
+                const idsSec = idsUniverso.filter(id => config.equipos[id].seccion === sec);
+                const totalSec = idsSec.length;
+                if(totalSec === 0) return;
+                const ctrlSec = idsSec.filter(id => equiposControladosSet.has(id)).length;
+                const pctSec = Math.min(100, Math.round((ctrlSec / totalSec) * 100));
+                const fallasSec = fallasPorSec[sec] || 0;
+                const badgeFalla = fallasSec > 0 ? `<span style="color:var(--danger); margin-left:4px;">(${fallasSec} Falla)</span>` : '';
+                const abierta = !!window.seccionesAbiertasHistorial[sec] || fSec !== 'ALL';
+
+                // Desglose por cada Grupo dentro de esta Sección
+                let subGruposHTML = '';
+                if(abierta) {
+                    const gruposEnSec = [...new Set(idsSec.map(id => config.equipos[id].grupo))].sort(sortNatural);
+                    gruposEnSec.forEach(g => {
+                        const idsSecGrp = idsSec.filter(id => config.equipos[id].grupo === g);
+                        const totSG = idsSecGrp.length;
+                        const ctrlSG = idsSecGrp.filter(id => equiposControladosSet.has(id)).length;
+                        const pctSG = Math.round((ctrlSG / totSG) * 100);
+                        const iconoG = esGrupoComunicacionNombre(g) ? '📞' : (esGrupoBotiquinOPA(g) ? '💊' : (g.toLowerCase().includes('extintor') ? '🧯' : '🚿'));
+                        subGruposHTML += `
+                            <div style="margin:6px 0; padding-left:10px; border-left:2px solid var(--edit);">
+                                <div class="chart-lbl-line" style="font-size:11.5px;">
+                                    <span>${iconoG} <b>${g}</b></span>
+                                    <span><b>${ctrlSG}/${totSG} (${pctSG}%)</b></span>
+                                </div>
+                                <div class="progress-bar-container" style="height:6px; margin-top:3px;">
+                                    <div class="progress-bar-fill" style="width:${pctSG}%; background:var(--edit);"></div>
+                                </div>
+                            </div>`;
+                    });
+                }
+
+                const secEsc = sec.replace(/'/g, "\\'");
+                html += `
+                    <div class="chart-row" style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:7px;">
+                        <div onclick="toggleSeccionDesplegableHistorial('${secEsc}')" style="cursor:pointer;">
+                            <div class="chart-lbl-line">
+                                <span>📍 <b>${sec}</b> ${badgeFalla} <small style="color:var(--primary); font-weight:bold;">${abierta ? '▲' : '▼ Ver grupos'}</small></span>
+                                <span class="text-muted"><b>${ctrlSec}/${totalSec} (${pctSec}%)</b></span>
+                            </div>
+                            <div class="progress-bar-container" style="height:8px;">
+                                <div class="progress-bar-fill" style="width:${pctSec}%;"></div>
+                            </div>
+                        </div>
+                        ${abierta ? `<div style="margin-top:8px; padding-top:6px; border-top:1px dashed var(--border);">${subGruposHTML}</div>` : ''}
+                    </div>`;
+            });
+            panel.innerHTML = html;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            aplicarActualizacionV637();
+        });
     </script>
 </body>
 </html>
