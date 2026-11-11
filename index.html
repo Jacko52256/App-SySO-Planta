@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache,     no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Gestión SySO V6.33 - Industrial Cloud IA</title>
@@ -3151,10 +3151,10 @@ const CFG_KEY = 'SySO_Config_Master';
         // =========================================================================
         // MOTOR 1: LLAVE GEMINI SEGURA + ASISTENTE CONVERSACIONAL REAL DE DOBLE FILA
         // =========================================================================
-        function guardarLlaveGeminiSegura() {
+function guardarLlaveGeminiSegura() {
             if(!esUsuarioCreador()) return;
             const rawKey = document.getElementById('inputGeminiApiKey').value.trim();
-            if(!rawKey || !rawKey.startsWith('AIza')) return alert("⚠️ Pegue una clave válida de Google AI Studio (comienza con AIzaSy...).");
+            if(!rawKey || rawKey.length < 20) return alert("⚠️ Pegue una clave válida de Google AI Studio.");
             if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
             config.iaConfig.apiKeyObf = btoa(rawKey.split('').reverse().join(''));
             parchearSubnodoConfigNube('iaConfig', config.iaConfig);
@@ -3340,13 +3340,18 @@ const CFG_KEY = 'SySO_Config_Master';
                         ? `Eres el Analista Senior e Ingeniero de Planta exclusivo para Jack Wiens (creador de Gestión SySO). Responde en español, directo al grano, en máximo 120 palabras, usando los datos reales en vivo: ${resumenPlanta}\nConsulta de Jack: "${texto}"`
                         : `Eres el Asistente Oficial de la aplicación industrial Gestión SySO. Responde exactamente la duda del operario en español claro, paso a paso y en máximo 95 palabras, sin repetir plantillas genéricas. Contexto de cómo funciona la app: ${resumenPlanta}\nPregunta del usuario: "${texto}"`;
 
-                    const urlApi = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-                    const resp = await fetch(urlApi, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: promptSistema }] }] })
-                    });
-                    if(resp.ok) {
+const modelosDisponibles = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+                    let data = null, respOk = false;
+                    for (const mod of modelosDisponibles) {
+                        const urlApi = `https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`;
+                        const resp = await fetch(urlApi, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: promptSistema }] }] })
+                        });
+                        if (resp.ok) { data = await resp.json(); respOk = true; break; }
+                    }
+                    if(respOk && data) {
                         const data = await resp.json();
                         const txtIA = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text;
                         if(txtIA) {
