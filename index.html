@@ -4847,41 +4847,106 @@ INSTRUCCIÓN ESTRICTA:
             _abrirModalSOSOrig();
             renderDirectorioEnModalSOS();
         };
+// 3. Guardia S.O.S. 24/7 Compatible con Android, iPhone y PC (Sin error de constructor móvil)
+        let keepAliveIntervalSOS = null;
 
-        // 3. Guardia S.O.S. 24/7 en Segundo Plano (Notificaciones Nativas + Canal Push ntfy.sh)
-        window.activarGuardiaSOS247 = async function() {
+        function iniciarPulsoSilenciosoSegundoPlano() {
+            if(keepAliveIntervalSOS) return;
+            keepAliveIntervalSOS = setInterval(() => {
+                try {
+                    if('wakeLock' in navigator && document.visibilityState === 'visible') {
+                        navigator.wakeLock.request('screen').catch(()=>{});
+                    }
+                    verificarSOSActivoEnNube();
+                } catch(e){}
+            }, 8000);
+        }
+
+        function actualizarEstadoVisualBotonGuardia() {
+            const btn = document.getElementById('btnActivarGuardiaSOS');
+            if(!btn) return;
+            const activa = localStorage.getItem('SySO_SOS_Guard_Active') === 'true';
+            if(activa) {
+                btn.className = 'btn btn-success';
+                btn.innerHTML = '🛡️ Guardia S.O.S. 24/7 Activa (Tocar para ver canal Push)';
+                iniciarPulsoSilenciosoSegundoPlano();
+            } else {
+                btn.className = 'btn btn-danger';
+                btn.innerHTML = '🔔 Activar Guardia S.O.S. 24/7 (Segundo Plano)';
+            }
+        }
+
+        async function mostrarNotificacionMovilSegura(titulo, cuerpo) {
             try {
-                if('Notification' in window) {
-                    const perm = await Notification.requestPermission();
-                    if(perm === 'granted') {
-                        localStorage.setItem('SySO_SOS_Guard_Active', 'true');
-                        new Notification('🛡️ Guardia S.O.S. 24/7 Activada', {
-                            body: 'Recibirás alertas sonoras de emergencia aunque minimices la aplicación.',
-                            requireInteraction: false
-                        });
+                if(!('Notification' in window) || Notification.permission !== 'granted') return;
+                if(navigator.serviceWorker && navigator.serviceWorker.ready) {
+                    const reg = await navigator.serviceWorker.getRegistration();
+                    if(reg && reg.showNotification) {
+                        await reg.showNotification(titulo, { body: cuerpo, vibrate: [400, 150, 400], requireInteraction: true });
+                        return;
                     }
                 }
-                if('wakeLock' in navigator) {
-                    try { await navigator.wakeLock.request('screen'); } catch(e){}
-                }
-                alert(`✅ GUARDIA S.O.S. ACTIVADA EN ESTE TELÉFONO:\n\n1) Con la app minimizada o pantalla bloqueada: sonará automáticamente.\n2) Con el navegador totalmente cerrado: instala la app gratuita "ntfy" (Android/iOS), toca "+" y suscríbete al canal:\n\n${SOS_PUSH_TOPIC}`);
+                new Notification(titulo, { body: cuerpo });
             } catch(e) {
-                alert("Active el permiso de notificaciones en la configuración de su navegador.");
+                // En Android sin ServiceWorker no lanza error bloqueante
             }
+        }
+
+        window.activarGuardiaSOS247 = async function() {
+            let estadoPermiso = 'default';
+            try {
+                // Desbloquear motor de audio y vibración del celular con el toque del usuario
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if(AudioCtx) {
+                    if(!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+                    if(sharedAudioCtx.state === 'suspended') await sharedAudioCtx.resume();
+                }
+                if(navigator.vibrate) navigator.vibrate(120);
+            } catch(e){}
+
+            try {
+                if('Notification' in window) {
+                    if(Notification.permission === 'granted') {
+                        estadoPermiso = 'granted';
+                    } else if(Notification.permission !== 'denied') {
+                        estadoPermiso = await Notification.requestPermission();
+                    } else {
+                        estadoPermiso = 'denied';
+                    }
+                }
+            } catch(e){}
+
+            try {
+                if('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+            } catch(e){}
+
+            localStorage.setItem('SySO_SOS_Guard_Active', 'true');
+            iniciarPulsoSilenciosoSegundoPlano();
+            actualizarEstadoVisualBotonGuardia();
+
+            if(estadoPermiso === 'granted') {
+                mostrarNotificacionMovilSegura('🛡️ Guardia S.O.S. 24/7 Activada', 'Recibirás alertas de emergencia en segundo plano.');
+            }
+
+            if(navigator.clipboard) {
+                try { await navigator.clipboard.writeText(SOS_PUSH_TOPIC); } catch(e){}
+            }
+
+            const notaPermiso = estadoPermiso === 'denied'
+                ? '\n⚠️ Nota: En este navegador tienes bloqueadas las notificaciones emergentes (puedes habilitarlas tocando el candado 🔒 de la barra de direcciones arriba), pero la sirena sonora en segundo plano ya quedó ACTIVA.'
+                : '\n✅ Permiso del navegador vinculado correctamente.';
+
+            alert(`✅ GUARDIA S.O.S. 24/7 ACTIVADA EN ESTE DISPOSITIVO:${notaPermiso}\n\n1) Con la app minimizada o pantalla encendida: la sirena sonará automáticamente cada vez que haya una emergencia.\n2) Para que suene incluso con Chrome totalmente cerrado: instala la app gratuita "ntfy" (Play Store / App Store), toca "+" y pega este canal (ya se copió a tu portapapeles):\n\n${SOS_PUSH_TOPIC}`);
         };
 
         const _activarAlarmaOrig = activarAlarmaVisualYSonora;
         activarAlarmaVisualYSonora = function(sosData) {
             _activarAlarmaOrig(sosData);
-            if(ultimoSOSDescartadoId !== String(sosData.id) && 'Notification' in window && Notification.permission === 'granted') {
-                try {
-                    new Notification(`🚨 S.O.S. ${sosData.tipo.toUpperCase()} EN ${sosData.seccion}`, {
-                        body: `Reporta: ${sosData.reporta} (${sosData.hora}) — Inicien protocolo de emergencia.`,
-                        tag: 'sos_' + sosData.id,
-                        renotify: true,
-                        requireInteraction: true
-                    });
-                } catch(e){}
+            if(ultimoSOSDescartadoId !== String(sosData.id)) {
+                mostrarNotificacionMovilSegura(
+                    `🚨 S.O.S. ${sosData.tipo.toUpperCase()} EN ${sosData.seccion}`,
+                    `Reporta: ${sosData.reporta} (${sosData.hora}) — Inicien protocolo de emergencia.`
+                );
             }
         };
 
@@ -4890,7 +4955,6 @@ INSTRUCCIÓN ESTRICTA:
             const sec = document.getElementById('sosSeccion').value;
             const ultimoDisp = localStorage.getItem(LAST_USER_KEY) || '';
             const usr = usuarioActual ? usuarioActual.nombre : (ultimoDisp ? `Celular de ${ultimoDisp}` : "Operario de Planta");
-            // Disparo Push instantáneo para teléfonos con la app cerrada (ntfy.sh)
             try {
                 fetch(`https://ntfy.sh/${SOS_PUSH_TOPIC}`, {
                     method: 'POST',
@@ -4904,9 +4968,13 @@ INSTRUCCIÓN ESTRICTA:
         document.addEventListener('DOMContentLoaded', () => {
             aplicarLimpiezaBotonesDuplicadosYV634();
             asegurarEstructuraEmergencias();
+            if(localStorage.getItem('SySO_SOS_Guard_Active') === 'true') {
+                iniciarPulsoSilenciosoSegundoPlano();
+            }
+            setTimeout(actualizarEstadoVisualBotonGuardia, 400);
         });
         // === FIN DEL PASO 1 DE 2 ===
-// =========================================================================
+        // =========================================================================
         // ACTUALIZACIÓN V6.34 - PASO 2 DE 2:
         // PANEL BRIGADISTA COMUNICACIÓN, SEMÁFORO 30 DÍAS, FAMILIARES Y NÓMINA BOMBEROS
         // =========================================================================
