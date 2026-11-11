@@ -2751,16 +2751,18 @@ const CFG_KEY = 'SySO_Config_Master';
             else { txt.innerHTML = ''; box.classList.add('hidden'); }
         }
 
-        function renderFormularioControlInspeccion(id) {
+function renderFormularioControlInspeccion(id) {
             const eq = config.equipos[id];
             if(!eq) return;
             motivosFallaPorIndex = {};
             actualizarCajaResumenFallas();
-            let fichaResumen = `${eq.seccion} | ${eq.tipo}`;
+            const ubiTexto = (!eq.ubicacion || eq.ubicacion === 'S/D') ? 'Pendiente en terreno' : eq.ubicacion;
+            const tipoTexto = (!eq.tipo || eq.tipo === 'Pendiente en terreno') ? 'Pendiente en terreno' : eq.tipo;
+            let fichaResumen = `${eq.seccion} | ${tipoTexto}`;
             if(eq.capacidad) fichaResumen += ` (${eq.capacidad})`;
             if(eq.serie) fichaResumen += ` [S/N: ${eq.serie}]`;
             document.getElementById('seccionEquipo').value = fichaResumen;
-            document.getElementById('ubicacionEquipo').value = eq.ubicacion || "No especificada";
+            document.getElementById('ubicacionEquipo').value = ubiTexto;
             actualizarMiniaturaPOSControl(id);
             
             const container = document.getElementById('moduloDinamico'); 
@@ -2775,7 +2777,68 @@ const CFG_KEY = 'SySO_Config_Master';
             }); 
             tagsHTML += `</div>`; 
             document.getElementById('smartTagsContainer').innerHTML = tagsHTML;
-            let warningHTML = '';
+
+            // Detector automático si al equipo creado en oficina le falta Foto de Referencia o Ubicación Exacta
+            const faltaUbi = !eq.ubicacion || eq.ubicacion === 'S/D' || eq.ubicacion === 'Pendiente en terreno';
+            const faltaTipo = !eq.tipo || eq.tipo === 'Pendiente en terreno';
+            const faltaFotoRef = !eq.tieneFotoRef;
+            const abrirEditorAuto = faltaUbi || faltaTipo || faltaFotoRef;
+            const secsOpciones = (config.secciones || []).map(s => `<option value="${s}" ${s === eq.seccion ? 'selected' : ''}>${s}</option>`).join('');
+
+            let warningHTML = `
+                <div style="margin-bottom:12px;">
+                    <button type="button" class="btn btn-outline" style="padding:9px 12px; font-size:13px; margin-bottom:6px; border-color:var(--edit); color:var(--edit);" onclick="toggleEditorFichaTerreno()">
+                        ✏️ Actualizar Ubicación / Foto Ref. / Vencimiento en Terreno ${abrirEditorAuto ? '⚠️ (Faltan Datos)' : ''}
+                    </button>
+                    <div id="boxEditorFichaTerreno" class="${abrirEditorAuto ? '' : 'hidden'}" style="border:2px solid var(--edit); border-radius:8px; padding:12px; background:var(--input-bg); margin-bottom:10px;">
+                        <div style="font-size:13px; font-weight:bold; color:var(--edit); margin-bottom:6px;">
+                            🛠️ ${abrirEditorAuto ? 'Completar Datos Pendientes del Equipo (Creado en Oficina)' : 'Actualizar Ficha del Equipo en Terreno'}
+                        </div>
+                        <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">
+                            ${abrirEditorAuto ? 'Este equipo fue registrado sin todos sus datos de campo. Complete ubicación y foto de referencia para habilitar el guardado:' : 'Use este panel si el equipo se mudó de lugar, volvió de recarga con nuevo vencimiento o requiere renovar su foto de referencia:'}
+                        </p>
+                        <div class="form-grid-pc">
+                            <div class="form-group">
+                                <label style="font-size:12px;">📍 Ubicación Exacta ${faltaUbi ? '<span style="color:var(--danger)">* (Falta)</span>' : ''}:</label>
+                                <input type="text" id="fieldEditUbi" value="${faltaUbi ? '' : (eq.ubicacion || '').replace(/"/g, '&quot;')}" placeholder="Ej. Entrada principal junto a tablero">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">🏷️ Tipo / Descripción ${faltaTipo ? '<span style="color:var(--danger)">* (Falta)</span>' : ''}:</label>
+                                <input type="text" id="fieldEditTipo" list="listaTiposSugeridos" value="${faltaTipo ? '' : (eq.tipo || '').replace(/"/g, '&quot;')}" placeholder="Ej. PQS ABC / Gabinete / Mural">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">⚖️ Capacidad / Medida:</label>
+                                <input type="text" id="fieldEditCap" value="${(eq.capacidad || '').replace(/"/g, '&quot;')}" placeholder="Ej. 5 kg / 10 kg / 25m">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">🔢 Marca / N° de Serie:</label>
+                                <input type="text" id="fieldEditSerie" value="${(eq.serie || '').replace(/"/g, '&quot;')}" placeholder="Ej. Melisam - N° 9482">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">📅 Vencimiento Carga (Post-Recarga):</label>
+                                <input type="month" id="fieldEditVenc" value="${eq.vencimiento || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">🚚 ¿Se mudó a otra Sección?:</label>
+                                <select id="fieldEditMudanzaSec">
+                                    <option value="${eq.seccion}">No (Sigue en ${eq.seccion})</option>
+                                    ${secsOpciones}
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
+                            <label style="font-size:12px;">🖼️ Foto de Referencia del Equipo ${faltaFotoRef ? '<span style="color:var(--danger)">* (Obligatoria en 1° recorrido)</span>' : '(Opcional si desea renovarla)'}:</label>
+                            <input type="file" id="inputFotoRefTerreno" accept="image/*" capture="environment" style="display:none;" onchange="procesarFotoRefEnTerreno(event)">
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                                <button type="button" class="btn-small btn-info" style="padding:8px 12px;" onclick="document.getElementById('inputFotoRefTerreno').click()">📷 ${faltaFotoRef ? 'Tomar Foto de Referencia' : 'Reemplazar Foto Ref.'}</button>
+                                <span id="lblEstadoFotoRefTerreno" style="font-size:11.5px; font-weight:bold; color:${faltaFotoRef ? 'var(--danger)' : 'var(--success)'};">${faltaFotoRef ? '⚠️ Sin foto de referencia' : '✅ Ya posee foto ref.'}</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-info" style="margin-top:10px; margin-bottom:0; padding:10px; font-size:13.5px;" onclick="guardarActualizacionFichaTerreno()">💾 Guardar Actualización de Ficha</button>
+                    </div>
+                </div>
+            `;
+
             if(esGrupoBotiquinOPA(eq.grupo) || (Array.isArray(eq.insumos) && eq.insumos.length > 0)) {
                 if(!Array.isArray(eq.insumos)) eq.insumos = [];
                 warningHTML += `
@@ -2831,8 +2894,121 @@ const CFG_KEY = 'SySO_Config_Master';
             }
             html += '</div>';
             container.innerHTML = warningHTML + html;
+            window.fotoRefTerrenoTempBase64 = null;
             actualizarEstadoRequisitoFoto();
         }
+
+        // --- FUNCIONES DE EDICIÓN DE FICHA EN TERRENO (PARA BRIGADISTAS Y ADMINS) ---
+        window.toggleEditorFichaTerreno = function() {
+            const box = document.getElementById('boxEditorFichaTerreno');
+            if(box) box.classList.toggle('hidden');
+        };
+
+        window.procesarFotoRefEnTerreno = function(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvasRef = document.getElementById('canvasRefEquipo');
+                    const MAX_W = 460;
+                    const scale = Math.min(1, MAX_W / img.width);
+                    canvasRef.width = Math.round(img.width * scale);
+                    canvasRef.height = Math.round(img.height * scale);
+                    const ctxR = canvasRef.getContext('2d');
+                    ctxR.drawImage(img, 0, 0, canvasRef.width, canvasRef.height);
+                    window.fotoRefTerrenoTempBase64 = canvasRef.toDataURL('image/jpeg', 0.6);
+                    const lbl = document.getElementById('lblEstadoFotoRefTerreno');
+                    if(lbl) { lbl.innerText = '✅ Nueva foto ref. lista para guardar'; lbl.style.color = 'var(--success)'; }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.guardarActualizacionFichaTerreno = async function(silencioso = false) {
+            const id = document.getElementById('idEquipo').value;
+            if(!id || !config.equipos[id]) return false;
+            const eq = config.equipos[id];
+            const nuevaUbi = corregirOrtografiaTexto((document.getElementById('fieldEditUbi') ? document.getElementById('fieldEditUbi').value : '').trim());
+            const nuevoTipo = aprenderTerminoNuevo('tipos', (document.getElementById('fieldEditTipo') ? document.getElementById('fieldEditTipo').value : '').trim());
+            const nuevaCap = (document.getElementById('fieldEditCap') ? document.getElementById('fieldEditCap').value : '').trim();
+            const nuevaSerie = (document.getElementById('fieldEditSerie') ? document.getElementById('fieldEditSerie').value : '').trim();
+            const nuevoVenc = (document.getElementById('fieldEditVenc') ? document.getElementById('fieldEditVenc').value : '').trim();
+            const secMudanza = document.getElementById('fieldEditMudanzaSec') ? document.getElementById('fieldEditMudanzaSec').value : eq.seccion;
+
+            const cambiosRealizados = [];
+            if(nuevaUbi && nuevaUbi !== eq.ubicacion) {
+                cambiosRealizados.push(`Ubicación: "${eq.ubicacion || 'Pendiente'}" ➔ "${nuevaUbi}"`);
+                eq.ubicacion = nuevaUbi;
+            }
+            if(nuevoTipo && nuevoTipo !== eq.tipo) {
+                cambiosRealizados.push(`Tipo: "${eq.tipo || 'Pendiente'}" ➔ "${nuevoTipo}"`);
+                eq.tipo = nuevoTipo;
+            }
+            if(nuevaCap !== (eq.capacidad || '')) {
+                cambiosRealizados.push(`Capacidad: "${nuevaCap || 'S/D'}"`);
+                eq.capacidad = nuevaCap;
+            }
+            if(nuevaSerie !== (eq.serie || '')) {
+                cambiosRealizados.push(`Serie: "${nuevaSerie || 'S/D'}"`);
+                eq.serie = nuevaSerie;
+            }
+            if(nuevoVenc !== (eq.vencimiento || '')) {
+                cambiosRealizados.push(`Vencimiento: "${eq.vencimiento || 'S/D'}" ➔ "${nuevoVenc || 'S/D'}"`);
+                eq.vencimiento = nuevoVenc;
+            }
+            if(secMudanza && secMudanza !== eq.seccion) {
+                cambiosRealizados.push(`🚚 Traslado reportado: ${eq.seccion} ➔ ${secMudanza}`);
+                if(!config.mudanzasPendientes) config.mudanzasPendientes = {};
+                config.mudanzasPendientes[id] = { de: eq.seccion, a: secMudanza, reporta: usuarioActual ? usuarioActual.nombre : 'Brigadista', fecha: obtenerFechaHoraEstandar().soloFecha };
+                await parchearSubnodoConfigNube('mudanzasPendientes', config.mudanzasPendientes);
+            }
+            if(window.fotoRefTerrenoTempBase64) {
+                eq.tieneFotoRef = true;
+                await guardarFotoReferenciaEnNube(id, window.fotoRefTerrenoTempBase64);
+                cambiosRealizados.push(`📷 Foto de Referencia actualizada`);
+                window.fotoRefTerrenoTempBase64 = null;
+            }
+
+            if(cambiosRealizados.length > 0) {
+                await parchearSubnodoConfigNube(`equipos/${encodeURIComponent(id)}`, eq);
+                if(!config.cambiosTerreno) config.cambiosTerreno = [];
+                config.cambiosTerreno.push({
+                    id,
+                    inspector: usuarioActual ? usuarioActual.nombre : 'Brigadista',
+                    fecha: obtenerFechaHoraEstandar().fechaHora,
+                    detalle: cambiosRealizados.join(' | ')
+                });
+                if(config.cambiosTerreno.length > 40) config.cambiosTerreno = config.cambiosTerreno.slice(-40);
+                await parchearSubnodoConfigNube('cambiosTerreno', config.cambiosTerreno);
+
+                const obsEl = document.getElementById('observaciones');
+                if(obsEl) {
+                    const notaCambio = `[Ficha actualizada: ${cambiosRealizados.join(', ')}]`;
+                    if(!obsEl.value.includes('[Ficha actualizada:')) {
+                        obsEl.value = obsEl.value.trim() ? `${obsEl.value.trim()} ${notaCambio}` : notaCambio;
+                        guardarBorrador();
+                    }
+                }
+                let fichaResumen = `${eq.seccion} | ${eq.tipo || 'Pendiente'}`;
+                if(eq.capacidad) fichaResumen += ` (${eq.capacidad})`;
+                if(eq.serie) fichaResumen += ` [S/N: ${eq.serie}]`;
+                document.getElementById('seccionEquipo').value = fichaResumen;
+                document.getElementById('ubicacionEquipo').value = eq.ubicacion || 'Pendiente en terreno';
+                actualizarMiniaturaPOSControl(id);
+                if(!silencioso) {
+                    alert(`✅ Datos del equipo ${id} actualizados en la nube:\n• ${cambiosRealizados.join('\n• ')}`);
+                    const boxEd = document.getElementById('boxEditorFichaTerreno');
+                    if(boxEd) boxEd.classList.add('hidden');
+                }
+                return true;
+            } else {
+                if(!silencioso) alert("No se detectaron cambios nuevos para guardar en la ficha.");
+                return false;
+            }
+        };
 
         function procesarEscaneo(id) {
             id = id.trim().toUpperCase(); 
@@ -2896,6 +3072,21 @@ const CFG_KEY = 'SySO_Config_Master';
             const btnSave = document.getElementById('btnGuardarControl');
             if(btnSave.disabled) return;
             const eq = config.equipos[id]; 
+
+            // Si el brigadista escribió cambios en el panel de edición de terreno pero no tocó "Guardar Actualización", los aplica automáticamente
+            const boxEd = document.getElementById('boxEditorFichaTerreno');
+            if(boxEd && !boxEd.classList.contains('hidden')) {
+                await guardarActualizacionFichaTerreno(true);
+            }
+
+            // Validar que si el equipo fue creado en oficina sin Ubicación o sin Foto de Referencia, el brigadista lo complete en este recorrido
+            const sigueSinUbi = !eq.ubicacion || eq.ubicacion === 'S/D' || eq.ubicacion === 'Pendiente en terreno';
+            const sigueSinFotoRef = !eq.tieneFotoRef;
+            if(sigueSinUbi || sigueSinFotoRef) {
+                if(boxEd) boxEd.classList.remove('hidden');
+                return alert(`📌 DATOS PENDIENTES DE COMPLETAR EN TERRENO:\nEste equipo (${id}) fue creado en oficina sin todos sus datos de campo.\n\nPor favor complete en el recuadro celeste:\n${sigueSinUbi ? '• 📍 Ubicación Exacta\n' : ''}${sigueSinFotoRef ? '• 📷 Foto de Referencia del Equipo\n' : ''}antes de guardar el control.`);
+            }
+
             const params = config.grupos[eq.grupo] || []; 
             let resp = {}, fallasDetectadas = [], hayEnRecarga = false, indiceSinMotivo = null;
             
@@ -2946,7 +3137,7 @@ const CFG_KEY = 'SySO_Config_Master';
             }
             let rawObs = document.getElementById('observaciones').value.trim(); 
             let obsText = rawObs ? corregirOrtografiaTexto(rawObs) : '';
-            if(obsText && obsText.length >= 4 && obsText.length <= 55) {
+            if(obsText && obsText.length >= 4 && obsText.length <= 55 && !obsText.includes('[Ficha actualizada:')) {
                 aprenderTerminoNuevo('notas', obsText);
             }
             if(hayEnRecarga && !obsText.includes('[EN RECARGA]')) obsText = (obsText ? obsText + ' ' : '') + '[EN RECARGA]';
@@ -3030,7 +3221,7 @@ const CFG_KEY = 'SySO_Config_Master';
                                 <div style="flex:1; min-width:0;">
                                     <div style="font-size:24px; font-weight:bold; color:var(--text);">${proximoId}</div>
                                     <div style="font-size:13.5px; color:var(--text); margin-top:2px;"><b>Tipo:</b> ${proximoEq.tipo}${proximoEq.capacidad ? ' ('+proximoEq.capacidad+')' : ''}</div>
-                                    <div style="font-size:13.5px; color:var(--text); margin-top:2px;"><b>📍 Ubicación:</b> ${proximoEq.ubicacion || 'N/A'}</div>
+                                    <div style="font-size:13.5px; color:var(--text); margin-top:2px;"><b>📍 Ubicación:</b> ${proximoEq.ubicacion || 'Pendiente en terreno'}</div>
                                 </div>
                                 <div id="radarNextThumbBox" class="pos-thumb-box" style="width:82px; min-height:82px;" onclick="event.stopPropagation(); verFotoReferenciaEquipo('${proximoId}')">
                                     <div class="pos-thumb-placeholder"><span>🖼️</span><div id="radarNextThumbLbl">${proximoEq.tieneFotoRef ? 'Cargando...' : 'Sin foto'}</div></div>
@@ -3149,51 +3340,120 @@ const CFG_KEY = 'SySO_Config_Master';
         }
 
         // =========================================================================
-        // MOTOR 1: LLAVE GEMINI SEGURA + ASISTENTE CONVERSACIONAL ADAPTADO POR PERMISOS
+        // MOTOR 1: ALTA FLEXIBLE EN OFICINA + LLAVE GEMINI FIJA + ASISTENTE POR ROL
         // =========================================================================
         
-        // Hacer obligatoria la Foto de Referencia al registrar un equipo nuevo (Solo Admin)
-        document.addEventListener('DOMContentLoaded', () => {
-            const inpRef = document.getElementById('inputFotoRefCamara');
-            if(inpRef && inpRef.parentElement) {
-                const lblRef = inpRef.parentElement.querySelector('label');
-                if(lblRef) lblRef.innerHTML = '📸 Foto de Referencia del Equipo <span style="color:var(--danger)">* (Obligatoria para ubicar en Control y Radar)</span>:';
+        // Permitir al Administrador crear un equipo desde su oficina solo con Sección, Grupo y Número (Foto y Ubicación se pueden completar en terreno)
+        guardarQR = async function() { 
+            const sec = document.getElementById('qrSeccion').value; 
+            const grupoElegido = document.getElementById('qrGrupo').value;
+            if(!sec || !grupoElegido) return alert("⛔ Seleccione primero la Sección y el Grupo del equipo.");
+            const prefijo = obtenerPrefijoCompuesto(grupoElegido, sec);
+            const numeroRaw = document.getElementById('qrNumero').value.trim(); 
+            if(!numeroRaw) return alert("⛔ Ingrese el Número correlativo del equipo (Ej. 001).");
+            const numero = numeroRaw.padStart(Math.max(3, numeroRaw.length), '0');
+            const id = prefijo + numero; 
+            const rawTipo = document.getElementById('qrTipo').value.trim(); 
+            const rawUbi = document.getElementById('qrUbicacion').value.trim(); 
+            const tipo = rawTipo ? aprenderTerminoNuevo('tipos', rawTipo, true) : 'Pendiente en terreno';
+            const ubi = rawUbi ? corregirOrtografiaTexto(rawUbi) : 'Pendiente en terreno';
+            const cap = document.getElementById('wrapQrCapacidad').classList.contains('campo-oculto') ? '' : document.getElementById('qrCapacidad').value.trim();
+            const serie = document.getElementById('wrapQrSerie').classList.contains('campo-oculto') ? '' : document.getElementById('qrSerie').value.trim();
+            const vencimiento = document.getElementById('wrapQrVencimiento').classList.contains('campo-oculto') ? '' : document.getElementById('qrVencimiento').value; 
+            const listaInsumos = document.getElementById('wrapInsumosBotiquin').classList.contains('campo-oculto') ? [] : recolectarInsumosFormulario();
+            
+            if(editQRId && id !== editQRId) { 
+                if(config.equipos[id]) return alert(`El código ${id} ya está en uso en la sección ${sec}.`); 
+                delete config.equipos[editQRId]; 
+                try { await fetch(`${CLOUD_BASE_URL}/syso_master_config/equipos/${encodeURIComponent(editQRId)}.json`, { method: 'DELETE' }); } catch(e){}
+            } 
+            if(!editQRId && config.equipos[id]) {
+                if(!confirm(`⚠️ El equipo ${id} ya existe en ${sec}. ¿Desea sobrescribirlo?`)) return;
             }
-        });
-        const _guardarQRBase = guardarQR;
-        guardarQR = async function() {
-            const idTemp = (document.getElementById('qrPrefijo').value || '') + (document.getElementById('qrNumero').value || '').trim().padStart(3, '0');
-            const yaTeniaFoto = (editQRId && config.equipos[editQRId] && config.equipos[editQRId].tieneFotoRef) || (config.equipos[idTemp] && config.equipos[idTemp].tieneFotoRef);
-            if(!fotoRefEquipoActualBase64 && (!yaTeniaFoto || fotoRefEquipoEliminada)) {
-                alert("📸 FOTO DE REFERENCIA OBLIGATORIA:\nAl registrar un equipo nuevo debe tomar o adjuntar su foto de referencia. Esta imagen sirve para que en el módulo Control y en el Radar de Ruta los brigadistas ubiquen el equipo físico rápidamente.");
-                return;
-            }
-            return await _guardarQRBase();
+            const teniaFotoAntes = (config.equipos[id] && config.equipos[id].tieneFotoRef) || false;
+            const tendraFoto = fotoRefEquipoActualBase64 ? true : (fotoRefEquipoEliminada ? false : teniaFotoAntes);
+            const nuevoEqObj = { 
+                tipo, seccion: sec, ubicacion: ubi, grupo: grupoElegido, 
+                capacidad: cap, serie, vencimiento, insumos: listaInsumos, tieneFotoRef: tendraFoto
+            }; 
+            config.equipos[id] = nuevoEqObj;
+            if(fotoRefEquipoActualBase64) await guardarFotoReferenciaEnNube(id, fotoRefEquipoActualBase64);
+            else if(fotoRefEquipoEliminada) await guardarFotoReferenciaEnNube(id, null);
+            await parchearSubnodoConfigNube('equipos', { [id]: nuevoEqObj });
+            await parchearSubnodoConfigNube('aprendidos', config.aprendidos);
+            
+            if(!qriousObj) qriousObj = new QRious({ element: document.getElementById('qrGenerado'), size: 250, level: 'H' }); 
+            qriousObj.value = id; 
+            document.getElementById('lblQR').innerText = `${id} - ${tipo}${cap ? ' ('+cap+')' : ''}`; 
+            document.getElementById('zonaQR').classList.remove('hidden'); 
+            
+            editQRId = null; 
+            document.getElementById('tituloAcordeonAlta').innerText = '➕ Registrar Nuevo Equipo / Generar QR';
+            let nextNumStr = String(parseInt(numero, 10) + 1).padStart(numero.length, '0');
+            
+            poblarAdmin(true); 
+            document.getElementById('qrSeccion').value = sec;
+            document.getElementById('qrGrupo').value = grupoElegido;
+            actualizarPrefijoUI();
+            document.getElementById('qrNumero').value = nextNumStr; 
+            document.getElementById('qrTipo').value = ''; 
+            document.getElementById('qrUbicacion').value = ''; 
+            document.getElementById('qrCapacidad').value = '';
+            document.getElementById('qrSerie').value = '';
+            document.getElementById('qrVencimiento').value = '';
+            document.getElementById('contenedorFilasInsumos').innerHTML = '';
+            if(esGrupoBotiquinOPA(grupoElegido)) agregarFilaInsumoBotiquin();
+            quitarFotoReferenciaEquipo();
+            fotoRefEquipoEliminada = false;
+            
+            const btn = document.getElementById('btnGuardarQR'); 
+            btn.innerText = 'Guardar Equipo'; btn.classList.replace('btn-info', 'btn-warning'); 
+            document.getElementById('qrUbicacion').focus();
         };
+
+        const LOCAL_GEMINI_KEY_BACKUP = 'SySO_Gemini_Key_Backup_Obf';
 
         function guardarLlaveGeminiSegura() {
             if(!esUsuarioCreador()) return;
-            const rawKey = document.getElementById('inputGeminiApiKey').value.trim();
+            const inp = document.getElementById('inputGeminiApiKey');
+            const rawKey = inp ? inp.value.trim() : '';
             if(!rawKey || rawKey.length < 18) return alert("⚠️ Pegue una clave válida de Google AI Studio.");
+            const obf = btoa(rawKey.split('').reverse().join(''));
             if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", cacheRespuestas: {} };
-            config.iaConfig.apiKeyObf = btoa(rawKey.split('').reverse().join(''));
+            config.iaConfig.apiKeyObf = obf;
+            localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
             parchearSubnodoConfigNube('iaConfig', config.iaConfig);
-            document.getElementById('inputGeminiApiKey').value = '';
+            if(inp) inp.value = '';
+            window.forzarMostrarInputLlave = false;
             renderPanelTelemetriaIA();
-            alert("✅ Llave Gemini IA guardada y protegida en Firebase. El cerebro conversacional ya está activo.");
+            alert("✅ Llave Gemini IA guardada y fijada permanentemente.");
         }
+
+        window.mostrarInputCambioLlave = function() {
+            window.forzarMostrarInputLlave = true;
+            renderPanelTelemetriaIA();
+            const inp = document.getElementById('inputGeminiApiKey');
+            if(inp) inp.focus();
+        };
 
         function obtenerLlaveGeminiDesencriptada() {
             try {
-                const obf = (config.iaConfig && config.iaConfig.apiKeyObf) || "";
+                let obf = (config.iaConfig && config.iaConfig.apiKeyObf) || "";
+                const backupObf = localStorage.getItem(LOCAL_GEMINI_KEY_BACKUP) || "";
+                if(!obf && backupObf) {
+                    obf = backupObf;
+                    if(!config.iaConfig) config.iaConfig = { apiKeyObf: obf, cacheRespuestas: {} };
+                    else config.iaConfig.apiKeyObf = obf;
+                    parchearSubnodoConfigNube('iaConfig', config.iaConfig);
+                } else if(obf && !backupObf) {
+                    localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
+                }
                 if(!obf) return "";
                 return atob(obf).split('').reverse().join('');
             } catch(e) { return ""; }
         }
 
-        // Catálogo completo de Guías Paso a Paso realistas segmentadas por Rol y Permisos
         const GUIAS_AYUDA_CATALOGO = {
-            // --- PREGUNTAS SIN LOGUEAR (PANTALLA DE INGRESO) ---
             "👤 ¿Cómo ingreso con mi PIN o Huella?": {
                 roles: ["LOGIN"],
                 titulo: "Ingreso Rápido de Personal",
@@ -3212,13 +3472,17 @@ const CFG_KEY = 'SySO_Config_Master';
                 pasos: ["<span>📲</span>1. Compartir App", "<span>📷</span>2. QR o WhatsApp", "<span>🔄</span>3. Actualizar"],
                 detalle: "1. Para pasar la app a un compañero, toque <b>📲 Compartir App</b> para mostrarle el código QR en pantalla o enviarle el link por WhatsApp.<br>2. Para descargar la última versión del sistema sin borrar sus datos, toque <b>🔄 Actualizar</b>."
             },
-
-            // --- PREGUNTAS OPERATIVAS REALISTAS (BRIGADISTAS Y ADMINS) ---
             "📋 ¿Cómo controlar un equipo con QR?": {
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Control Rápido de Equipos en Terreno",
                 pasos: ["<span>📷</span>1. Escanear QR", "<span>✅</span>2. Evaluar Puntos", "<span>💾</span>3. Guardar"],
-                detalle: "1. En <b>📋 Control</b>, toque <b>📷 Escanear QR</b> y apunte a la etiqueta (verifique la foto en miniatura a la derecha).<br>2. Si todo está bien, deje los puntos en <b>✅ OK</b>. Si el equipo fue llevado a taller, elija <b>🔧 En Recarga</b>. Si tiene un desperfecto, elija <b>🚨 Falla</b>.<br>3. Toque <b>✅ Guardar Control</b> y el radar le indicará cuál es el siguiente equipo en su ruta."
+                detalle: "1. En <b>📋 Control</b>, toque <b>📷 Escanear QR</b> y apunte a la etiqueta.<br>2. Si al equipo le faltaba su Foto de Referencia o Ubicación (porque fue creado en oficina), complételos en el recuadro celeste.<br>3. Evalúe los puntos (<b>✅ OK</b>, <b>🔧 En Recarga</b> o <b>🚨 Falla</b>) y toque <b>✅ Guardar Control</b>."
+            },
+            "✏️ ¿Qué hago si un equipo se mudó o no tiene foto?": {
+                roles: ["BRIGADISTA", "ADMIN"],
+                titulo: "Actualizar Ubicación, Foto de Referencia o Vencimiento en Terreno",
+                pasos: ["<span>📋</span>1. Cargar Equipo", "<span>✏️</span>2. Tocar Actualizar", "<span>💾</span>3. Guardar Ficha"],
+                detalle: "1. Si durante el recorrido nota que un equipo aún no tiene Foto de Referencia, cambió de ubicación o volvió de recarga con nueva fecha de vencimiento, toque el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> dentro de <b>📋 Control</b>.<br>2. Edite el dato o tome la foto de referencia y toque <b>💾 Guardar Actualización de Ficha</b>."
             },
             "💊 ¿Cómo reponer un Botiquín?": {
                 roles: ["BOTIQUIN", "ADMIN"],
@@ -3234,21 +3498,15 @@ const CFG_KEY = 'SySO_Config_Master';
             },
             "📸 ¿Cuándo es obligatorio sacar foto en Control?": {
                 roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Regla de Evidencia Fotográfica en Terreno",
-                pasos: ["<span>🚨</span>1. Si hay Falla", "<span>⌨️</span>2. Si es Sin QR", "<span>✅</span>3. Opcional si OK"],
-                detalle: "• <b>Es OBLIGATORIA en 2 casos:</b><br>1) Cuando marca <b>🚨 Falla</b> en cualquier punto del equipo.<br>2) Cuando selecciona el equipo manualmente desde <b>⌨️ Elegir de Lista</b> (sin escanear QR).<br>• <b>Es OPCIONAL:</b> Cuando escanea el QR con la cámara y el equipo está <b>✅ OK</b> o <b>🔧 En Recarga</b>."
+                titulo: "Regla de Fotos en Terreno (Referencia vs. Evidencia)",
+                pasos: ["<span>🖼️</span>1. Si falta Ref.", "<span>🚨</span>2. Si hay Falla", "<span>⌨️</span>3. Si es Sin QR"],
+                detalle: "• <b>Foto de Referencia del Equipo:</b> Solo se pide la primera vez si el Administrador creó el QR en oficina sin foto (o si usted desea renovarla).<br>• <b>Foto de Evidencia del Control:</b> Es obligatoria cuando marca <b>🚨 Falla</b> o cuando usa <b>⌨️ Elegir de Lista</b>. Si escanea QR y está <b>✅ OK</b>, no hace falta foto."
             },
             "🔧 ¿Cómo marco un equipo En Recarga o Taller?": {
                 roles: ["BRIGADISTA", "ADMIN"],
                 titulo: "Equipos Retirados por Mantenimiento o Recarga",
                 pasos: ["<span>📋</span>1. Cargar Equipo", "<span>🔧</span>2. Elegir Recarga", "<span>✅</span>3. Guardar"],
-                detalle: "1. Si un extintor o equipo se retiró temporalmente para recarga, cárguelo en <b>📋 Control</b>.<br>2. En el selector de estado elija <b>🔧 En Recarga / Taller (Sin Falla)</b> y guarde.<br>3. Así el puesto queda verificado en su ruta del mes sin contarse como una falla en las estadísticas."
-            },
-            "↩️ ¿Cómo corrijo un control si me equivoqué?": {
-                roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Corrección de Errores antes o después de Guardar",
-                pasos: ["<span>↩️</span>1. Volver a OK", "<span>📷</span>2. Re-escanear Hoy", "<span>🔄</span>3. Sobrescribir"],
-                detalle: "• <b>Antes de guardar:</b> Si tocó <i>Falla</i> por error, presione <b>↩️ Fue un error / Volver a OK</b>.<br>• <b>Si ya guardó el control hoy:</b> Vuelva a escanear el mismo equipo hoy mismo; el sistema le preguntará <i>'¿Desea actualizar el control de hoy?'</i>, confirme y reemplazará el registro anterior sin duplicarlo."
+                detalle: "1. Si un extintor o equipo se retiró temporalmente para recarga, cárguelo en <b>📋 Control</b>.<br>2. En el selector de estado elija <b>🔧 En Recarga / Taller (Sin Falla)</b> y guarde.<br>3. Cuando regrese recargado, use <b>✏️ Actualizar Ubicación / Vencimiento</b> en Control para anotar su nueva fecha de vencimiento."
             },
             "⏳ ¿Cómo veo qué equipos me faltan este mes?": {
                 roles: ["BRIGADISTA", "ADMIN"],
@@ -3256,60 +3514,33 @@ const CFG_KEY = 'SySO_Config_Master';
                 pasos: ["<span>📊</span>1. Ir a Historial", "<span>⏳</span>2. Ver Pendientes", "<span>▶️</span>3. Controlar"],
                 detalle: "1. Entre a la pestaña <b>📊 Historial</b>.<br>2. En el filtro <b>Estado / Vista</b> seleccione <b>⏳ Equipos Pendientes del Mes</b> (puede filtrar también su Sección).<br>3. Verá la lista exacta de equipos que aún no fueron visitados este mes y podrá tocar <b>▶️ Controlar</b> para ir directo a cualquiera de ellos."
             },
-            "📄 ¿Cómo enviar el PDF firmado o bajar Excel?": {
-                roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Descarga de Reportes Excel y PDF con Firma",
-                pasos: ["<span>📊</span>1. Filtrar Mes", "<span>✍️</span>2. Firmar PDF", "<span>📥</span>3. Bajar Excel"],
-                detalle: "1. En <b>📊 Historial</b>, elija el Mes, Sección o Grupo que desea exportar.<br>2. Toque <b>📄 PDF Firmado</b> para firmar con el dedo en pantalla y compartir el reporte con fotos por WhatsApp.<br>3. En PC o celular, toque <b>📥 Excel Controles</b> o <b>💊 Excel Consumo Botiquines</b>."
-            },
-            "👆 ¿Cómo activo mi Huella o el Modo Día/Noche?": {
-                roles: ["BRIGADISTA", "ADMIN"],
-                titulo: "Configuración de Huella Digital y Brillo Solar",
-                pasos: ["<span>⚙️</span>1. Ir a Ajustes", "<span>👆</span>2. Activar Huella", "<span>☀️</span>3. Modo Día/Noche"],
-                detalle: "1. Entre a la pestaña <b>⚙️ Ajustes</b>.<br>2. Toque <b>👆 Activar Huella / FaceID</b> y valide con su dedo para que en el próximo ingreso no necesite escribir su PIN.<br>3. Toque <b>☀️ Modo Día / 🌙 Modo Noche</b> para mejorar la lectura bajo el sol o en sectores oscuros."
-            },
-            "🚨 ¿Cómo funciona el botón S.O.S.?": {
-                roles: ["LOGIN", "BRIGADISTA", "ADMIN"],
-                titulo: "Protocolo de Emergencia S.O.S. en Planta",
-                pasos: ["<span>🚨</span>1. Tocar S.O.S.", "<span>🔥</span>2. Elegir Tipo", "<span>📲</span>3. Aviso Brigada"],
-                detalle: "1. Ante una emergencia real, toque el botón rojo <b>🚨 S.O.S.</b> arriba a la derecha.<br>2. Elija la sección donde ocurre y presione <b>🚑 Accidente Médico</b> o <b>🔥 Incendio</b>.<br>3. Sonará una sirena en vivo en los celulares conectados y se abrirá el reporte listo para enviar al grupo de Brigada en WhatsApp."
-            },
-
-            // --- PREGUNTAS EXCLUSIVAS PARA ADMINISTRADORES ---
-            "📦 ¿Cómo registrar un equipo nuevo y su foto?": {
+            "📦 ¿Cómo registrar un equipo nuevo desde oficina?": {
                 roles: ["ADMIN"],
-                titulo: "Alta de Nuevo Equipo con Foto de Referencia Obligatoria",
-                pasos: ["<span>📍</span>1. Sección y Grupo", "<span>📸</span>2. Tomar Foto Ref.", "<span>💾</span>3. Guardar y QR"],
-                detalle: "1. En <b>📦 Equipos</b>, abra <b>➕ Registrar Nuevo Equipo / Generar QR</b> y elija Sección y Grupo (el número correlativo se calcula solo).<br>2. Complete Ubicación Exacta, Tipo y tome la <b>📸 Foto de Referencia (obligatoria)</b> para que los brigadistas ubiquen el equipo en Control.<br>3. Toque <b>Guardar Equipo</b> y descargue su etiqueta QR."
+                titulo: "Alta Rápida en Oficina y Completado en Terreno",
+                pasos: ["<span>📍</span>1. Sección y Grupo", "<span>🖨️</span>2. Crear QR", "<span>👷</span>3. Foto en Campo"],
+                detalle: "1. En <b>📦 Equipos</b>, elija <b>Sección</b>, <b>Grupo</b> y <b>Número</b> y toque <b>Guardar Equipo</b>.<br>2. Puede dejar la Foto de Referencia y la Ubicación Exacta vacías si está en la oficina.<br>3. Cuando el brigadista escanee ese QR en su recorrido, la app le pedirá completar la ubicación y tomar la foto de referencia en el lugar."
             },
             "🖨️ ¿Cómo imprimir QRs nuevos o dañados?": {
                 roles: ["ADMIN"],
                 titulo: "Impresión de Etiquetas QR por Lote o Dañadas",
                 pasos: ["<span>📦</span>1. Ir a Equipos", "<span>🖨️</span>2. QRs Dañados", "<span>📍</span>3. O por Sección"],
-                detalle: "• <b>Para reimprimir etiquetas rotas:</b> En <b>📦 Equipos</b> toque arriba <b>🖨️ QRs Dañados</b> (arma una plancha con los equipos que fueron cargados manualmente).<br>• <b>Para imprimir una sección o grupo:</b> Despliegue el grupo en el inventario y toque el botón amarillo <b>🖨️ QR</b> de esa sección."
+                detalle: "• <b>Para reimprimir etiquetas rotas:</b> En <b>📦 Equipos</b> toque arriba <b>🖨️ QRs Dañados</b>.<br>• <b>Para imprimir una sección o grupo:</b> Despliegue el grupo en el inventario y toque el botón amarillo <b>🖨️ QR</b> de esa sección."
             },
             "👥 ¿Cómo asignar secciones y grupos al personal?": {
                 roles: ["ADMIN"],
                 titulo: "Permisos de Personal por Sección y Grupo",
                 pasos: ["<span>⚙️</span>1. Ir a Ajustes", "<span>👥</span>2. Personal", "<span>☑️</span>3. Marcar Acceso"],
-                detalle: "1. En <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>, cree un usuario o toque <b>✏️</b> en uno existente.<br>2. En <b>1° Secciones Habilitadas</b> marque qué sectores controla (al marcar uno puntual, <i>Todas las Secciones</i> se desmarca sola).<br>3. En <b>2° Grupos Habilitados</b> marque sus grupos (ej. Extintores, Botiquines) y toque <b>Guardar Usuario</b>."
-            },
-            "⚡ ¿Cómo importar muchos equipos desde Excel?": {
-                roles: ["ADMIN"],
-                titulo: "Importación Masiva de Equipos por Lote",
-                pasos: ["<span>📦</span>1. Elegir Grupo", "<span>📄</span>2. Bajar Plantilla", "<span>🚀</span>3. Pegar e Importar"],
-                detalle: "1. En <b>📦 Equipos</b>, seleccione primero el Grupo en el formulario de registro.<br>2. Abajo de todo, abra <b>⚡ Importar Lote desde Excel</b>, pegue las filas copiadas de su planilla y toque <b>🚀 Importar Lote</b>."
+                detalle: "1. En <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>, cree un usuario o toque <b>✏️</b> en uno existente.<br>2. En <b>1° Secciones Habilitadas</b> marque qué sectores controla y en <b>2° Grupos Habilitados</b> marque sus grupos.<br>3. Toque <b>Guardar Usuario</b>."
             }
         };
 
         const PREGUNTAS_ANALISTA_JACK = [
             "🧠 ¿Qué mejoras detectó el Gemelo Digital hoy?",
             "📊 ¿Qué secciones tienen más fallas o pendientes este mes?",
-            "🏷️ ¿Qué etiquetas QR están dañadas y debo reimprimir?",
+            "🛠️ ¿Qué equipos actualizaron los brigadistas en terreno?",
             "💊 ¿Qué botiquines tienen insumos vencidos o agotados?"
         ];
 
-        // Determina qué preguntas frecuentes mostrar según quién abrió el botón Ayuda IA
         function obtenerPreguntasSegunPermisosUsuario() {
             if(modoChatIAActual === 'ANALISTA' && esUsuarioCreador()) {
                 return PREGUNTAS_ANALISTA_JACK;
@@ -3374,7 +3605,6 @@ const CFG_KEY = 'SySO_Config_Master';
             });
         }
 
-        // Al abrir el modal de Ayuda IA, la caja de respuesta inicia OCULTA hasta que el usuario elija o pregunte algo
         function abrirModalAyuda() {
             const switchBox = document.getElementById('boxSwitchModoIA');
             if(switchBox) {
@@ -3392,7 +3622,6 @@ const CFG_KEY = 'SySO_Config_Master';
             document.getElementById('modalAyudaIA').classList.remove('hidden');
         }
 
-        // Motor Razonador Contextual consciente del Rol (Brigadista vs Admin) y de los permisos reales
         function generarRespuestaContextualInteligente(pregunta, modo) {
             const p = pregunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
@@ -3406,13 +3635,13 @@ const CFG_KEY = 'SySO_Config_Master';
             if(modo === 'ANALISTA' && esUsuarioCreador()) {
                 const pendientes = obtenerEquiposPendientesDelMes();
                 const fallasActivas = Object.entries(config.fallas || {});
-                const qrsRotos = Object.entries((config.telemetria && config.telemetria.equiposSinQR) || {}).sort((a,b)=>b[1]-a[1]);
+                const cambiosCampo = (config.cambiosTerreno || []).slice(-5).reverse();
                 const gemeloH = (config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || [];
                 if(p.includes('gemelo') || p.includes('mejora') || p.includes('velocidad') || p.includes('usabilidad')) {
                     return encabezado + `• <b>Velocidad actual:</b> Arranque en ${metricasVelocidad.arranqueMs} ms | Nube en ${metricasVelocidad.latenciaNubeMs} ms | Memoria local: ${metricasVelocidad.usoMemoriaKB} KB.<br>• <b>Hallazgos del Gemelo Autónomo:</b><br>${gemeloH.length ? gemeloH.map(h => `• ${h}`).join('<br>') : '• Todo operando en parámetros óptimos.'}`;
                 }
-                if(p.includes('qr') || p.includes('danad') || p.includes('reimprim')) {
-                    return encabezado + `${qrsRotos.length ? qrsRotos.map(x => `• <b>${x[0]}</b>: cargado manualmente ${x[1]} veces (sección ${config.equipos[x[0]] ? config.equipos[x[0]].seccion : 'S/D'}). Puedes reimprimirlos todos juntos en <b>📦 Equipos ➔ 🖨️ QRs Dañados</b>.`).join('<br>') : '✅ Todas las etiquetas QR se están leyendo bien con la cámara.'}`;
+                if(p.includes('terreno') || p.includes('actualizaron') || p.includes('mudanza') || p.includes('ficha')) {
+                    return encabezado + (cambiosCampo.length ? cambiosCampo.map(c => `• <b>${c.id}</b> (${c.inspector} - ${c.fecha}): ${c.detalle}`).join('<br>') : '✅ Aún no hay modificaciones de fichas realizadas en terreno.');
                 }
                 if(p.includes('botiqu') || p.includes('vencid') || p.includes('agotad')) {
                     let botAlertas = [];
@@ -3428,26 +3657,18 @@ const CFG_KEY = 'SySO_Config_Master';
                 return encabezado + `• <b>Equipos totales en planta:</b> ${Object.keys(config.equipos || {}).length}<br>• <b>Pendientes de controlar este mes:</b> ${pendientes.length} equipos.<br>• <b>Fallas activas hoy:</b> ${fallasActivas.length ? fallasActivas.map(f => `${f[0]} (${f[1]})`).join(', ') : '0 fallas.'}`;
             }
 
-            // 2. Consultas sobre REGISTRAR / DAR DE ALTA UN EQUIPO NUEVO, CREAR QR o EDITAR INVENTARIO
-            if((p.includes('registrar') || p.includes('nuevo') || p.includes('alta') || p.includes('crear qr') || p.includes('agregar equipo') || p.includes('inventario')) && (p.includes('equipo') || p.includes('extintor') || p.includes('botiquin') || p.includes('hidrante') || p.includes('qr') || p.includes('foto'))) {
+            // 2. Consultas sobre REGISTRAR EQUIPO NUEVO vs ACTUALIZAR UBICACIÓN / FOTO EN TERRENO
+            if(p.includes('registrar') || p.includes('nuevo') || p.includes('alta') || p.includes('mudo') || p.includes('mudanza') || p.includes('cambiar ubicacion') || (p.includes('foto') && p.includes('referencia'))) {
                 if(!esAdmin) {
                     return encabezado +
-                        `Con tu acceso actual de <b>Brigadista / Inspector</b> (${nombreUsu}), <b>no tienes habilitado el módulo 📦 Equipos para registrar equipos nuevos</b>, por lo que no podrás dar de alta el equipo ni sacarle su foto de registro.<br><br>` +
-                        `👉 <b>¿Qué debes hacer?</b> Solicita a un <b>Administrador</b> que registre el equipo nuevo, tome su foto de referencia y te entregue la etiqueta QR.<br>` +
-                        `<small class="text-muted">Nota: En tu módulo <b>📋 Control</b>, la foto solo es obligatoria cuando detectas una <b>🚨 Falla</b> o cuando seleccionas un equipo manualmente por QR dañado.</small>`;
+                        `Como <b>Brigadista / Inspector</b> (${nombreUsu}), el flujo se divide así:<br>` +
+                        `• <b>Crear el código de un equipo nuevo:</b> Lo hace un <b>Administrador</b> desde <b>📦 Equipos</b>.<br>` +
+                        `• <b>Completar o actualizar Foto de Referencia, Ubicación o Vencimiento en tu recorrido:</b> ¡Sí puedes hacerlo tú mismo! Cuando escanees el equipo en <b>📋 Control</b>, si le falta la Foto de Referencia o la Ubicación (o si el equipo se mudó de lugar o volvió de recarga), toca el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b>, actualiza el dato o toma la foto y presiona <b>💾 Guardar Actualización de Ficha</b>.`;
                 } else {
-                    if(p.includes('foto')) {
-                        return encabezado +
-                            `<b>Sí, para ti como Administrador es obligatorio sacar o adjuntar la Foto de Referencia</b> al registrar un equipo nuevo.<br><br>` +
-                            `• <b>¿Por qué es obligatoria?</b> Porque esa foto aparece automáticamente como miniatura en el módulo <b>📋 Control</b> y en el radar de <b>🎯 Siguiente Equipo en Ruta</b>, permitiendo a los brigadistas ubicar el equipo más fácil en la planta y corroborar que están frente al código correcto.<br>` +
-                            `• <b>¿Cómo se gestiona?</b> Ve a la pestaña <b>📦 Equipos</b>, abre <b>➕ Registrar Nuevo Equipo / Generar QR</b>, elige Sección y Grupo, completa los datos, toca <b>📷 Tomar Foto</b> (o <b>📁 Galería</b>) y presiona <b>Guardar Equipo</b>.`;
-                    }
                     return encabezado +
-                        `Como <b>Administrador</b>, gestionas el alta de equipos nuevos desde la pestaña <b>📦 Equipos</b>:<br>` +
-                        `1. Toca el desplegable <b>➕ Registrar Nuevo Equipo / Generar QR</b>.<br>` +
-                        `2. Elige la <b>1. Sección de Planta</b> y el <b>2. Grupo de Equipo</b> (el sistema calculará solo el código y número correlativo siguiente).<br>` +
-                        `3. Completa Ubicación Exacta, Tipo/Capacidad y toma la <b>📸 Foto de Referencia (obligatoria)</b> para que los brigadistas ubiquen el equipo fácilmente en Control.<br>` +
-                        `4. Toca <b>Guardar Equipo</b> y descarga o imprime la etiqueta QR.`;
+                        `Como <b>Administrador</b>, puedes registrar equipos nuevos desde tu oficina sin trabas:<br>` +
+                        `1. En <b>📦 Equipos</b>, elige solo <b>Sección</b>, <b>Grupo</b> y <b>Número</b> y guarda para imprimir el QR.<br>` +
+                        `2. <b>No es obligatorio que saques la Foto de Referencia ni pongas la ubicación desde la oficina:</b> cuando el brigadista escanee ese equipo por primera vez en <b>📋 Control</b>, la app le abrirá automáticamente el recuadro para que tome la Foto de Referencia y anote la Ubicación Exacta en terreno.`;
                 }
             }
 
@@ -3456,66 +3677,26 @@ const CFG_KEY = 'SySO_Config_Master';
                 const todosPend = obtenerEquiposPendientesDelMes();
                 const misPend = usuarioActual ? todosPend.filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)) : todosPend;
                 return encabezado +
-                    `Si no se controlan todos los equipos antes de fin de mes ocurre lo siguiente en el sistema:<br>` +
-                    `1. <b>Quedan detectados en Historial:</b> La barra de cobertura mensual no llega al 100% y el sistema los enlista automáticamente en <b>📊 Historial ➔ Estado/Vista: ⏳ Equipos Pendientes del Mes</b>.<br>` +
-                    `2. <b>Salen en amarillo en el Excel de Auditoría:</b> Al descargar el <b>📥 Excel Controles</b>, todos los equipos que faltaron visitar se agregan al final de la planilla con la alerta <b>⏳ SIN CONTROLAR</b>.<br><br>` +
-                    `📌 <b>Estado actual en tus sectores (${secsUsu}):</b> Hoy quedan <b>${misPend.length} equipos pendientes</b> de controlar en este mes. Puedes ir a <b>📊 Historial</b>, filtrar <b>⏳ Equipos Pendientes del Mes</b> y tocar <b>▶️ Controlar</b> para ir directo a ellos.`;
+                    `Si no se controlan todos los equipos antes de fin de mes:<br>` +
+                    `1. Quedan enlistados en <b>📊 Historial ➔ Estado/Vista: ⏳ Equipos Pendientes del Mes</b>.<br>` +
+                    `2. Al descargar el <b>📥 Excel Controles</b>, salen resaltados en amarillo al final como <b>⏳ SIN CONTROLAR</b>.<br>` +
+                    `📌 <b>En tus sectores (${secsUsu}):</b> Hoy quedan <b>${misPend.length} equipos pendientes</b> este mes.`;
             }
 
-            // 4. Consultas sobre CUÁNDO ES OBLIGATORIA LA FOTO EN UN CONTROL
+            // 4. Consultas sobre CUÁNDO ES OBLIGATORIA LA FOTO EN CONTROL
             if(p.includes('foto') && (p.includes('obligatori') || p.includes('si o si') || p.includes('cuando') || p.includes('falla') || p.includes('hallazgo') || p.includes('control'))) {
                 return encabezado +
-                    `Durante una inspección en la pestaña <b>📋 Control</b>, sacar foto de evidencia:<br>` +
-                    `• <b>Es 100% OBLIGATORIA en 2 casos:</b><br>` +
-                    `  1) Cuando marcas <b>🚨 Falla</b> en algún punto del equipo (para dejar evidencia con fecha, hora y tu nombre estampados).<br>` +
-                    `  2) Cuando eliges el equipo sin escanear el QR usando <b>⌨️ Elegir de Lista</b> (para comprobar que estás físicamente frente al equipo con el QR roto).<br>` +
-                    `• <b>Es OPCIONAL:</b> Cuando escaneas el código QR con la cámara y todos los puntos del equipo están <b>✅ OK</b> (o cuando anotas consumo normal de un botiquín).`;
+                    `En <b>📋 Control</b> existen dos tipos de fotos:<br>` +
+                    `• <b>🖼️ Foto de Referencia del Equipo:</b> Solo se te pide la primera vez si el Administrador creó el equipo en oficina sin foto (o si tocas <b>✏️ Actualizar</b> para renovarla).<br>` +
+                    `• <b>📸 Foto de Evidencia del Control:</b> Es obligatoria solo si marcas <b>🚨 Falla</b> o si eliges el equipo manualmente con <b>⌨️ Elegir de Lista</b>. Si escaneas el QR y está <b>✅ OK</b>, no hace falta sacar foto.`;
             }
 
-            // 5. Consultas sobre PERMISOS / SECCIONES ASIGNADAS
-            if(p.includes('permiso') || p.includes('no me deja') || p.includes('no puedo ver') || p.includes('otra seccion') || p.includes('asignad')) {
-                return encabezado +
-                    `Tu usuario <b>${nombreUsu}</b> (${rolTexto}) tiene asignados actualmente:<br>` +
-                    `• <b>Secciones habilitadas:</b> ${secsUsu}<br>` +
-                    `• <b>Grupos habilitados:</b> ${grpsUsu}<br><br>` +
-                    `${esAdmin ? 'Puedes modificar los permisos de cualquier brigadista en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>.' : 'Si necesitas controlar equipos de otra sección o grupo, pídele a un <b>Administrador</b> que los marque dentro de tu perfil en <b>⚙️ Ajustes ➔ 👥 Gestión de Personal</b>.'}`;
-            }
-
-            // 6. Consultas sobre RECARGA / TALLER
-            if(p.includes('recarga') || p.includes('taller') || p.includes('mantenimiento') || p.includes('retirad')) {
-                return encabezado +
-                    `Si un extintor o equipo fue retirado temporalmente para recarga o taller:<br>` +
-                    `1. Cárgalo en <b>📋 Control</b> (escaneando su QR o desde <b>⌨️ Elegir de Lista</b>).<br>` +
-                    `2. En los puntos de chequeo selecciona la opción <b>🔧 En Recarga / Taller (Sin Falla)</b> y toca <b>✅ Guardar Control</b>.<br>` +
-                    `3. Así el equipo queda cumplido en tu ruta del mes sin contarse como una falla en las estadísticas.`;
-            }
-
-            // 7. Consultas sobre VENCIMIENTOS / BOTIQUINES
-            if(p.includes('vencid') || p.includes('vencimiento') || p.includes('agotad') || p.includes('stock') || p.includes('botiqu') || p.includes('medicamento') || p.includes('repon')) {
-                return encabezado +
-                    `• <b>Si solo hubo uso normal y reposición en un Botiquín:</b> En <b>📋 Control</b> anota cuánto se usó en <b>➖ Usado</b> y cuánto agregaste en <b>➕ Repuesto</b> (o toca <b>✅ Botiquín Intacto</b> si no se usó nada) y deja el estado en <b>✅ OK</b>.<br>` +
-                    `• <b>Si un medicamento venció o quedó en Stock 0 y no tienes repuesto:</b> El sistema mostrará una alerta roja automática para que se reponga a la brevedad.`;
-            }
-
-            // 8. Consultas sobre LOGIN / PIN / HUELLA
-            if(p.includes('ingreso') || p.includes('ingresar') || p.includes('entrar') || p.includes('pin') || p.includes('huella') || p.includes('faceid') || p.includes('contrasena') || p.includes('modo noche') || p.includes('sol')) {
-                return encabezado +
-                    `• <b>Ingreso rápido y Huella:</b> Puedes activar tu huella digital en <b>⚙️ Ajustes ➔ 👆 Activar Huella / FaceID</b> para entrar en 1 toque sin escribir tu PIN.<br>` +
-                    `• <b>Pantalla bajo el sol:</b> En <b>⚙️ Ajustes</b> puedes alternar entre <b>🌙 Modo Noche</b> y <b>☀️ Modo Día</b> según la iluminación del sector.`;
-            }
-
-            // 9. Consultas sobre EQUIVOCACIÓN / CORREGIR REGISTRO
-            if(p.includes('equivoc') || p.includes('error') || p.includes('corregir') || p.includes('mal') || p.includes('borrar')) {
-                return encabezado +
-                    `• <b>Si marcaste "Falla" por error antes de guardar:</b> Toca el botón <b>↩️ Fue un error / Volver a OK</b> en la ventana emergente.<br>` +
-                    `• <b>Si ya guardaste el control hoy y quieres corregirlo:</b> Simplemente vuelve a escanear el mismo código QR hoy mismo; la app te preguntará <i>"¿Desea actualizar el control de hoy?"</i>, dale <b>Aceptar</b> y sobrescribirá el registro anterior sin duplicarlo.`;
-            }
-
-            // 10. Respuesta guiada según el rol real del usuario
+            // Respuesta general guiada según el rol real
             const misPendientesHoy = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : 0;
             return encabezado +
                 `Hola <b>${nombreUsu}</b> (${rolTexto} — Secciones: <b>${secsUsu}</b>):<br>` +
-                `• Tienes acceso a <b>📋 Control</b> (para inspeccionar equipos; hoy quedan <b>${misPendientesHoy} equipos pendientes</b> en tus sectores), <b>📊 Historial</b> (para filtrar pendientes del mes o descargar reportes) y <b>⚙️ Ajustes</b>.${esAdmin ? '<br>• Como <b>Administrador</b>, también tienes habilitado <b>📦 Equipos</b> para dar de alta equipos nuevos (con foto de referencia obligatoria) y reimprimir etiquetas QR.' : '<br>• <i>Recuerda que con perfil de Brigadista el alta de equipos nuevos (📦 Equipos) y los cambios de permisos los realiza únicamente un Administrador.</i>'}`;
+                `• En <b>📋 Control</b> puedes escanear equipos (te quedan <b>${misPendientesHoy} pendientes</b> este mes) y también usar el botón <b>✏️ Actualizar Ubicación / Foto Ref. / Vencimiento</b> si un equipo se mudó, volvió de recarga o no tenía foto de referencia.<br>` +
+                `• En <b>📊 Historial</b> puedes filtrar los pendientes del mes o descargar reportes Excel y PDF.`;
         }
 
         function mostrarGuiaEnModal(pregunta) {
@@ -3552,14 +3733,12 @@ const CFG_KEY = 'SySO_Config_Master';
             const secsUsu = (usuarioActual && Array.isArray(usuarioActual.secciones)) ? usuarioActual.secciones.join(', ') : 'Todas';
             const grpsUsu = (usuarioActual && Array.isArray(usuarioActual.grupo)) ? usuarioActual.grupo.join(', ') : 'Todos';
 
-            // 1. Revisar caché en Firebase SEPARADA POR ROL (Inspector vs Admin)
             const normKey = `${rolActual}_${modoChatIAActual}_${texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "_").substring(0, 55)}`;
             if(modoChatIAActual === 'AYUDA' && config.iaConfig && config.iaConfig.cacheRespuestas && config.iaConfig.cacheRespuestas[normKey]) {
                 box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:4px;">🤖 Respuesta para "${texto}" (${esAdmin ? 'Administrador' : 'Brigadista'}):</div><div>${config.iaConfig.cacheRespuestas[normKey]}</div>`;
                 return;
             }
 
-            // 2. Consulta en vivo a Gemini Flash con contexto exacto del Rol y permisos del usuario activo
             const apiKey = obtenerLlaveGeminiDesencriptada();
             if(apiKey) {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando tu consulta según tu perfil (${esAdmin ? 'Administrador' : 'Brigadista'})...</div>`;
@@ -3567,17 +3746,17 @@ const CFG_KEY = 'SySO_Config_Master';
                     const pendientesMes = obtenerEquiposPendientesDelMes().length;
                     const misPendientes = usuarioActual ? obtenerEquiposPendientesDelMes().filter(eq => usuarioTienePermisoEquipo(usuarioActual, eq)).length : pendientesMes;
                     const reglasExactasApp = `
-REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
-- Usuario que hace la pregunta: Nombre="${nombreUsu}", Rol="${esAdmin ? 'Administrador (Admin)' : 'Brigadista / Inspector (NO es Admin)'}", Secciones asignadas="${secsUsu}", Grupos asignados="${grpsUsu}".
-- DIFERENCIA CRÍTICA DE ROLES:
-  1) Si el usuario es "Brigadista / Inspector": NO tiene acceso ni ve la pestaña "📦 Equipos" (no puede registrar equipos nuevos, ni editar equipos, ni crear QRs). Si pregunta cómo registrar un equipo nuevo o si debe sacar foto al registrar un equipo nuevo, DEBES responderle claramente que con su perfil de Brigadista NO tiene habilitado el módulo para registrar equipos nuevos y debe pedirle a un Administrador que lo haga.
-  2) Si el usuario es "Administrador (Admin)": SÍ tiene la pestaña "📦 Equipos". Al registrar un equipo nuevo ("➕ Registrar Nuevo Equipo / Generar QR"), sacar la "📸 Foto de Referencia" SÍ ES OBLIGATORIO porque esa imagen sirve para que en el módulo "📋 Control" y en el radar de "🎯 Siguiente Equipo en Ruta" los brigadistas ubiquen el equipo más fácil y corroboren cuál es.
-- FOTOS EN EL MÓDULO "📋 CONTROL" (para Brigadistas y Admins): Al inspeccionar un equipo existente, la foto de evidencia solo es obligatoria si marca "🚨 Falla" o si usa "⌨️ Elegir de Lista" (carga manual por QR roto). Si escanea QR y está "✅ OK" o "🔧 En Recarga", la foto es opcional.
-- QUÉ PASA SI NO SE CONTROLAN TODOS LOS EQUIPOS EN EL MES: Quedan registrados como pendientes en "📊 Historial" (bajo el filtro "⏳ Equipos Pendientes del Mes"; hoy faltan ${pendientesMes} en planta y ${misPendientes} en los sectores de este usuario) y al descargar el "📥 Excel Controles" salen listados al final en color amarillo como "⏳ SIN CONTROLAR".`;
+REGLAS ESTRICTAS DE GESTIÓN SySO V6.33:
+- Usuario actual: Nombre="${nombreUsu}", Rol="${esAdmin ? 'Administrador (Admin)' : 'Brigadista / Inspector'}", Secciones="${secsUsu}", Grupos="${grpsUsu}".
+- FLUJO OFICINA VS TERRENO:
+  1) El Administrador en "📦 Equipos" puede dar de alta un equipo nuevo desde su oficina ingresando solo Sección, Grupo y Número (sin obligación de poner foto de referencia ni ubicación en ese momento).
+  2) El Brigadista en "📋 Control" NO crea códigos de equipos nuevos ni puede borrar nada, PERO cuando escanea un equipo que aún no tiene Foto de Referencia o Ubicación Exacta, la app le abre automáticamente el recuadro para que tome la Foto de Referencia y escriba la Ubicación en terreno. Además, el Brigadista tiene el botón "✏️ Actualizar Ubicación / Foto Ref. / Vencimiento" en Control para actualizar si el equipo se mudó de lugar, si volvió de recarga con nueva fecha de vencimiento/serie, o si cambió de sección.
+- FOTOS EN CONTROL: La Foto de Evidencia solo es obligatoria si marca "🚨 Falla" o si usa "⌨️ Elegir de Lista" (QR roto). La Foto de Referencia solo se pide una vez si el equipo fue creado en oficina sin ella.
+- PENDIENTES DEL MES: Hoy faltan ${pendientesMes} equipos en planta (${misPendientes} en sectores de este usuario). Se ven en "📊 Historial ➔ ⏳ Equipos Pendientes del Mes" y salen al final del Excel.`;
 
                     const promptSistema = (modoChatIAActual === 'ANALISTA' && esUsuarioCreador())
-                        ? `Eres el Analista Senior e Ingeniero de Planta exclusivo para Jack Wiens. Datos en vivo: Equipos=${Object.keys(config.equipos||{}).length}, Pendientes mes=${pendientesMes}, Fallas=${JSON.stringify(config.fallas||{})}, En recarga=${JSON.stringify(config.enRecarga||{})}, Telemetría=${JSON.stringify(config.telemetria||{})}, Gemelo=${JSON.stringify((config.gemeloAutonomo&&config.gemeloAutonomo.hallazgos)||[])}. Responde en español, directo y en máximo 120 palabras a: "${texto}"`
-                        : `Eres el Asistente Inteligente de Gestión SySO. Responde DIRECTAMENTE la pregunta exacta del usuario sin cambiarle el tema, teniendo en cuenta su Rol actual (${esAdmin ? 'Administrador' : 'Brigadista'}) y estas reglas: ${reglasExactasApp}\nResponde en español claro en máximo 95 palabras.\nPregunta exacta: "${texto}"`;
+                        ? `Eres el Analista Senior de Planta exclusivo para Jack Wiens. Datos en vivo: Equipos=${Object.keys(config.equipos||{}).length}, Pendientes mes=${pendientesMes}, Fallas=${JSON.stringify(config.fallas||{})}, Cambios en terreno=${JSON.stringify((config.cambiosTerreno||[]).slice(-5))}, Gemelo=${JSON.stringify((config.gemeloAutonomo&&config.gemeloAutonomo.hallazgos)||[])}. Responde en español, directo y en máximo 120 palabras a: "${texto}"`
+                        : `Eres el Asistente Inteligente de Gestión SySO. Responde DIRECTAMENTE la pregunta exacta del usuario según su Rol (${esAdmin ? 'Administrador' : 'Brigadista'}) y estas reglas: ${reglasExactasApp}\nResponde en español claro en máximo 95 palabras.\nPregunta exacta: "${texto}"`;
 
                     const modelosDisponibles = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
                     let data = null, respOk = false;
@@ -3609,20 +3788,19 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
                 } catch(e) {}
             }
 
-            // 3. Si aún no guardaste la llave o no hay señal, responde con el Razonador Contextual por Rol
             box.innerHTML = generarRespuestaContextualInteligente(texto, modoChatIAActual);
         }
+
         // =========================================================================
-        // MOTOR 2: GEMELO DIGITAL AUTÓNOMO (PILOTO AUTOMÁTICO 24/7 EN SEGUNDO PLANO)
+        // MOTOR 2: GEMELO DIGITAL AUTÓNOMO INTELIGENTE (DIFERENCIA 0% INICIO DE MES VS ATRASO REAL)
         // =========================================================================
         function ejecutarGemeloDigitalAutonomo() {
             try {
-                // Clonación en burbuja aislada (Sandbox) sin tocar los datos reales
                 const clonConfig = JSON.parse(JSON.stringify(config || {}));
                 const clonDB = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
                 const hallazgos = [];
 
-                // 1. Auditoría Automática de Velocidad y Memoria
+                // 1. Velocidad y Memoria
                 calcularUsoMemoriaLocalKB();
                 if(metricasVelocidad.arranqueMs > 1800) {
                     hallazgos.push(`⚡ <b>Velocidad Apertura:</b> Demoró ${metricasVelocidad.arranqueMs} ms. Se activó optimización automática de caché local.`);
@@ -3631,7 +3809,7 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
                     hallazgos.push(`⚡ <b>Velocidad Óptima:</b> Arranque en ${metricasVelocidad.arranqueMs} ms | Cambio de pestaña: ${metricasVelocidad.cambioPestanaMs || 2} ms | Nube: ${metricasVelocidad.latenciaNubeMs || 120} ms.`);
                 }
 
-                // 2. Auditoría Automática Visual (Escáner DOM Anti-Desborde)
+                // 2. Auditoría Visual Anti-Desborde
                 let desbordesDetectados = 0;
                 document.querySelectorAll('button, .card, .modal-content').forEach(el => {
                     if(el.offsetParent !== null && el.scrollWidth > el.clientWidth + 14) {
@@ -3639,37 +3817,61 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
                         desbordesDetectados++;
                     }
                 });
-                if(desbordesDetectados > 0) {
-                    hallazgos.push(`🎨 <b>Auto-Corrección Visual:</b> El Gemelo detectó y ajustó automáticamente ${desbordesDetectados} botón(es) largos para que no salgan del borde.`);
-                } else {
-                    hallazgos.push(`🎨 <b>Auditoría Visual OK:</b> 0 botones cortados o desbordados en pantalla.`);
-                }
+                hallazgos.push(desbordesDetectados > 0
+                    ? `🎨 <b>Auto-Corrección Visual:</b> Se ajustaron ${desbordesDetectados} botón(es) largos automáticamente.`
+                    : `🎨 <b>Auditoría Visual OK:</b> 0 botones cortados o desbordados en pantalla.`);
 
-                // 3. Simulación de Prueba y Error en Rutas y Usabilidad (200 Operarios)
-                const t = clonConfig.telemetria || {};
-                const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
-                if(promSeg > 45) {
-                    hallazgos.push(`👆 <b>Usabilidad en Terreno:</b> El tiempo promedio es alto (${promSeg}s/equipo). Sugerencia: usar el botón "✅ Botiquín Intacto" y etiquetas rápidas.`);
-                }
-                if((t.fallasRevertidas || 0) >= 3) {
-                    hallazgos.push(`↩️ <b>Fricción Táctil Detectada:</b> Los inspectores tocaron "Falla" por error y volvieron a "OK" ${t.fallasRevertidas} veces.`);
-                }
-
-                // 4. Simulación de Cobertura y Cuellos de Botella por Sección
+                // 3. Análisis Inteligente de Avance Mensual (Distingue 0% global vs. sección realmente atrasada)
+                const idsTodos = Object.keys(clonConfig.equipos || {});
+                const totalPlanta = idsTodos.length;
                 const pendientes = obtenerEquiposPendientesDelMes();
-                if(pendientes.length > 0) {
-                    const porSec = {};
-                    pendientes.forEach(p => porSec[p.seccion] = (porSec[p.seccion] || 0) + 1);
-                    const secMasAtrasada = Object.entries(porSec).sort((a,b) => b[1]-a[1])[0];
-                    if(secMasAtrasada) {
-                        hallazgos.push(`📍 <b>Ruta Prioritaria Sugerida:</b> La sección <b>${secMasAtrasada[0]}</b> concentra ${secMasAtrasada[1]} equipos sin controlar este mes.`);
+                const controladosMes = Math.max(0, totalPlanta - pendientes.length);
+
+                // Detectar equipos con vencimientos o fallas activas para priorizar con criterio real
+                let secsConUrgencia = {};
+                idsTodos.forEach(id => {
+                    const eq = clonConfig.equipos[id];
+                    const v = verificarEquipoTieneVencidos(eq);
+                    const f = clonConfig.fallas && clonConfig.fallas[id];
+                    if(v.vencido || f) secsConUrgencia[eq.seccion] = (secsConUrgencia[eq.seccion] || 0) + 1;
+                });
+                const listaUrgencias = Object.entries(secsConUrgencia).sort((a,b) => b[1]-a[1]);
+
+                if(totalPlanta > 0 && controladosMes === 0) {
+                    const urgTxt = listaUrgencias.length > 0
+                        ? `Se sugiere iniciar el recorrido por <b>${listaUrgencias[0][0]}</b> porque registra <b>${listaUrgencias[0][1]} equipo(s) con insumos vencidos o falla activa</b>.`
+                        : `Todas las secciones están listas para iniciar el recorrido mensual.`;
+                    hallazgos.push(`📅 <b>Ciclo Mensual Sin Iniciar (0/${totalPlanta} eq.):</b> Aún no se controló ningún equipo en ninguna sección este mes. ${urgTxt}`);
+                } else if(totalPlanta > 0 && pendientes.length > 0) {
+                    // Calcular porcentaje de avance real por sección para detectar cuál va más atrasada en proporción
+                    let peorSec = null, menorPct = 101, faltanPeor = 0, totalPeor = 0;
+                    (clonConfig.secciones || []).forEach(sec => {
+                        const totS = idsTodos.filter(id => clonConfig.equipos[id].seccion === sec).length;
+                        if(totS === 0) return;
+                        const pendS = pendientes.filter(p => p.seccion === sec).length;
+                        const pctS = Math.round(((totS - pendS) / totS) * 100);
+                        if(pctS < menorPct && pendS > 0) {
+                            menorPct = pctS; peorSec = sec; faltanPeor = pendS; totalPeor = totS;
+                        }
+                    });
+                    if(peorSec) {
+                        hallazgos.push(`📍 <b>Desbalance de Avance por Sección:</b> La sección con menor porcentaje de avance este mes es <b>${peorSec}</b> (${menorPct}% completado, faltan ${faltanPeor} de ${totalPeor} equipos).`);
                     }
+                } else if(totalPlanta > 0 && pendientes.length === 0) {
+                    hallazgos.push(`🎉 <b>Cobertura Mensual Completa:</b> El 100% de los equipos (${totalPlanta}) ya fue controlado este mes.`);
                 }
 
-                // 5. Detección de Fraude de Escritorio (<15s) en el Historial
-                const posiblesFraudes = clonDB.filter(r => r.Alerta_Fraude && r.Alerta_Fraude.includes('SÍ')).length;
-                if(posiblesFraudes > 0) {
-                    hallazgos.push(`🕵️ <b>Alerta de Auditoría:</b> Se detectaron ${posiblesFraudes} controles hechos con menos de 15 seg. de diferencia.`);
+                // 4. Auditoría de Equipos Creados en Oficina Pendientes de Completar en Terreno (Sin Foto Ref. o Sin Ubicación)
+                const sinFotoRef = idsTodos.filter(id => !clonConfig.equipos[id].tieneFotoRef).length;
+                const sinUbi = idsTodos.filter(id => !clonConfig.equipos[id].ubicacion || clonConfig.equipos[id].ubicacion === 'S/D' || clonConfig.equipos[id].ubicacion === 'Pendiente en terreno').length;
+                if(sinFotoRef > 0 || sinUbi > 0) {
+                    hallazgos.push(`📌 <b>Fichas por Completar en Terreno:</b> Hay <b>${sinFotoRef} equipo(s) sin Foto de Referencia</b> y <b>${sinUbi} sin Ubicación Exacta</b> (se solicitarán al brigadista al escanearlos).`);
+                }
+
+                // 5. Avisos de Mudanzas de Sección o Actualizaciones de Ficha hechas por Brigadistas
+                const mudanzas = Object.entries(clonConfig.mudanzasPendientes || {});
+                if(mudanzas.length > 0) {
+                    hallazgos.push(`🚚 <b>Mudanzas Reportadas en Terreno:</b> ${mudanzas.map(m => `${m[0]} (${m[1].de} ➔ ${m[1].a})`).join(', ')}.`);
                 }
 
                 if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [] };
@@ -3690,20 +3892,31 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
             const boxGemelo = document.getElementById('panelGemeloAutonomo');
             const contPal = document.getElementById('listaPalabrasAprendidas');
             const lblKey = document.getElementById('lblEstadoLlaveIA');
+            const inpKey = document.getElementById('inputGeminiApiKey');
             if(!box || !contPal) return;
 
+            // Si la llave ya está guardada, oculta la caja de pegar para que no parezca vacía
+            const keyActiva = obtenerLlaveGeminiDesencriptada();
+            const tieneKey = !!keyActiva;
+            if(inpKey && inpKey.parentElement) {
+                if(tieneKey && !window.forzarMostrarInputLlave) {
+                    inpKey.parentElement.style.display = 'none';
+                } else {
+                    inpKey.parentElement.style.display = 'flex';
+                }
+            }
             if(lblKey) {
-                const tieneKey = !!obtenerLlaveGeminiDesencriptada();
+                const ultimos4 = tieneKey ? keyActiva.slice(-4) : '';
                 lblKey.innerHTML = tieneKey
-                    ? `<span style="color:var(--success); font-weight:bold;">✅ Llave Gemini Flash Conectada y Activa en la Nube (0 gasto de puntos personales).</span>`
-                    : `<span style="color:var(--warn-text); font-weight:bold;">⚡ Usando Motor Contextual Local. Pegue arriba su clave gratuita AIzaSy... de Google AI Studio.</span>`;
+                    ? `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:4px;"><span style="color:var(--success); font-weight:bold; font-size:12px;">🔒 Llave Gemini Conectada y Guardada (•••${ultimos4})</span><button type="button" class="btn-small btn-dark" style="padding:4px 8px; font-size:10.5px;" onclick="mostrarInputCambioLlave()">🔄 Cambiar Llave</button></div>`
+                    : `<span style="color:var(--warn-text); font-weight:bold;">⚡ Pegue arriba su clave gratuita de Google AI Studio y toque Guardar Llave.</span>`;
             }
 
             if(boxGemelo) {
                 const g = config.gemeloAutonomo || { ciclos: 1, ultimaCorrida: obtenerFechaHoraEstandar().fechaHora, hallazgos: [] };
                 boxGemelo.innerHTML = `
                     <div class="text-muted" style="font-size:11px; margin-bottom:4px;">Ciclos simulados en esta sesión: <b>${g.ciclos || 1}</b> | Último escaneo: ${g.ultimaCorrida || 'Ahora'}</div>
-                    ${(g.hallazgos && g.hallazgos.length) ? g.hallazgos.map(h => `<div style="margin-top:3px;">${h}</div>`).join('') : '<div>✅ Sin anomalías detectadas.</div>'}
+                    ${(g.hallazgos && g.hallazgos.length) ? g.hallazgos.map(h => `<div style="margin-top:4px;">${h}</div>`).join('') : '<div>✅ Sin anomalías detectadas.</div>'}
                 `;
             }
 
@@ -3718,11 +3931,13 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
                     if(v.vencido) botiquinesAlerta.push(`${id} (${v.detalle})`);
                 }
             });
+            const ultimosCambiosCampo = (config.cambiosTerreno || []).slice(-3).reverse().map(c => `${c.id} por ${c.inspector} (${c.detalle})`).join(' | ') || 'Ninguno aún';
             box.innerHTML = `
                 <div>⏱️ <b>Tiempo promedio por control:</b> ${promSeg} seg. (${t.controlesTotales} controles medidos)</div>
                 <div style="margin-top:4px;">📷 <b>Intentos de QR cancelados sin leer:</b> ${t.qrCancelados || 0} | ⌨️ <b>Cargas manuales:</b> ${t.cargasManuales || 0}</div>
                 <div style="margin-top:4px;">🏷️ <b>Etiquetas QR a reimprimir (uso manual repetido):</b> <span style="color:var(--danger);font-weight:bold;">${topManuales}</span></div>
                 <div style="margin-top:4px;">💊 <b>Botiquines con stock agotado o vencido:</b> <span style="color:${botiquinesAlerta.length ? 'var(--danger)' : 'var(--success)'};font-weight:bold;">${botiquinesAlerta.length ? botiquinesAlerta.join(' | ') : 'Todos al día'}</span></div>
+                <div style="margin-top:4px;">🛠️ <b>Últimas fichas actualizadas en terreno:</b> <span style="color:var(--edit);font-weight:bold;">${ultimosCambiosCampo}</span></div>
                 <div style="margin-top:4px;">↩️ <b>Errores "Falla a OK" revertidos por el usuario:</b> ${t.fallasRevertidas || 0}</div>
             `;
 
@@ -3735,14 +3950,12 @@ REGLAS ESTRICTAS DE LA APP GESTIÓN SySO V6.33:
                 { key: 'preguntasAyuda', lbl: '❓' }
             ];
             let totalPalabras = 0;
-            // 1. Mostrar palabras ya aprobadas y activas
             categorias.forEach(cat => {
                 const arr = (config.aprendidos && config.aprendidos[cat.key]) || [];
                 arr.forEach((pal, idx) => {
                     totalPalabras++;
                     contPal.innerHTML += `<span class="btn-small btn-chip-wrap" style="background:var(--input-bg); color:var(--text); border:1px solid var(--border);">${cat.lbl} ${pal} <b style="color:var(--danger); margin-left:4px; cursor:pointer;" onclick="borrarPalabraAprendida('${cat.key}', ${idx}, false, '')">❌</b></span>`;
                 });
-                // 2. Mostrar palabras candidatas (en observación por Regla de 3) para que Jack pueda aprobarlas de 1 toque o borrarlas
                 const cands = (config.aprendidosCandidatos && config.aprendidosCandidatos[cat.key]) || {};
                 Object.keys(cands).forEach(palCand => {
                     totalPalabras++;
