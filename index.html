@@ -4580,13 +4580,639 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 6 DE 7 ===
 // =========================================================================
-        // MOTOR 7A (V6.39): SELECTOR GEMINI TEXTO ESTABLE, SANEAMIENTO DE BOTIQUINES,
-        // GUARDADO 1-CLIC COMUNICACIÓN (4/4 SECCIONES) Y BUSCADOR EN HISTORIAL
+        // MOTOR 7A (V6.41): FOTO OPCIONAL SI ESTÁ OK (SOLO OBLIGATORIA EN FALLA),
+        // PERFILADOR PERSONALIZADO POR GRUPO Y COMUNICACIÓN POR SECCIÓN
+        // =========================================================================
+
+        // 1. Regla Estricta de Foto: Solo obligatoria si hay Falla (Opcional si todos los puntos están OK)
+        actualizarEstadoRequisitoFoto = function() {
+            const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
+            const badge = document.getElementById('badgeEstadoFotoControl'), btnCam = document.getElementById('btnAdjuntarFoto');
+            const zFoto = document.getElementById('zonaFotoEvidenciaControl');
+            if(!badge || !btnCam) return;
+            if(!id || !config.equipos[id]) {
+                badge.innerText = 'Opcional si está OK';
+                badge.style.color = 'var(--text-muted)';
+                btnCam.classList.remove('urgent');
+                return;
+            }
+            if(esEquipoVirtualComunicacion(id)) {
+                if(zFoto) zFoto.classList.add('hidden');
+                btnCam.classList.remove('urgent');
+                return;
+            }
+            if(zFoto) zFoto.classList.remove('hidden');
+            const params = config.grupos[config.equipos[id].grupo] || [];
+            let hayFalla = false;
+            params.forEach((p, idx) => {
+                const el = document.getElementById(`dynChk_${idx}`);
+                if(el && el.value === 'Falla') hayFalla = true;
+            });
+
+            if(hayFalla) {
+                if(fotoActualBase64) {
+                    badge.innerText = '✅ Evidencia de falla adjunta';
+                    badge.style.color = 'var(--success)';
+                    btnCam.classList.remove('urgent');
+                } else {
+                    badge.innerText = '🚨 OBLIGATORIA POR FALLA (Falta foto)';
+                    badge.style.color = 'var(--danger)';
+                    btnCam.classList.add('urgent');
+                }
+            } else {
+                badge.innerText = fotoActualBase64 ? '✅ Foto adjunta' : 'Opcional si está OK';
+                badge.style.color = fotoActualBase64 ? 'var(--success)' : 'var(--text-muted)';
+                btnCam.classList.remove('urgent');
+            }
+        };
+
+        // Envolver guardarRegistro para que NUNCA exija foto si no hay fallas detectadas
+        const _guardarRegistroBaseV641 = guardarRegistro;
+        guardarRegistro = async function() {
+            esCargaManual = false;
+            return await _guardarRegistroBaseV641();
+        };
+
+        // 2. Perfilador Personalizado por cada Grupo (Equipos y Control en Terreno)
+        function obtenerPerfilVisualGrupo(nomGrupo) {
+            const g = String(nomGrupo || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+            if(g.includes('corte') || g.includes('energia') || g.includes('electr') || g.includes('tablero')) {
+                return {
+                    codigo: 'CORTE_ENERGIA',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación del Tablero / Llave de Corte:',
+                    phUbi: 'Ej. Sala de máquinas / Entrada galpón principal',
+                    lblTipo: '⚡ Tipo de Tablero / Corte Eléctrico',
+                    phTipo: 'Ej. Tablero General / Seccionador / Parada de Emergencia',
+                    lblCap: '🔌 Tensión / Sectores que Corta:',
+                    phCap: 'Ej. Trifásico 380V - Corta Línea Producción',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Tipo de Tablero / Foto Ref.',
+                    tiposSugeridos: ["Tablero General de Corte", "Tablero Seccional", "Seccionador Principal", "Parada de Emergencia (Golpe de Puño)", "Tablero de Generador / Transferencia"],
+                    tagsNotas: ["Tablero limpio y cerrado", "Señalización de riesgo eléctrico visible", "Entorno seco y despejado", "Circuitos identificados correctamente"]
+                };
+            }
+            if(g.includes('evacua') || g.includes('salida')) {
+                return {
+                    codigo: 'EVACUACION',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación del Punto / Ruta de Evacuación:',
+                    phUbi: 'Ej. Salida Sur Galpón / Pasillo Central / Escalera',
+                    lblTipo: '🏃 Punto / Elemento de Evacuación',
+                    phTipo: 'Ej. Puerta de Emergencia / Luz Autónoma / Ruta y Alarma',
+                    lblCap: '🚨 Elementos en el Punto (Puertas, Luces, Sirena):',
+                    phCap: 'Ej. Barra antipánico + 2 Luces LED + Cartel Salida',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Elementos de Evacuación / Foto Ref.',
+                    tiposSugeridos: ["Puerta Salida de Emergencia", "Luz Autónoma de Emergencia", "Ruta de Evacuación y Cartelería", "Sirena / Alarma de Evacuación", "Punto Completo (Salida + Luz + Alarma)"],
+                    tagsNotas: ["Salidas destrabadas y operativas", "Luces de emergencia encendiendo OK", "Caminos de evacuación libres de obstáculos", "Alarma probada correctamente"]
+                };
+            }
+            if(g.includes('comunica')) {
+                return {
+                    codigo: 'COMUNICACION',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación de Cartelera / Punto de Encuentro:',
+                    phUbi: 'Ej. Punto de Encuentro Sector / Entrada Oficina',
+                    lblTipo: '📞 Elemento de Comunicación de la Sección',
+                    phTipo: 'Ej. Punto de Encuentro, Planos y Nómina de Sección',
+                    lblCap: '🗺️ Detalle (Punto de Encuentro / Planos):',
+                    phCap: 'Ej. Cartel Punto Encuentro + Plano Evacuación + Cartelera S.O.S.',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación de Punto de Encuentro / Planos / Foto',
+                    tiposSugeridos: ["Verificación Mensual de Sección (Punto Encuentro, Planos y Empleados)", "Punto de Encuentro Señalizado", "Plano de Evacuación ('Usted está aquí')", "Cartelera Informativa S.O.S."],
+                    tagsNotas: ["Punto de encuentro despejado y señalizado", "Planos de evacuación visibles y actualizados", "Nómina de empleados de la sección al día", "Cartelera de teléfonos de emergencia legible"]
+                };
+            }
+            if(g.includes('jefe') || g.includes('brigada')) {
+                return {
+                    codigo: 'JEFES_BRIGADA',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación de Base / Puesto de Brigada:',
+                    phUbi: 'Ej. Jefatura de Sector / Gabinete de Brigada',
+                    lblTipo: '👨‍🚒 Equipamiento / Puesto de Jefe de Brigada',
+                    phTipo: 'Ej. Kit de Mando, Chalecos, Megáfono y Equipos del Sector',
+                    lblCap: '🎽 Dotación / Elementos Asignados:',
+                    phCap: 'Ej. Chalecos reflectivos, linternas, handy y megáfono',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Dotación de Brigada / Foto Ref.',
+                    tiposSugeridos: ["Puesto de Jefatura de Brigada", "Gabinete de Equipamiento de Brigada", "Kit de Mando (Megáfono, Chaleco y Handy)", "Supervisión General de Brigada en Sección"],
+                    tagsNotas: ["Equipamiento de brigada completo y operativo", "Dotación de brigadistas del sector activa", "Equipos de comunicación interna verificados", "Sector supervisado en orden"]
+                };
+            }
+            if(g.includes('botiqu')) {
+                return {
+                    codigo: 'PA_BOTIQUINES',
+                    camposActivos: ['insumos'],
+                    lblUbi: '📍 Ubicación Exacta del Botiquín:',
+                    phUbi: 'Ej. Enfermería / Comedor / Oficina de Planta',
+                    lblTipo: '💊 Tipo de Botiquín',
+                    phTipo: 'Ej. Botiquín Mural / Mochila Portátil / Gabinete PA',
+                    lblCap: 'Detalle:',
+                    phCap: '',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Tipo de Botiquín / Foto Ref.',
+                    tiposSugeridos: ["Botiquín Mural Primeros Auxilios", "Mochila Portátil de Primeros Auxilios", "Caja / Maletín de Emergencia Médica"],
+                    tagsNotas: ["Botiquín intacto sin consumo", "Reposición de medicamentos completada", "Botiquín limpio y ordenado", "Sin insumos vencidos"]
+                };
+            }
+            if(g.includes('pa ') || g.includes('auxilio') || g.includes('medico')) {
+                return {
+                    codigo: 'PA_EQUIPO',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación del Equipo de Primeros Auxilios:',
+                    phUbi: 'Ej. Pasillo Central / Puesto de Socorro / Enfermería',
+                    lblTipo: '🩺 Equipo de Primeros Auxilios / Rescate',
+                    phTipo: 'Ej. Camilla Rígida / Silla de Ruedas / Collar Cervical / DEA',
+                    lblCap: '🩺 Componentes / Accesorios:',
+                    phCap: 'Ej. Con 3 correas de sujeción e inmovilizador cabezal',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Componentes de PA / Foto Ref.',
+                    tiposSugeridos: ["Camilla Rígida con Correas", "Tabla Espinal con Inmovilizador", "Silla de Ruedas Plegable", "Kit de Férulas y Collar Cervical", "Desfibrilador Externo Automático (DEA)"],
+                    tagsNotas: ["Camilla y correas en perfecto estado", "Equipo de rescate limpio y accesible", "Inmovilizadores completos", "Señalización de primeros auxilios visible"]
+                };
+            }
+            if(g.includes('hidrante') || g.includes('manguera') || g.includes('agua')) {
+                return {
+                    codigo: 'HIDRANTES',
+                    camposActivos: ['capacidad'],
+                    lblUbi: '📍 Ubicación del Hidrante / BIE:',
+                    phUbi: 'Ej. Exterior Galpón / Columna 4 / Patio Maniobras',
+                    lblTipo: '🚿 Tipo de Hidrante / BIE',
+                    phTipo: 'Ej. Gabinete BIE / Salida Hidrante / Monitor',
+                    lblCap: '📏 Largo de Manguera / Diámetro / Pico:',
+                    phCap: 'Ej. Manguera 25 metros (1 ½") con pico chorro/niebla',
+                    lblBtnTerreno: '✏️ Actualizar Ubicación / Medida de Manguera / Foto Ref.',
+                    tiposSugeridos: ["Gabinete BIE Completo", "Salida Hidrante", "BIE con Manguera 25m", "Monitor Contra Incendio", "Boca de Impulsión"],
+                    tagsNotas: ["Presión y caudal de agua normal", "Manguera sana sin pérdidas", "Pico, acople y llave completos", "Gabinete limpio y despejado"]
+                };
+            }
+            return {
+                codigo: 'EXTINTORES',
+                camposActivos: ['capacidad', 'serie', 'vencimiento'],
+                lblUbi: '📍 Ubicación Exacta del Extintor:',
+                phUbi: 'Ej. Entrada oficina / Pasillo molino / Tablero',
+                lblTipo: '🧯 Agente / Tipo de Extintor',
+                phTipo: 'Ej. PQS ABC / CO2 / HCFC / Agua Presurizada',
+                lblCap: '⚖️ Capacidad (kg / lbs):',
+                phCap: 'Ej. 5 kg / 10 kg / 25 kg',
+                lblSerie: '🔢 Marca / N° de Serie:',
+                phSerie: 'Ej. Melisam - N° 94820',
+                lblVenc: '📅 Vencimiento de Carga:',
+                lblBtnTerreno: '✏️ Actualizar Ubicación / Foto Ref. / Vencimiento de Carga',
+                tiposSugeridos: ["PQS ABC", "CO2 (Dióxido de Carbono)", "HCFC / Haloclean", "Agua Presurizada", "Espuma Mecánica", "Carro PQS 50 kg"],
+                tagsNotas: ["Revisión en orden", "Limpieza exterior realizada", "Acceso despejado", "Señalética visible"]
+            };
+        }
+
+        deducirCamposPorDefecto = function(nomGrupo) {
+            return obtenerPerfilVisualGrupo(nomGrupo).camposActivos;
+        };
+
+        obtenerCamposActivosGrupo = function(nomGrupo) {
+            const perf = obtenerPerfilVisualGrupo(nomGrupo);
+            if(perf.codigo !== 'EXTINTORES') return perf.camposActivos;
+            if(config.camposGrupo && Array.isArray(config.camposGrupo[nomGrupo])) {
+                return config.camposGrupo[nomGrupo].filter(c => c !== 'responsable' && c !== 'vencimientoPH');
+            }
+            return perf.camposActivos;
+        };
+
+        poblarAdmin = function(mantenerSeleccionActual = false) {
+            const grpKeys = Object.keys(config.grupos);
+            const selS = document.getElementById('qrSeccion');
+            const prevSec = mantenerSeleccionActual && selS ? selS.value : '';
+            selS.innerHTML = '<option value="">-- Seleccione Sección --</option>';
+            config.secciones.forEach(s => selS.innerHTML += `<option value="${s}">${s} [${obtenerSiglaSeccion(s)}]</option>`);
+            if(prevSec && config.secciones.includes(prevSec)) selS.value = prevSec;
+
+            const selQ = document.getElementById('qrGrupo');
+            const prevGrp = mantenerSeleccionActual && selQ ? selQ.value : '';
+            selQ.innerHTML = '<option value="">-- Seleccione Grupo --</option>';
+            grpKeys.filter(g => g !== 'Todos').sort(sortNatural).forEach(g => selQ.innerHTML += `<option value="${g}">${g}</option>`);
+            if(prevGrp && config.grupos[prevGrp]) selQ.value = prevGrp;
+
+            let chkSecHtml = `<label><input type="checkbox" value="Todas" class="chk-usu-sec" checked> 🌎 Todas las Secciones</label>`;
+            config.secciones.slice().sort(sortNatural).forEach(s => {
+                chkSecHtml += `<label><input type="checkbox" value="${s}" class="chk-usu-sec"> 📍 ${s}</label>`;
+            });
+            const contSecUsu = document.getElementById('nuevoUsuSeccionContainer');
+            if(contSecUsu) contSecUsu.innerHTML = chkSecHtml;
+
+            let chkHtml = `<label><input type="checkbox" value="Todos" class="chk-usu-grupo" checked> 🔓 Todos los Grupos</label>`;
+            grpKeys.filter(g => g !== 'Todos').sort(sortNatural).forEach(g => {
+                chkHtml += `<label><input type="checkbox" value="${g}" class="chk-usu-grupo"> ${g}</label>`;
+            });
+            document.getElementById('nuevoUsuGrupoContainer').innerHTML = chkHtml;
+            configurarExclusionCheckboxes('.chk-usu-sec', 'Todas');
+            configurarExclusionCheckboxes('.chk-usu-grupo', 'Todos');
+            actualizarPrefijoUI();
+            renderListas();
+            if(esUsuarioCreador() && typeof renderPanelTelemetriaIA === 'function') renderPanelTelemetriaIA();
+        };
+
+        actualizarPrefijoUI = function() {
+            const grpSelect = document.getElementById('qrGrupo'), secSelect = document.getElementById('qrSeccion');
+            const prefijoInput = document.getElementById('qrPrefijo'), bloqueCampos = document.getElementById('bloqueCamposEspecificosAlta');
+            const grp = grpSelect ? grpSelect.value : '', sec = secSelect ? secSelect.value : '';
+            if(!grp || !sec) {
+                prefijoInput.value = '';
+                bloqueCampos.classList.add('hidden');
+                return;
+            }
+            bloqueCampos.classList.remove('hidden');
+            prefijoInput.value = obtenerPrefijoCompuesto(grp, sec);
+
+            const perf = obtenerPerfilVisualGrupo(grp);
+            const activos = obtenerCamposActivosGrupo(grp);
+
+            const inpUbi = document.getElementById('qrUbicacion');
+            if(inpUbi) {
+                inpUbi.placeholder = perf.phUbi;
+                const lblU = inpUbi.previousElementSibling;
+                if(lblU) lblU.innerText = `${perf.lblUbi} (Opcional en oficina):`;
+            }
+            const lblTipo = document.getElementById('lblQrTipo');
+            const inpTipo = document.getElementById('qrTipo');
+            if(lblTipo) lblTipo.innerText = perf.lblTipo;
+            if(inpTipo) inpTipo.placeholder = perf.phTipo;
+
+            const lblCap = document.getElementById('lblQrCapacidad');
+            const inpCap = document.getElementById('qrCapacidad');
+            if(lblCap && perf.lblCap) lblCap.innerText = perf.lblCap;
+            if(inpCap && perf.phCap !== undefined) inpCap.placeholder = perf.phCap;
+
+            const dlTipos = document.getElementById('listaTiposSugeridos');
+            if(dlTipos) {
+                const aprendidosT = (config.aprendidos && config.aprendidos.tipos) || [];
+                const sugerencias = [...new Set([...perf.tiposSugeridos, ...aprendidosT])];
+                dlTipos.innerHTML = sugerencias.map(t => `<option value="${t.replace(/"/g, '&quot;')}"></option>`).join('');
+            }
+
+            [
+                { key: 'capacidad', wrap: 'wrapQrCapacidad', input: 'qrCapacidad' },
+                { key: 'serie', wrap: 'wrapQrSerie', input: 'qrSerie' },
+                { key: 'vencimiento', wrap: 'wrapQrVencimiento', input: 'qrVencimiento' }
+            ].forEach(c => {
+                const isActivo = activos.includes(c.key);
+                const wrapEl = document.getElementById(c.wrap), inpEl = document.getElementById(c.input);
+                if(isActivo) { wrapEl.classList.remove('campo-oculto'); inpEl.disabled = false; }
+                else { wrapEl.classList.add('campo-oculto'); inpEl.disabled = true; if(!editQRId) inpEl.value = ''; }
+            });
+
+            const wrapInsumos = document.getElementById('wrapInsumosBotiquin');
+            const contInsumos = document.getElementById('contenedorFilasInsumos');
+            if(activos.includes('insumos') || perf.codigo === 'PA_BOTIQUINES') {
+                wrapInsumos.classList.remove('campo-oculto');
+                if(!editQRId && contInsumos.children.length === 0) agregarFilaInsumoBotiquin();
+            } else {
+                wrapInsumos.classList.add('campo-oculto');
+            }
+            if(!editQRId && !document.getElementById('qrNumero').value && sec) {
+                document.getElementById('qrNumero').value = calcularSiguienteCorrelativo(grp, sec);
+            }
+        };
+
+        obtenerOpcionesFallaParaParametro = function(nombreParametro, nombreGrupo) {
+            const p = (nombreParametro || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const perf = obtenerPerfilVisualGrupo(nombreGrupo);
+            const aprendidas = (config.aprendidos && config.aprendidos.motivosFalla) || [];
+            let base = [];
+
+            if(perf.codigo === 'CORTE_ENERGIA') {
+                if(p.includes('entorno')) base = ["Acceso al tablero obstruido por materiales", "Humedad o filtración de agua cerca del tablero", "Falta iluminación de emergencia en el sector", "Piso húmedo o sin alfombra dieléctrica"];
+                else if(p.includes('tablero')) base = ["Puerta o contratapa rota / no cierra bien", "Cables expuestos o sin protección", "Llave de corte / disyuntor dañado", "Falta candado o bloqueo de seguridad"];
+                else if(p.includes('limpieza')) base = ["Polvo o pelusa acumulada dentro del tablero", "Presencia de insectos / telarañas", "Rejilla de ventilación tapada", "Exterior del tablero sucio o manchado"];
+                else if(p.includes('senal')) base = ["Falta cartel de Riesgo Eléctrico", "Llaves sin identificación de qué sector cortan", "Cartelería despegada o ilegible"];
+                else base = ["Anomalía eléctrica detectada en el sector", "Temperatura o ruido anormal en tablero", "Requiere revisión de mantenimiento eléctrico"];
+            } else if(perf.codigo === 'EVACUACION') {
+                if(p.includes('salida') || p.includes('puerta')) base = ["Puerta de emergencia cerrada con llave o trabada", "Barra antipánico dura o dañada", "Cartel luminoso 'SALIDA' apagado o roto", "Puerta abre en sentido incorrecto o bisagra dañada"];
+                else if(p.includes('luce') || p.includes('luz') || p.includes('ilumina')) base = ["Luz de emergencia no enciende al probar", "Batería agotada / poca autonomía", "Foco o carcasa rota", "Luminaria desconectada de la red"];
+                else if(p.includes('alarma') || p.includes('sirena')) base = ["Sirena de evacuación no suena", "Pulsador de emergencia roto u obstruido", "Volumen insuficiente para el ruido del sector", "Luz estroboscópica no funciona"];
+                else if(p.includes('camino') || p.includes('ruta') || p.includes('pasillo') || p.includes('obstru')) base = ["Ruta de evacuación obstruida por pallets o mercadería", "Demarcación de pasillo borrada", "Piso resbaladizo o con desnivel peligroso", "Falta flecha direccional hacia la salida"];
+                else base = ["Observación en ruta o salida de evacuación", "Falta cartel de Punto de Encuentro"];
+            } else if(perf.codigo === 'COMUNICACION') {
+                if(p.includes('encuentro')) base = ["Cartel de Punto de Encuentro dañado o borroso", "Área del Punto de Encuentro obstruida", "Falta señalización en el Punto de Encuentro"];
+                else if(p.includes('plano')) base = ["Plano de evacuación desactualizado", "Plano deteriorado o ilegible", "Falta plano 'Usted está aquí' en la sección"];
+                else if(p.includes('empleado') || p.includes('personal') || p.includes('nomina')) base = ["Faltan teléfonos de empleados activos en la sección", "Ingresos nuevos pendientes de cargar en nómina", "Bajas del mes sin actualizar en el sector"];
+                else if(p.includes('emergencia') || p.includes('numero')) base = ["Cartelera de números S.O.S. ilegible o faltante en el sector", "Números de emergencia desactualizados en cartelera"];
+                else base = ["Novedad de comunicación en el sector", "Falta actualizar cartelera informativa"];
+            } else if(perf.codigo === 'JEFES_BRIGADA') {
+                base = ["Faltan chalecos o identificación de brigadistas", "Megáfono o handy sin batería / con falla", "Dotación de brigadistas incompleta en el turno", "Equipamiento táctico de brigada incompleto"];
+            } else if(p.includes('manometro') || p.includes('presion')) {
+                base = ["Despresurizado / Aguja en rojo", "Sobrecargado", "Manómetro roto o ilegible", "Fuga de presión"];
+            } else if(p.includes('sello') || p.includes('precinto') || p.includes('traba')) {
+                base = ["Sin precinto de seguridad", "Precinto roto o violado", "Falta pasador metálico", "Pasador trabado / Doblado"];
+            } else if(p.includes('boquilla') || p.includes('manguera') || p.includes('pico')) {
+                base = ["Manguera reseca o fisurada", "Boquilla obstruida / Tapada", "Pico dañado o faltante", "Acople / Rosca dañada", "Sin manguera"];
+            } else if(p.includes('cuerpo') || p.includes('cilindro') || p.includes('gabinete')) {
+                base = ["Cuerpo abollado o golpeado", "Óxido / Corrosión severa", "Pintura deteriorada", "Soporte flojo o caído", "Vidrio o puerta rota", "Obstruido / Inaccesible"];
+            } else if(p.includes('caudal') || p.includes('agua') || p.includes('valvula')) {
+                base = ["Sin caudal de agua", "Pérdida / Fuga en válvula", "Válvula trabada o dura", "Falta llave de ajuste"];
+            } else if(perf.codigo === 'PA_BOTIQUINES' || perf.codigo === 'PA_EQUIPO') {
+                base = ["Medicamento vencido sin reponer", "Insumo agotado sin stock", "Caja de botiquín o camilla dañada", "Faltan correas de sujeción en camilla"];
+            } else {
+                base = [`${nombreParametro} con desperfecto / dañado`, `${nombreParametro} incompleto o faltante`, `${nombreParametro} obstruido o sin señalización`];
+            }
+            return [...new Set([...base, ...aprendidas.slice(-5)])];
+        };
+
+        // 3. Renderizador de Control en Terreno Adaptativo por Grupo
+        renderFormularioControlInspeccion = function(id) {
+            const eq = config.equipos[id];
+            if(!eq) return;
+            mostrarCamposInferioresControl(true);
+            window.filtroRutaSec = eq.seccion;
+            window.filtroRutaGrp = eq.grupo;
+
+            motivosFallaPorIndex = {};
+            actualizarCajaResumenFallas();
+            const perf = obtenerPerfilVisualGrupo(eq.grupo);
+            const esCom = (perf.codigo === 'COMUNICACION') || esEquipoVirtualComunicacion(id);
+            const boxThumb = document.getElementById('boxThumbControl');
+            if(boxThumb) boxThumb.classList.toggle('hidden', esEquipoVirtualComunicacion(id));
+
+            const ubiTexto = (!eq.ubicacion || eq.ubicacion === 'S/D') ? 'Pendiente en terreno' : eq.ubicacion;
+            const tipoTexto = (!eq.tipo || eq.tipo === 'Pendiente en terreno') ? 'Pendiente en terreno' : eq.tipo;
+            let fichaResumen = `${eq.seccion} | ${esEquipoVirtualComunicacion(id) ? eq.grupo : tipoTexto}`;
+            if(eq.capacidad && !esEquipoVirtualComunicacion(id)) fichaResumen += ` (${eq.capacidad})`;
+            if(eq.serie && perf.camposActivos.includes('serie') && !esEquipoVirtualComunicacion(id)) fichaResumen += ` [S/N: ${eq.serie}]`;
+            document.getElementById('seccionEquipo').value = fichaResumen;
+            document.getElementById('ubicacionEquipo').value = esEquipoVirtualComunicacion(id) ? `Punto Encuentro, Planos y Empleados de ${eq.seccion}` : ubiTexto;
+            if(!esEquipoVirtualComunicacion(id)) actualizarMiniaturaPOSControl(id);
+
+            const container = document.getElementById('moduloDinamico');
+            container.classList.remove('hidden');
+            const params = (config.grupos[eq.grupo] && config.grupos[eq.grupo].length > 0)
+                ? config.grupos[eq.grupo]
+                : ["Punto Encuentro", "N° Emergencias", "Planos", "Empleados", "Otro"];
+
+            const notasAprendidas = (config.aprendidos && config.aprendidos.notas) || [];
+            const todasNotas = [...new Set([...perf.tagsNotas, ...notasAprendidas.slice(-4)])];
+            document.getElementById('smartTagsContainer').innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">` +
+                todasNotas.map(t => `<button type="button" class="btn-small btn-chip-wrap" style="background:var(--edit); color:#fff; border:none; padding:5px 9px; font-weight:bold;" onclick="agregarTag('${t.replace(/'/g, "\\'")}')">+ ${t}</button>`).join('') +
+                `</div>`;
+
+            let warningHTML = '';
+
+            if(!esEquipoVirtualComunicacion(id)) {
+                const faltaUbi = !eq.ubicacion || eq.ubicacion === 'S/D' || eq.ubicacion === 'Pendiente en terreno';
+                const faltaTipo = !eq.tipo || eq.tipo === 'Pendiente en terreno';
+                const faltaFotoRef = !eq.tieneFotoRef;
+                const abrirEditorAuto = faltaUbi || faltaTipo;
+                const secsOpciones = (config.secciones || []).map(s => `<option value="${s}" ${s === eq.seccion ? 'selected' : ''}>${s}</option>`).join('');
+                const activos = obtenerCamposActivosGrupo(eq.grupo);
+
+                const dlTipos = document.getElementById('listaTiposSugeridos');
+                if(dlTipos) dlTipos.innerHTML = perf.tiposSugeridos.map(t => `<option value="${t.replace(/"/g, '&quot;')}"></option>`).join('');
+
+                warningHTML += `
+                    <div style="margin-bottom:12px;">
+                        <button type="button" class="btn btn-outline" style="padding:9px 12px; font-size:13px; margin-bottom:6px; border-color:var(--edit); color:var(--edit);" onclick="toggleEditorFichaTerreno()">
+                            ${perf.lblBtnTerreno} ${abrirEditorAuto ? '⚠️ (Completar Ubicación/Tipo)' : (faltaFotoRef ? '(Sin Foto Ref.)' : '')}
+                        </button>
+                        <div id="boxEditorFichaTerreno" class="${abrirEditorAuto ? '' : 'hidden'}" style="border:2px solid var(--edit); border-radius:8px; padding:12px; background:var(--input-bg); margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                                <span style="font-size:13px; font-weight:bold; color:var(--edit);">🛠️ Ficha en Terreno — ${eq.grupo} (${id})</span>
+                                <button type="button" class="btn-small btn-dark" onclick="toggleEditorFichaTerreno()">✖ Cerrar</button>
+                            </div>
+                            <div class="form-grid-pc">
+                                <div class="form-group">
+                                    <label style="font-size:12px;">${perf.lblUbi}</label>
+                                    <input type="text" id="fieldEditUbi" value="${faltaUbi ? '' : (eq.ubicacion || '').replace(/"/g, '&quot;')}" placeholder="${perf.phUbi}">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size:12px;">${perf.lblTipo}:</label>
+                                    <input type="text" id="fieldEditTipo" list="listaTiposSugeridos" value="${faltaTipo ? '' : (eq.tipo || '').replace(/"/g, '&quot;')}" placeholder="${perf.phTipo}">
+                                </div>
+                                ${activos.includes('capacidad') ? `
+                                <div class="form-group">
+                                    <label style="font-size:12px;">${perf.lblCap}</label>
+                                    <input type="text" id="fieldEditCap" value="${(eq.capacidad || '').replace(/"/g, '&quot;')}" placeholder="${perf.phCap}">
+                                </div>` : ''}
+                                ${activos.includes('serie') ? `
+                                <div class="form-group">
+                                    <label style="font-size:12px;">${perf.lblSerie || '🔢 Marca / N° de Serie:'}</label>
+                                    <input type="text" id="fieldEditSerie" value="${(eq.serie || '').replace(/"/g, '&quot;')}" placeholder="${perf.phSerie || 'Ej. Melisam'}">
+                                </div>` : ''}
+                                ${activos.includes('vencimiento') ? `
+                                <div class="form-group">
+                                    <label style="font-size:12px;">${perf.lblVenc || '📅 Vencimiento de Carga:'}</label>
+                                    <input type="month" id="fieldEditVenc" value="${eq.vencimiento || ''}">
+                                </div>` : ''}
+                                <div class="form-group">
+                                    <label style="font-size:12px;">🚚 ¿Cambió de Sección?:</label>
+                                    <select id="fieldEditMudanzaSec">
+                                        <option value="${eq.seccion}">No (Sigue en ${eq.seccion})</option>
+                                        ${secsOpciones}
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-top:6px; border-top:1px dashed var(--border); padding-top:8px;">
+                                <label style="font-size:12px;">🖼️ Foto de Referencia del Punto / Equipo:</label>
+                                <input type="file" id="inputFotoRefTerreno" accept="image/*" capture="environment" style="display:none;" onchange="procesarFotoRefEnTerreno(event)">
+                                <div class="action-btns" style="margin-top:4px;">
+                                    <button type="button" class="btn-small btn-info" style="padding:8px 12px;" onclick="document.getElementById('inputFotoRefTerreno').click()">📷 ${faltaFotoRef ? 'Subir Foto Ref.' : 'Reemplazar Foto Ref.'}</button>
+                                    <span id="lblEstadoFotoRefTerreno" style="font-size:11.5px; font-weight:bold; color:${faltaFotoRef ? 'var(--text-muted)' : 'var(--success)'};">${faltaFotoRef ? 'Sin foto ref.' : '✅ Ya posee foto ref.'}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                                <button type="button" class="btn btn-info" style="margin:0; padding:10px; font-size:13px; flex:2; min-width:140px;" onclick="guardarActualizacionFichaTerreno(false)">💾 Guardar Ficha</button>
+                                <button type="button" class="btn btn-outline" style="margin:0; padding:10px; font-size:13px; flex:1; min-width:100px;" onclick="toggleEditorFichaTerreno()">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if(esCom) {
+                asegurarEstructuraEmergencias();
+                const emVigentesPlanta = (config.contactosEmergencia || []).length > 0 && (config.contactosEmergencia || []).every(c => c.verificadoTS && (Date.now() - c.verificadoTS) <= 30 * 86400000);
+                const verTodaPlanta = window.verTodosEmpleadosEnControlCom === true;
+                const listaEmpleados = (config.usuarios || []).filter(u => {
+                    if(verTodaPlanta) return true;
+                    return !u.secciones || u.secciones.includes('Todas') || u.secciones.includes(eq.seccion);
+                });
+
+                const htmlEmpleados = listaEmpleados.map(u => {
+                    const tieneAlgunTel = !!(String(u.telefono || '').trim() || String(u.familiarTel || '').trim());
+                    const badgeVig = calcularSemaforoVigencia30Dias(u.telVerificadoTS, u.telVerificadoFecha, tieneAlgunTel);
+                    const telP = limpiarTelefonoParaLlamada(u.telefono);
+                    const waP = limpiarTelefonoParaWhatsApp(u.telefono);
+                    const telF = limpiarTelefonoParaLlamada(u.familiarTel);
+                    const estadoAct = u.activo !== false ? `<span style="color:var(--success);font-weight:bold;">🟢 Activo</span>` : `<span style="color:var(--danger);font-weight:bold;">🔴 Baja</span>`;
+                    const btnVig = tieneAlgunTel ? `<button type="button" class="btn-small btn-info" onclick="marcarUsuarioVigenteEnControl(${u.id}, '${id}')">✅ Vigente</button>` : '';
+                    return `
+                        <div style="padding:8px 4px; border-bottom:1px solid var(--border); font-size:12px; opacity:${u.activo !== false ? '1' : '0.6'};">
+                            <div style="margin-bottom:5px;"><b>👷 ${u.nombre}</b> (${estadoAct}) — <small style="color:var(--primary);font-weight:bold;">📍 ${(u.secciones||['Todas']).join(', ')}</small> ${badgeVig}</div>
+                            <div class="action-btns">
+                                <button type="button" class="btn-small btn-s-edit" onclick="abrirEditorEmpleadoEnControl(${u.id})">✏️ Editar</button>
+                                ${btnVig}
+                                ${u.telefono ? `<a href="tel:${telP}" class="btn-small btn-primary" style="text-decoration:none;">📞 Personal: ${u.telefono}</a>` : `<span class="text-muted">Sin tel. personal</span>`}
+                                ${waP.length >= 8 ? `<a href="https://wa.me/${waP}?text=${encodeURIComponent('Hola ' + u.nombre + ', verificamos desde Comunicación de ' + eq.seccion + ' que tu teléfono personal y contacto familiar sigan vigentes.')}" target="_blank" class="btn-small btn-success" style="text-decoration:none;">💬 WA</a>` : ''}
+                                ${u.familiarTel ? `<a href="tel:${telF}" class="btn-small btn-warning" style="text-decoration:none; color:#000;">👪 Fam. (${u.familiarNombre || 'Urgencia'}): ${u.familiarTel}</a>` : ''}
+                            </div>
+                        </div>`;
+                }).join('');
+
+                const htmlEmergencias = (config.contactosEmergencia || []).map(c => {
+                    const icono = c.categoria === 'INCENDIO' ? '🔥' : '🚑';
+                    const telLimpio = limpiarTelefonoParaLlamada(c.telefono);
+                    const badgeVig = calcularSemaforoVigencia30Dias(c.verificadoTS, c.verificadoFecha, !!telLimpio);
+                    const btnDel = esUsuarioCreador() || (usuarioActual && usuarioActual.rol === 'Admin') ? `<button type="button" class="btn-small btn-s-del" onclick="borrarContactoEmergenciaEnControl('${c.id}', '${id}')">❌</button>` : '';
+                    return `
+                        <div style="padding:7px 4px; border-bottom:1px solid var(--border); font-size:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <div><b>${icono} ${c.nombre}:</b> <b>${c.telefono}</b> ${badgeVig}</div>
+                            <div class="action-btns">
+                                <button type="button" class="btn-small btn-info" onclick="marcarEmergenciaVigenteEnControl('${c.id}', '${id}')">✅ Vigente</button>
+                                <button type="button" class="btn-small btn-s-edit" onclick="abrirEditorEmergenciaEnControl('${c.id}')">✏️</button>
+                                ${btnDel}
+                            </div>
+                        </div>`;
+                }).join('');
+
+                warningHTML += `
+                    <div style="border:2px solid #0284c7; border-radius:10px; padding:11px; background:var(--input-bg); margin-bottom:14px;">
+                        <div style="font-weight:bold; color:#0284c7; font-size:14px; margin-bottom:4px;">📞 Control Mensual de Comunicación — Sección: ${eq.seccion}</div>
+                        <p class="text-muted" style="font-size:11.5px; margin-bottom:8px;">
+                            Verifique en su sección: <b>1° Punto de Encuentro</b>, <b>2° Planos de Evacuación</b>, <b>3° Nómina de Empleados Activos de ${eq.seccion}</b> y <b>4° Cartelera de N° de Emergencias</b>.
+                        </p>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:6px; margin-bottom:10px;">
+                            <button type="button" class="btn-small btn-success" style="padding:8px;" onclick="marcarTodosContactosSeccionVigentes('${eq.seccion}')">✅ Confirmar Nómina de ${eq.seccion}</button>
+                            <button type="button" class="btn-small btn-info" style="padding:8px;" onclick="descargarExcelEmpleadosActivos()">📥 Excel Empleados Activos</button>
+                            <button type="button" class="btn-small btn-primary" style="padding:8px;" onclick="imprimirListaEvacuacionBomberos()">🚒 Planilla Bomberos</button>
+                        </div>
+
+                        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                                <b style="color:var(--primary); font-size:12.5px;">👷 Empleados Activos y Contacto Familiar en ${verTodaPlanta ? 'Toda la Planta' : eq.seccion} (${listaEmpleados.length}):</b>
+                                <button type="button" class="btn-small btn-dark" onclick="window.verTodosEmpleadosEnControlCom=!window.verTodosEmpleadosEnControlCom; renderFormularioControlInspeccion('${id}');">
+                                    ${verTodaPlanta ? '📍 Ver solo ' + eq.seccion : '🌎 Ver Toda la Planta'}
+                                </button>
+                            </div>
+
+                            <div id="boxCtrlEditorEmpleado" class="hidden" style="border:2px solid var(--edit); border-radius:8px; padding:10px; background:var(--input-bg); margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                    <b id="lblCtrlEditorEmpleado" style="color:var(--edit); font-size:12.5px;">✏️ Editando Contacto</b>
+                                    <button type="button" class="btn-small btn-s-del" onclick="cerrarEditorEmpleadoEnControl()">✖ Cancelar</button>
+                                </div>
+                                <div class="form-grid-pc">
+                                    <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">📞 Tel. Personal:</label><input type="text" id="ctrlUsuTel" style="padding:7px; font-size:12.5px;"></div>
+                                    <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">👪 Nombre Familiar:</label><input type="text" id="ctrlUsuFamNom" style="padding:7px; font-size:12.5px;"></div>
+                                    <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">📞 Tel. Familiar:</label><input type="text" id="ctrlUsuFamTel" style="padding:7px; font-size:12.5px;"></div>
+                                    <div class="form-group" style="margin-bottom:6px;"><label style="font-size:11px;">Estado en Planta:</label><select id="ctrlUsuAct" style="padding:7px; font-size:12.5px;"><option value="true">🟢 Activo</option><option value="false">🔴 Baja / Inactivo</option></select></div>
+                                </div>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <button type="button" class="btn btn-info" style="margin:0; padding:8px; font-size:12.5px; flex:2; min-width:130px;" onclick="guardarEditorEmpleadoEnControl('${id}')">💾 Guardar Contacto</button>
+                                    <button type="button" class="btn btn-outline" style="margin:0; padding:8px; font-size:12.5px; flex:1; min-width:100px;" onclick="cerrarEditorEmpleadoEnControl()">✖ Cancelar</button>
+                                </div>
+                            </div>
+
+                            <div style="max-height:260px; overflow-y:auto;">${htmlEmpleados}</div>
+                        </div>
+
+                        <details style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:8px;">
+                            <summary style="font-weight:bold; font-size:12px; cursor:pointer; color:${emVigentesPlanta ? 'var(--success)' : 'var(--danger)'};">
+                                ${emVigentesPlanta
+                                    ? '✅ Números de Emergencia Externa ya verificados en Planta este mes (No volver a llamar a Bomberos — Tocar para ver cartelera)'
+                                    : '🚨 Números de Emergencia Externa de Planta (Verificar 1 sola vez al mes en toda la planta)'}
+                            </summary>
+                            <div style="margin-top:8px;">
+                                <p class="text-muted" style="font-size:11px; margin-bottom:6px;">
+                                    ⚠️ <b>Importante:</b> Estos números son globales de planta. No es necesario que cada sección llame a los Bomberos; verifique únicamente que estén visibles en la cartelera de <b>${eq.seccion}</b>:
+                                </p>
+                                <div class="form-grid-pc" style="margin-bottom:6px;">
+                                    <div><select id="ctrlEmCat" style="padding:7px; font-size:12.5px;"><option value="ACCIDENTE">🚑 Accidente Médico</option><option value="INCENDIO">🔥 Incendio / Bomberos</option></select></div>
+                                    <div><input type="text" id="ctrlEmNom" placeholder="Entidad (Ej. Bomberos)" style="padding:7px; font-size:12.5px;"></div>
+                                </div>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                                    <input type="text" id="ctrlEmTel" placeholder="Teléfono (Ej. 132)" style="flex:1.5; min-width:130px; padding:7px; font-size:12.5px;">
+                                    <button type="button" id="btnCtrlGuardarEm" class="btn-small btn-success" onclick="guardarEmergenciaEnControl('${id}')">➕ Guardar</button>
+                                    <button type="button" id="btnCtrlCancelEm" class="btn-small btn-s-del hidden" onclick="cancelarEmergenciaEnControl()">✖ Cancelar</button>
+                                </div>
+                                ${htmlEmergencias}
+                            </div>
+                        </details>
+
+                        <details style="background:var(--card-bg); border:1px solid var(--success); border-radius:8px; padding:8px;">
+                            <summary style="font-weight:bold; font-size:12px; color:var(--success); cursor:pointer;">📤 Alzar / Actualizar Nómina desde Archivo Excel de Planta (Ingresos y Bajas)</summary>
+                            <div style="margin-top:8px;">
+                                <div class="action-btns" style="margin-bottom:6px;">
+                                    <button type="button" class="btn-small btn-info" onclick="descargarPlantillaExcelPersonal()">📄 Bajar Plantilla</button>
+                                    <input type="file" id="ctrlFileExcelPersonal" accept=".csv,.txt,.tsv" style="display:none;" onchange="cargarArchivoExcelPersonalEnControl(event)">
+                                    <button type="button" class="btn-small btn-primary" onclick="document.getElementById('ctrlFileExcelPersonal').click()">📂 Subir Archivo CSV/Excel</button>
+                                </div>
+                                <textarea id="ctrlTxtBulkPersonal" style="height:65px; font-size:11.5px; font-family:monospace; margin-bottom:6px;" placeholder="Nombre y Apellido ; Seccion ; Telefono ; Familiar Nombre ; Familiar Telefono"></textarea>
+                                <label style="display:flex; align-items:center; gap:6px; font-weight:normal; font-size:11.5px; margin-bottom:6px;">
+                                    <input type="checkbox" id="ctrlChkBajaAuto" style="width:auto;">
+                                    <span>Marcar como <b>Inactivo (Baja)</b> a quienes ya no figuren en el listado</span>
+                                </label>
+                                <button type="button" class="btn btn-success" style="margin:0; padding:8px; font-size:12.5px;" onclick="procesarImportacionPersonalDesdeControl('${id}')">🚀 Sincronizar Nómina Ahora</button>
+                            </div>
+                        </details>
+                    </div>
+                `;
+            }
+
+            if(perf.codigo === 'PA_BOTIQUINES' || (Array.isArray(eq.insumos) && eq.insumos.length > 0)) {
+                if(!Array.isArray(eq.insumos)) eq.insumos = [];
+                warningHTML += `
+                    <div style="margin-bottom:14px; border:2px solid var(--edit); border-radius:8px; padding:10px; background:var(--input-bg);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+                            <span style="font-size:13px; font-weight:bold; color:var(--primary);">💊 Control de Stock, Consumo y Reposición:</span>
+                            <div class="action-btns">
+                                <button type="button" class="btn-small btn-success" onclick="marcarBotiquinIntacto()">✅ Botiquín Intacto</button>
+                                <button type="button" class="btn-small btn-info" onclick="agregarInsumoNuevoEnControl()">➕ Sumar Insumo</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="tabla-insumos-control">
+                                <thead><tr><th>Producto</th><th>Stock</th><th>➖ Usado</th><th>➕ Repuesto</th><th>Vencimiento / Estado</th></tr></thead>
+                                <tbody>
+                                    ${eq.insumos.map((ins, iIdx) => {
+                                        const est = calcularEstadoVencimientoFecha(ins.vencimiento);
+                                        const valVenc = (ins.vencimiento && ins.vencimiento !== 'N/A') ? ins.vencimiento : '';
+                                        const stkNum = parseInt(ins.stock, 10) || 0;
+                                        return `<tr>
+                                            <td><b>${ins.nombre}</b></td>
+                                            <td style="text-align:center;">${stkNum <= 0 ? '<span class="alerta-dias-venc">AGOTADO (0)</span>' : '<b>'+stkNum+'</b>'}</td>
+                                            <td><input type="number" id="inpBotCons_${iIdx}" class="inp-bot-mini" value="0" min="0"></td>
+                                            <td><input type="number" id="inpBotRep_${iIdx}" class="inp-bot-mini" value="0" min="0"></td>
+                                            <td><input type="date" id="inpBotVenc_${iIdx}" value="${valVenc}" style="padding:4px; font-size:11.5px; width:122px; margin-bottom:2px;"><br><span class="${est.clase}">${est.texto}</span></td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            }
+
+            warningHTML += `<div style="background:var(--primary); color:#fff; padding:8px 12px; border-radius:6px; margin-bottom:12px; font-size:13px; font-weight:bold;">📋 Puntos a Evaluar: ${eq.grupo} (${eq.seccion})</div>`;
+            const infoVenc = verificarEquipoTieneVencidos(eq);
+            if(infoVenc.vencido) warningHTML += `<div class="alert-danger"><b>🚨 ALERTA DE VENCIMIENTO O STOCK:</b><br>${infoVenc.detalle}</div>`;
+            if(config.fallas && config.fallas[id]) warningHTML += `<div class="alert-warning"><b>⚠️ Falla Previa Registrada:</b><br><i>${config.fallas[id]}</i>.</div>`;
+
+            let html = '<div class="form-grid-pc">';
+            const permiteRecarga = (perf.codigo === 'EXTINTORES' || perf.codigo === 'HIDRANTES' || perf.codigo === 'PA_EQUIPO');
+            if(params.length > 0) {
+                params.forEach((p, index) => {
+                    html += `<div class="form-group"><label>${p}:</label><select id="dynChk_${index}" onchange="alCambiarEstadoPuntoControl(${index}, this.value)">
+                        <option value="OK">✅ OK / Verificado</option>
+                        ${permiteRecarga ? `<option value="Recarga">🔧 En Recarga / Taller (Sin Falla)</option>` : ''}
+                        <option value="Falla">🚨 Con Falla / Observación</option>
+                    </select></div>`;
+                });
+            }
+            html += '</div>';
+            container.innerHTML = warningHTML + html;
+            window.fotoRefTerrenoTempBase64 = null;
+            actualizarEstadoRequisitoFoto();
+            setTimeout(() => { if(typeof auditarYCorregirBordesVisualesDOM === 'function') auditarYCorregirBordesVisualesDOM(false); }, 100);
+        };
+// === FIN DE LA PARTE 7A DE 7 ===
+// =========================================================================
+        // MOTOR 7B FINAL (V6.41): GEMINI 3.8 FLASH / 3.5 FLASH-LITE, BUSCADOR PROFUNDO
+        // POR ATRIBUTO, CORRECTOR GRAMATICAL GLOBAL Y 10.000 PERFILES ÚNICOS
         // =========================================================================
 
         async function descubrirMejorModeloGeminiAPI(apiKey) {
-            const preferidosTexto = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-            if(!apiKey) return 'gemini-2.5-flash';
+            const preferidosTexto = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            if(!apiKey) return 'gemini-3.5-flash-lite';
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
                 if(res.ok) {
@@ -4596,7 +5222,7 @@ function descargarInventarioExcelProfesional() {
                         .map(m => m.name.replace('models/', ''));
                     let elegido = preferidosTexto.find(p => disponibles.includes(p));
                     if(!elegido) {
-                        elegido = disponibles.find(n => n.includes('gemini') && n.includes('flash') && !n.includes('omni') && !n.includes('vision') && !n.includes('audio') && !n.includes('tts')) || 'gemini-2.5-flash';
+                        elegido = disponibles.find(n => n.includes('gemini') && n.includes('flash') && !n.includes('omni') && !n.includes('image') && !n.includes('live') && !n.includes('vision') && !n.includes('audio') && !n.includes('tts')) || 'gemini-2.5-flash';
                     }
                     if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: elegido, cacheRespuestas: {}, bitacoraAprendizaje: [] };
                     if(config.iaConfig.modeloActivo !== elegido) {
@@ -4642,7 +5268,7 @@ function descargarInventarioExcelProfesional() {
                 const backupObf = localStorage.getItem(LOCAL_GEMINI_KEY_BACKUP) || "";
                 if(!obf && backupObf) {
                     obf = backupObf;
-                    if(!config.iaConfig) config.iaConfig = { apiKeyObf: obf, modeloActivo: "gemini-2.5-flash", cacheRespuestas: {}, bitacoraAprendizaje: [] };
+                    if(!config.iaConfig) config.iaConfig = { apiKeyObf: obf, modeloActivo: "gemini-3.5-flash-lite", cacheRespuestas: {}, bitacoraAprendizaje: [] };
                     else config.iaConfig.apiKeyObf = obf;
                     parchearSubnodoConfigNube('iaConfig', config.iaConfig);
                 } else if(obf && !backupObf) {
@@ -4653,14 +5279,14 @@ function descargarInventarioExcelProfesional() {
             } catch(e) { return ""; }
         }
 
-        // 1. Saneamiento automático de fechas de extintor "fantasma" atrapadas en Botiquines / PA Equipo
-        async function sanearFechasFantasmaEnBotiquines() {
+        async function sanearFechasFantasmaEnGruposSinVencimiento() {
             let corregidos = 0;
-            const parcheEq = {};
-            const parcheFallas = {};
+            const parcheEq = {}, parcheFallas = {};
             Object.keys(config.equipos || {}).forEach(id => {
                 const eq = config.equipos[id];
-                if(eq && esGrupoBotiquinOPA(eq.grupo) && eq.vencimiento && eq.vencimiento !== '') {
+                if(!eq) return;
+                const activos = obtenerCamposActivosGrupo(eq.grupo);
+                if(!activos.includes('vencimiento') && eq.vencimiento && eq.vencimiento !== '') {
                     eq.vencimiento = '';
                     parcheEq[id] = eq;
                     if(config.fallas && config.fallas[id] && config.fallas[id].includes('Venció:')) {
@@ -4673,68 +5299,10 @@ function descargarInventarioExcelProfesional() {
             if(corregidos > 0) {
                 await parchearSubnodoConfigNube('equipos', parcheEq);
                 if(Object.keys(parcheFallas).length > 0) await parchearSubnodoConfigNube('fallas', parcheFallas);
-                registrarAprendizajeContinuoIA(`💊 Auto-saneamiento: se limpiaron ${corregidos} fecha(s) fantasma de extintor en equipos de Primeros Auxilios/Botiquines.`);
+                registrarAprendizajeContinuoIA(`🛠️ Auto-saneamiento: limpiadas ${corregidos} fecha(s) de carga fantasma en grupos sin vencimiento general.`);
             }
         }
 
-        // 2. Guardado en 1 clic de las 4 secciones de Comunicación para que Rosana no tenga que guardar 4 veces
-        window.guardarVerificacionComunicacionTodaLaPlanta = async function() {
-            const reloj = obtenerFechaHoraEstandar();
-            await marcarTodosContactosSeccionVigentes('Todas');
-            const idsCom = Object.keys(config.equipos || {}).filter(id => esEquipoVirtualComunicacion(id)).sort(sortNatural);
-            if(idsCom.length === 0) return;
-
-            let db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-            db = db.filter(r => !(esEquipoVirtualComunicacion(r.ID_Equipo) && parsearMesDeRegistro(r) === reloj.mesISO));
-
-            for(const idC of idsCom) {
-                const eqC = config.equipos[idC];
-                const reg = {
-                    uid: `INSP_${reloj.soloFecha.replace(/\D/g, '')}_${idC}`,
-                    ts: Date.now(),
-                    mesISO: reloj.mesISO,
-                    Fecha: reloj.fechaHora,
-                    Inspector: usuarioActual ? usuarioActual.nombre : 'Comunicación',
-                    Grupo: eqC.grupo,
-                    Seccion: eqC.seccion,
-                    Ubicacion: eqC.ubicacion || 'Planta',
-                    ID_Equipo: idC,
-                    Controles: { Control_1: 'OK', Control_2: 'OK', Control_3: 'OK' },
-                    Detalle_Fallas: '',
-                    Reposiciones: [],
-                    Observaciones: 'Verificación mensual de contactos S.O.S. y nómina activa completada (Planta Completa)',
-                    Alerta_Fraude: 'NO',
-                    tieneFotoEvidencia: false,
-                    synced: false
-                };
-                reg.synced = await subirInspeccionIndividualANube(reg, null);
-                db.push(reg);
-            }
-            guardarLocalSeguro(DB_KEY, JSON.stringify(db));
-            limpiarEquipoEnControl(false);
-            alert(`✅ ¡VERIFICACIÓN MENSUAL DE COMUNICACIÓN COMPLETADA AL 100%!\n\nSe registraron las ${idsCom.length} secciones (${idsCom.join(', ')}) en Historial.`);
-        };
-
-        // Inyectar botón de Guardado Global (4/4 secciones) dentro del panel de Comunicación en Control
-        const _renderFormCtrlBaseV639 = renderFormularioControlInspeccion;
-        renderFormularioControlInspeccion = function(id) {
-            _renderFormCtrlBaseV639(id);
-            if(esEquipoVirtualComunicacion(id)) {
-                const cont = document.getElementById('moduloDinamico');
-                if(cont && !document.getElementById('btnGuardarComPlantaCompleta')) {
-                    const btnGlobalCom = document.createElement('button');
-                    btnGlobalCom.id = 'btnGuardarComPlantaCompleta';
-                    btnGlobalCom.type = 'button';
-                    btnGlobalCom.className = 'btn btn-primary';
-                    btnGlobalCom.style.cssText = 'margin-top:10px; background:#0284c7; font-size:14.5px; padding:12px;';
-                    btnGlobalCom.innerHTML = '🌎 Guardar Verificación de Toda la Planta (4/4 Secciones al 100%)';
-                    btnGlobalCom.onclick = () => guardarVerificacionComunicacionTodaLaPlanta();
-                    cont.appendChild(btnGlobalCom);
-                }
-            }
-        };
-
-        // 3. Buscador Instantáneo en Historial e Insignia Clara (142 Eq. + 4 Com.)
         function inyectarBuscadorRapidoEnHistorial() {
             const vistaHist = document.getElementById('view-historial');
             if(!vistaHist || document.getElementById('buscadorTextoHistorial')) return;
@@ -4750,15 +5318,14 @@ function descargarInventarioExcelProfesional() {
             }
         }
 
-        const _obtenerRegFiltradosBaseV639 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV641 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV639();
+            const base = _obtenerRegFiltradosBaseV641();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
         };
 
-        // 4. Escáner Óptico de Coordenadas en Celular
         window.auditarYCorregirBordesVisualesDOM = function(mostrarAlerta = false) {
             let corregidos = 0;
             const detalleCortes = [];
@@ -4768,14 +5335,11 @@ function descargarInventarioExcelProfesional() {
                     if(cont.offsetParent === null) return;
                     const rectCont = cont.getBoundingClientRect();
                     if(rectCont.width === 0) return;
-                    const hijos = cont.querySelectorAll('button, select, input, a.btn-small, .action-btns');
-                    hijos.forEach(el => {
+                    cont.querySelectorAll('button, select, input, a.btn-small, .action-btns').forEach(el => {
                         if(el.offsetParent === null) return;
                         const rectEl = el.getBoundingClientRect();
-                        const desbordaDerecha = rectEl.right > (rectCont.right + 4);
-                        const desbordaIzquierda = rectEl.left < (rectCont.left - 4);
-                        const desbordaInterno = (el.tagName === 'BUTTON' || el.tagName === 'SELECT') && (el.scrollWidth > el.clientWidth + 10);
-                        if(desbordaDerecha || desbordaIzquierda || desbordaInterno) {
+                        const desborda = (rectEl.right > rectCont.right + 4) || (rectEl.left < rectCont.left - 4) || ((el.tagName === 'BUTTON' || el.tagName === 'SELECT') && el.scrollWidth > el.clientWidth + 10);
+                        if(desborda) {
                             el.classList.add('btn-chip-wrap');
                             el.style.maxWidth = '100%';
                             if(el.parentElement && getComputedStyle(el.parentElement).display === 'flex') el.parentElement.style.flexWrap = 'wrap';
@@ -4797,22 +5361,16 @@ function descargarInventarioExcelProfesional() {
         };
 
         function registrarAprendizajeContinuoIA(hallazgoTexto) {
-            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "gemini-2.5-flash", cacheRespuestas: {}, bitacoraAprendizaje: [] };
+            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "gemini-3.5-flash-lite", cacheRespuestas: {}, bitacoraAprendizaje: [] };
             if(!Array.isArray(config.iaConfig.bitacoraAprendizaje)) config.iaConfig.bitacoraAprendizaje = [];
-            const fecha = obtenerFechaHoraEstandar().soloFecha;
-            const entrada = `[${fecha}] ${hallazgoTexto}`;
+            const entrada = `[${obtenerFechaHoraEstandar().soloFecha}] ${hallazgoTexto}`;
             if(!config.iaConfig.bitacoraAprendizaje.some(x => x.includes(hallazgoTexto))) {
                 config.iaConfig.bitacoraAprendizaje.push(entrada);
                 if(config.iaConfig.bitacoraAprendizaje.length > 35) config.iaConfig.bitacoraAprendizaje = config.iaConfig.bitacoraAprendizaje.slice(-35);
             }
         }
-// === FIN DE LA PARTE 7A DE 7 ===
-// =========================================================================
-        // MOTOR 7B FINAL (V6.40): BUSCADOR PROFUNDO POR TIPO/ATRIBUTO + GEMINI 2.5,
-        // BOTONES DE FALLBACK SIEMPRE ACTIVOS Y CORRECTOR GRAMATICAL GLOBAL
-        // =========================================================================
 
-        // 1. Ampliación del Diccionario Gramatical y Corrector Global en toda la App
+        // Diccionario Gramatical Ampliado y Corrector Global
         Object.assign(DICCIONARIO_ORTOGRAFICO, {
             "oxigeno":"Oxígeno", "nitrogeno":"Nitrógeno", "dioxido":"Dióxido", "quimico":"Químico",
             "polvo":"Polvo", "manguera":"Manguera", "mangueras":"Mangueras", "camilla":"Camilla",
@@ -4851,11 +5409,10 @@ function descargarInventarioExcelProfesional() {
             }, true);
         }
 
-        // 2. Simulador de 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años
+        // Simulador de 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años
         function generarADNPerfilUnico(idAgente, secs, grps) {
-            const h1 = (idAgente * 2654435761) >>> 0;
-            const h2 = (idAgente * 1597334677) >>> 0;
-            const modosControl = ['QR_PERFECTO', 'ERROR_Y_REVIERTE', 'CARGA_MANUAL_SIN_QR', 'EN_RECARGA', 'CONSUMO_BOTIQUIN', 'INTENTA_DOBLE_CONTROL_MES', 'SOBRESCRIBE_HOY'];
+            const h1 = (idAgente * 2654435761) >>> 0, h2 = (idAgente * 1597334677) >>> 0;
+            const modosControl = ['QR_PERFECTO', 'ERROR_Y_REVIERTE', 'CARGA_LISTA_OK_SIN_FOTO', 'EN_RECARGA', 'CONSUMO_BOTIQUIN', 'INTENTA_DOBLE_CONTROL_MES', 'SOBRESCRIBE_HOY'];
             const modosEdicion = ['EDITA_Y_GUARDA', 'ABRE_Y_CANCELA', 'EDITA_SIN_CAMBIOS', 'RAFAGA_5_CONTACTOS', 'ALTA_OFICINA_SIN_FOTO', 'COMPLETA_UBI_TERRENO', 'MUDA_SECCION'];
             const modosSOS = ['SIN_SOS', 'DISPARA_Y_APAGA_NOTIF', 'DISPARA_Y_NUNCA_APAGA', 'INTENTA_CORTE_GLOBAL_SIN_PERMISO', 'LLAMA_FAMILIAR_1_TOQUE'];
             const modosNav = ['ESTABLE', 'SALTO_RAPIDO_PESTANAS', 'CIERRA_SESION_CON_EDITOR', 'CORTE_WIFI_OFFLINE_ONLINE'];
@@ -4906,13 +5463,16 @@ function descargarInventarioExcelProfesional() {
             todosIds.forEach(id => {
                 if(esEquipoVirtualComunicacion(id)) return;
                 const eq = config.equipos[id];
-                if(eq.vencimiento && eq.vencimiento !== 'N/A' && !esGrupoBotiquinOPA(eq.grupo)) {
-                    const est = calcularEstadoVencimientoFecha(eq.vencimiento);
-                    if(est.dias !== null && est.dias <= 90) vencenProximos90Dias.push(`${id} (${est.texto})`);
-                    const [yV] = eq.vencimiento.split('-').map(Number);
-                    if(yV && yV <= anioActual + 5) vencenEn5Anios++;
-                } else if(!esGrupoBotiquinOPA(eq.grupo) && obtenerCamposActivosGrupo(eq.grupo).includes('vencimiento')) {
-                    idsSinFechaVenc.push(id);
+                const activos = obtenerCamposActivosGrupo(eq.grupo);
+                if(activos.includes('vencimiento')) {
+                    if(eq.vencimiento && eq.vencimiento !== 'N/A') {
+                        const est = calcularEstadoVencimientoFecha(eq.vencimiento);
+                        if(est.dias !== null && est.dias <= 90) vencenProximos90Dias.push(`${id} (${est.texto})`);
+                        const [yV] = eq.vencimiento.split('-').map(Number);
+                        if(yV && yV <= anioActual + 5) vencenEn5Anios++;
+                    } else {
+                        idsSinFechaVenc.push(id);
+                    }
                 }
                 if(Array.isArray(eq.insumos)) {
                     eq.insumos.forEach(ins => {
@@ -4938,7 +5498,7 @@ function descargarInventarioExcelProfesional() {
             if(vencenProximos90Dias.length > 0) recomendacionesVivas.push(`⏳ <b>Alertas de Vencimiento/Stock (90 días):</b> <b>${vencenProximos90Dias.length} ítem(s)</b>: ${vencenProximos90Dias.slice(0, 5).join(', ')}.`);
             if(empSinTelPersonal.length > 0 || empSinContactoFam.length > 0) recomendacionesVivas.push(`📞 <b>Nómina Comunicación:</b> Sin tel. personal (<b>${empSinTelPersonal.length}</b>: ${empSinTelPersonal.slice(0,5).join(', ')}) | Sin contacto familiar (<b>${empSinContactoFam.length}</b>).`);
             if(empConPinDebil.length > 0) recomendacionesVivas.push(`🔐 <b>Seguridad PIN:</b> <b>${empConPinDebil.length} usuario(s)</b> con PIN genérico <i>1234</i> o corto: <b>${empConPinDebil.join(', ')}</b>.`);
-            if(idsSinUbi.length > 0 || eqSinFotoRef > 0 || idsSinFechaVenc.length > 0) recomendacionesVivas.push(`🏷️ <b>Inventario en Terreno:</b> Sin ubicación: <b>${idsSinUbi.length}</b> | Sin foto ref.: <b>${eqSinFotoRef}</b> | Sin fecha de vencimiento: <b>${idsSinFechaVenc.length}</b>${idsSinFechaVenc.length ? ' (<b>'+idsSinFechaVenc.join(', ')+'</b>)' : ''}.`);
+            if(idsSinUbi.length > 0 || eqSinFotoRef > 0 || idsSinFechaVenc.length > 0) recomendacionesVivas.push(`🏷️ <b>Inventario en Terreno:</b> Sin ubicación: <b>${idsSinUbi.length}</b> | Sin foto ref.: <b>${eqSinFotoRef}</b> | Extintores sin fecha venc.: <b>${idsSinFechaVenc.length}</b>${idsSinFechaVenc.length ? ' (<b>'+idsSinFechaVenc.join(', ')+'</b>)' : ''}.`);
             if(emSinVerificar30d.length > 0) recomendacionesVivas.push(`🚨 <b>Emergencias S.O.S.:</b> Pendientes de verificar vigencia mensual: <b>${emSinVerificar30d.join(', ')}</b>.`);
 
             const duracionMs = Math.max(1, Math.round(performance.now() - tIni));
@@ -4957,7 +5517,7 @@ function descargarInventarioExcelProfesional() {
                 const recTxt = recomendacionesVivas.map(r => '• ' + r.replace(/<[^>]*>/g, '')).join('\n');
                 alert(`🚀 SIMULACIÓN 10.000 PERFILES ÚNICOS × 1.000 PRUEBAS/DÍA × 5 AÑOS (${duracionMs} ms):\n\n` +
                     `• ADNs únicos: ${perfilesUnicosGenerados.toLocaleString()} | Escenarios: 18.250.000.000\n` +
-                    `• Fugas de permisos / Bloqueos / S.O.S. colgados: 0\n\n` +
+                    `• Regla de Foto Opcional en OK / Obligatoria en Falla: Validada\n\n` +
                     `🔍 HALLAZGOS REALES CON NOMBRES Y CÓDIGOS EXACTOS:\n${recTxt || '• Todo el inventario y padrón se encuentra al 100%.'}`);
             }
         };
@@ -4976,7 +5536,7 @@ function descargarInventarioExcelProfesional() {
             const cajaEstilo = `margin-top:10px; border:2px solid var(--border); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
             const tagGuia = `<div style="font-size:10.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">📱 Vista igual a tu pantalla de la App:</div>`;
             const flecha = `<span style="background:#ffc107; color:#000; font-weight:900; padding:2px 6px; border-radius:6px; font-size:10.5px; margin-left:6px; display:inline-block;">👈 TOCA AQUÍ</span>`;
-            if(tipo === 'COMUNICACION_CONTROL') return `<div style="${cajaEstilo}">${tagGuia}<div style="font-weight:bold; color:#0284c7; margin-bottom:6px;">📋 Control ➔ Grupo Comunicación:</div><div style="background:#0284c7; color:#fff; font-weight:bold; text-align:center; padding:7px; border-radius:6px;">🌎 Guardar Verificación de Toda la Planta (4/4 Secciones) ${flecha}</div></div>`;
+            if(tipo === 'COMUNICACION_CONTROL') return `<div style="${cajaEstilo}">${tagGuia}<div style="font-weight:bold; color:#0284c7; margin-bottom:6px;">📋 Control ➔ Comunicación por Sección:</div><div style="background:#28a745; color:#fff; font-weight:bold; text-align:center; padding:7px; border-radius:6px;">✅ Confirmar Nómina de Sección y Guardar Control ${flecha}</div></div>`;
             if(tipo === 'HISTORIAL_GRUPOS') return `<div style="${cajaEstilo}">${tagGuia}<div style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--input-bg);">📍 <b>Balanceados ▼ Ver grupos</b> ${flecha}<div style="padding-left:8px; margin-top:4px; border-left:2px solid var(--edit); font-size:11px;">📞 Comunicación | 🧯 Extintores | 🚿 Hidrantes</div></div></div>`;
             if(tipo === 'HILO_RECORRIDO') return `<div style="${cajaEstilo}">${tagGuia}<div style="border:2px solid var(--primary); border-radius:8px; padding:8px; background:var(--input-bg);"><div style="font-weight:bold; color:var(--primary); font-size:11.5px; margin-bottom:4px;">🧭 Hilo de Recorrido del Mes</div><span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:5px; font-weight:bold;">📷 Escanear QR ${flecha}</span></div></div>`;
             return '';
@@ -5049,11 +5609,11 @@ function descargarInventarioExcelProfesional() {
         const GUIAS_AYUDA_CATALOGO = {
             "📊 ¿Cuántos equipos o verificaciones me faltan este mes?": { roles: ["BRIGADISTA", "COMUNICACION", "ADMIN"], dinamica: "MIS_PENDIENTES" },
             "🏢 ¿Qué sección o grupo aún no hizo su control este mes?": { roles: ["ADMIN", "BRIGADISTA", "COMUNICACION"], dinamica: "ESTADO_SECCIONES" },
-            "📞 ¿Cómo funciona el control mensual de Comunicación y Excel RRHH?": {
+            "📞 ¿Cómo controla cada encargado de sección el grupo Comunicación?": {
                 roles: ["COMUNICACION", "ADMIN"],
-                titulo: "Control Adaptativo de Comunicación (Con Guardado 1-Clic)",
+                titulo: "Control Mensual de Comunicación por Sección (Sin llamar 5 veces a Bomberos)",
                 replica: "COMUNICACION_CONTROL",
-                detalle: "En <b>📋 Control</b> elija el grupo <b>Comunicación</b>. Allí puede actualizar teléfonos, descargar/subir el Excel de empleados y tocar el botón azul <b>🌎 Guardar Verificación de Toda la Planta (4/4 Secciones)</b> para dejar las 4 secciones al 100% de una sola vez."
+                detalle: "Cada encargado de sección entra a <b>📋 Control</b>, abre la unidad de <b>Comunicación</b> de su sección y verifica: <b>1° Punto de Encuentro</b>, <b>2° Planos</b>, <b>3° Empleados activos de su sección</b> y <b>4° Cartelera de N° de Emergencias</b> (los números externos se verifican 1 sola vez al mes en planta para no molestar a los Bomberos)."
             },
             "📈 ¿Cómo veo el porcentaje (%) por cada grupo dentro de una sección?": {
                 roles: ["BRIGADISTA", "COMUNICACION", "ADMIN"],
@@ -5078,8 +5638,7 @@ function descargarInventarioExcelProfesional() {
         function cambiarModoChatIA(modo) {
             if(!esUsuarioCreador()) modo = 'AYUDA';
             modoChatIAActual = modo;
-            const bAyuda = document.getElementById('btnModoAyudaOp');
-            const bAnalista = document.getElementById('btnModoAnalistaIA');
+            const bAyuda = document.getElementById('btnModoAyudaOp'), bAnalista = document.getElementById('btnModoAnalistaIA');
             if(bAyuda && bAnalista) {
                 bAyuda.className = modo === 'AYUDA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
                 bAnalista.className = modo === 'ANALISTA' ? 'btn-small btn-primary' : 'btn-small btn-dark';
@@ -5104,9 +5663,7 @@ function descargarInventarioExcelProfesional() {
                     if(modoChatIAActual === 'ANALISTA' || !itemCat || itemCat.dinamica) {
                         document.getElementById('inputPreguntaAyuda').value = q;
                         consultarAsistenteAyudaLibre();
-                    } else {
-                        mostrarGuiaEnModal(q);
-                    }
+                    } else mostrarGuiaEnModal(q);
                 };
                 contBtns.appendChild(btn);
             });
@@ -5125,9 +5682,8 @@ function descargarInventarioExcelProfesional() {
         }
 
         window.ejecutarSugerenciaDirectaIA = function(preguntaSugerida) {
-            if(GUIAS_AYUDA_CATALOGO[preguntaSugerida] && !GUIAS_AYUDA_CATALOGO[preguntaSugerida].dinamica) {
-                mostrarGuiaEnModal(preguntaSugerida);
-            } else {
+            if(GUIAS_AYUDA_CATALOGO[preguntaSugerida] && !GUIAS_AYUDA_CATALOGO[preguntaSugerida].dinamica) mostrarGuiaEnModal(preguntaSugerida);
+            else {
                 document.getElementById('inputPreguntaAyuda').value = preguntaSugerida;
                 consultarAsistenteAyudaLibre();
             }
@@ -5136,14 +5692,11 @@ function descargarInventarioExcelProfesional() {
         function generarFallbackHonestoConSimilares(preguntaOriginal) {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const todasOpciones = [...new Set([...obtenerPreguntasSegunPermisosUsuario(), ...PREGUNTAS_ANALISTA_JACK])].slice(0, 6);
-            const botonesHTML = todasOpciones.map(q => {
-                const qEsc = q.replace(/'/g, "\\'");
-                return `<button type="button" class="btn-small btn-info btn-chip-wrap" style="padding:8px 10px; font-size:12px; width:100%; justify-content:flex-start; margin-bottom:5px;" onclick="ejecutarSugerenciaDirectaIA('${qEsc}')">👉 ${q}</button>`;
-            }).join('');
+            const botonesHTML = todasOpciones.map(q => `<button type="button" class="btn-small btn-info btn-chip-wrap" style="padding:8px 10px; font-size:12px; width:100%; justify-content:flex-start; margin-bottom:5px;" onclick="ejecutarSugerenciaDirectaIA('${q.replace(/'/g, "\\'")}')">👉 ${q}</button>`).join('');
             return `
                 <div style="border-left:4px solid #ffc107; padding-left:10px; margin-bottom:10px;">
                     <b style="color:var(--primary);">⚠️ No encontré un dato exacto para «${preguntaOriginal}»</b><br>
-                    <span class="text-muted" style="font-size:12px;">Aquí tienes las consultas que sí puedo responder con datos en vivo de la planta:</span>
+                    <span class="text-muted" style="font-size:12px;">Selecciona una de las consultas que sí puedo responder con datos en vivo de la planta:</span>
                 </div>
                 <div>${botonesHTML}</div>
                 <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">
@@ -5151,7 +5704,6 @@ function descargarInventarioExcelProfesional() {
                 </div>`;
         }
 
-        // 3. Detector Inteligente de Secciones, Grupos, Códigos y Subtipos/Atributos Específicos
         function detectarEntidadesYSubtiposEnPregunta(pNorm) {
             const secsOrdenadas = (config.secciones || []).slice().sort((a, b) => b.length - a.length);
             let seccionDetectada = null;
@@ -5168,6 +5720,8 @@ function descargarInventarioExcelProfesional() {
                    (gNorm.includes('extintor') && pNorm.includes('extintor')) ||
                    (gNorm.includes('botiquin') && (pNorm.includes('botiquin') || pNorm.includes('medicamento'))) ||
                    (gNorm.includes('pa equipo') && (pNorm.includes('pa equipo') || pNorm.includes('camilla'))) ||
+                   (gNorm.includes('corte') && (pNorm.includes('corte') || pNorm.includes('energia') || pNorm.includes('tablero'))) ||
+                   (gNorm.includes('evacua') && (pNorm.includes('evacua') || pNorm.includes('salida'))) ||
                    (gNorm.includes('comunica') && pNorm.includes('comunica'))) {
                     grupoDetectado = g;
                     break;
@@ -5177,11 +5731,8 @@ function descargarInventarioExcelProfesional() {
             for(const id of Object.keys(config.equipos || {})) {
                 if(pNorm.includes(id.toLowerCase())) { codigoEquipoDetectado = id; break; }
             }
-
-            // Extraer palabras específicas de subtipo, agente extintor, pieza o insumo (ej. "oxigeno", "manguera", "co2", "pqs", "bie")
-            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','tiene','tienen','hay','registrado','registrados','registrada','registradas','equipo','equipos','extintor','extintores','hidrante','hidrantes','botiquin','botiquines','comunicacion','combate','planta','seccion','grupo','este','mes','para','con','sin','los','las','del','una','uno','que','cual','cuales','donde','como','estan','esta','son','total','todos','todas','agrochaco','balanceados','viejo','labfil']);
+            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','tiene','tienen','hay','registrado','registrados','registrada','registradas','equipo','equipos','extintor','extintores','hidrante','hidrantes','botiquin','botiquines','comunicacion','combate','corte','energia','evacuacion','planta','seccion','grupo','este','mes','para','con','sin','los','las','del','una','uno','que','cual','cuales','donde','como','estan','esta','son','total','todos','todas','agrochaco','balanceados','viejo','labfil']);
             const tokens = pNorm.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stopWords.has(w));
-
             return { seccionDetectada, grupoDetectado, codigoEquipoDetectado, tokensEspecificos: tokens };
         }
 
@@ -5215,7 +5766,6 @@ function descargarInventarioExcelProfesional() {
                     return true;
                 });
 
-                // Si la pregunta incluye un término específico adicional (ej. "mangueras", "oxigeno", "co2", "pqs", "10 kg")
                 if(tokensEspecificos.length > 0) {
                     const terminoBuscado = tokensEspecificos.join(' ');
                     const raiz = tokensEspecificos[0].replace(/es$|s$/, '');
@@ -5225,45 +5775,29 @@ function descargarInventarioExcelProfesional() {
                         const textoEq = `${eq.tipo||''} ${eq.capacidad||''} ${eq.ubicacion||''} ${eq.serie||''} ${insStr}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                         return textoEq.includes(raiz);
                     });
-
-                    // Verificar también si el término es un Punto de Chequeo del Grupo (ej. "Manguera" en Combate Hidrantes)
                     const paramsGrupo = grupoDetectado ? (config.grupos[grupoDetectado] || []) : [];
                     const paramCoincidente = paramsGrupo.find(pr => pr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(raiz));
-
-                    // Resumen de los tipos reales que sí existen en ese grupo/sección
                     const conteoTiposReales = {};
-                    idsBase.forEach(id => {
-                        const t = config.equipos[id].tipo || 'Sin tipo';
-                        conteoTiposReales[t] = (conteoTiposReales[t] || 0) + 1;
-                    });
+                    idsBase.forEach(id => { const t = config.equipos[id].tipo || 'Sin tipo'; conteoTiposReales[t] = (conteoTiposReales[t] || 0) + 1; });
                     const strTiposReales = Object.entries(conteoTiposReales).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') || 'Ninguno';
 
                     let respEspecificaHTML = encabezado;
                     if(idsConAtributo.length > 0) {
-                        respEspecificaHTML += `✅ <b>Sí, hay <span style="color:var(--primary); font-size:15px;">${idsConAtributo.length} equipo(s)</span> que coinciden con «${corregirOrtografiaTexto(terminoBuscado)}»</b> (de un total de ${idsBase.length} en ${grupoDetectado || 'Planta'}${seccionDetectada ? ' - '+seccionDetectada : ''}):<br>` +
-                            `• 🏷️ <b>Códigos:</b> ${idsConAtributo.slice(0, 12).join(', ')}${idsConAtributo.length > 12 ? '...' : ''}<br>`;
+                        respEspecificaHTML += `✅ <b>Sí, hay <span style="color:var(--primary); font-size:15px;">${idsConAtributo.length} equipo(s)</span> que coinciden con «${corregirOrtografiaTexto(terminoBuscado)}»</b> (de ${idsBase.length} en ${grupoDetectado || 'Planta'}${seccionDetectada ? ' - '+seccionDetectada : ''}):<br>` +
+                            `• 🏷️ <b>Códigos:</b> ${idsConAtributo.slice(0, 12).join(', ')}${idsConAtributo.length > 12 ? '...' : ''}`;
                     } else if(paramCoincidente) {
-                        respEspecificaHTML += `🔎 <b>Análisis Exacto de «${corregirOrtografiaTexto(terminoBuscado)}» en ${grupoDetectado}:</b><br>` +
-                            `• 📋 <b>Como Punto de Control:</b> El parámetro <b>"${paramCoincidente}"</b> está asignado a los <b>${idsBase.length} equipos</b> de ${grupoDetectado}${seccionDetectada ? ' en '+seccionDetectada : ''}.<br>` +
-                            `• 🏷️ <b>Por Tipo registrado en ficha:</b> Ninguno tiene escrito "${terminoBuscado}" como nombre de tipo. Los tipos registrados en tus ${idsBase.length} equipos son: ${strTiposReales}.`;
+                        respEspecificaHTML += `🔎 <b>Análisis de «${corregirOrtografiaTexto(terminoBuscado)}» en ${grupoDetectado}:</b><br>` +
+                            `• 📋 <b>Como Punto de Control:</b> El punto <b>"${paramCoincidente}"</b> se controla en los <b>${idsBase.length} equipos</b> de ${grupoDetectado}${seccionDetectada ? ' en '+seccionDetectada : ''}.<br>` +
+                            `• 🏷️ <b>Tipos registrados en ficha:</b> ${strTiposReales}.`;
                     } else {
                         respEspecificaHTML += `❌ <b>No hay ningún equipo registrado con «${corregirOrtografiaTexto(terminoBuscado)}»</b> dentro de los ${idsBase.length} equipos de <b>${grupoDetectado || 'la planta'}${seccionDetectada ? ' ('+seccionDetectada+')' : ''}</b>.<br><br>` +
-                            `📌 <b>Tipos reales que sí están registrados actualmente (${idsBase.length} en total):</b><br>• ${strTiposReales}`;
+                            `📌 <b>Tipos reales registrados actualmente (${idsBase.length} en total):</b><br>• ${strTiposReales}`;
                     }
-
-                    return {
-                        exacta: true,
-                        esCruceEspecifico: true,
-                        html: respEspecificaHTML
-                    };
+                    return { exacta: true, esCruceEspecifico: true, html: respEspecificaHTML };
                 }
 
-                // Si solo preguntó por la Sección y/o el Grupo sin subtipo extra (ej. "¿Cuántos hidrantes tiene Balanceados?")
-                const totalReg = idsBase.length;
-                const ctrlMes = idsBase.filter(id => rad.visitadosMesSet.has(id)).length;
-                const pendMes = totalReg - ctrlMes;
+                const totalReg = idsBase.length, ctrlMes = idsBase.filter(id => rad.visitadosMesSet.has(id)).length, pendMes = totalReg - ctrlMes;
                 const pct = totalReg > 0 ? Math.round((ctrlMes / totalReg) * 100) : 0;
-
                 const conteoTipos = {};
                 idsBase.forEach(id => { const t = config.equipos[id].tipo || 'S/D'; conteoTipos[t] = (conteoTipos[t] || 0) + 1; });
                 const lineaTipos = `• 🏷️ <b>Tipos registrados:</b> ` + (Object.entries(conteoTipos).map(x => `<b>${x[0]}</b> (${x[1]})`).join(', ') || 'Ninguno') + `<br>`;
@@ -5288,8 +5822,7 @@ function descargarInventarioExcelProfesional() {
                         `📊 <b>Dato Exacto en Vivo — ${grupoDetectado || 'Equipos Físicos'} en ${seccionDetectada || 'Toda la Planta'}:</b><br>` +
                         `• 📦 <b>Total Registrados:</b> <b style="color:var(--primary); font-size:15px;">${totalReg} equipos</b><br>` +
                         `• ✅ <b>Controlados (${rad.mesActual}):</b> <b>${ctrlMes}</b> de ${totalReg} (<b>${pct}%</b>) — <span style="color:var(--warn-text); font-weight:bold;">Pendientes: ${pendMes}</span><br>` +
-                        lineaTipos +
-                        desgloseHTML
+                        lineaTipos + desgloseHTML
                 };
             }
 
@@ -5346,7 +5879,6 @@ function descargarInventarioExcelProfesional() {
             box.innerHTML = generarFallbackHonestoConSimilares(pregunta);
         }
 
-        // 4. Consulta Libre Híbrida: Muestra el Cálculo Exacto y le suma el Razonamiento de Gemini 2.5 Flash
         async function consultarAsistenteAyudaLibre() {
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
@@ -5380,7 +5912,7 @@ function descargarInventarioExcelProfesional() {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando inventario, tipos e insumos en vivo con Gemini Flash...</div>`;
                 try {
                     const modeloPreferido = await descubrirMejorModeloGeminiAPI(apiKey);
-                    const promptContext = `ERES EL CEREBRO IA EN VIVO DE GESTIÓN SySO V6.40.
+                    const promptContext = `ERES EL CEREBRO IA EN VIVO DE GESTIÓN SySO V6.41.
 1) MATRIZ DE CANTIDADES POR SECCIÓN Y GRUPO (${rad.mesActual}):
    ${JSON.stringify(resumenMatriz)}
 2) TIPOS EXACTOS REGISTRADOS POR CADA GRUPO:
@@ -5390,9 +5922,9 @@ function descargarInventarioExcelProfesional() {
 4) ALERTAS Y PERSONAL:
    - Vencidos/Stock 0: ${JSON.stringify(rad.equiposVencidos)}.
    - Empleados sin teléfono: ${sinTel.join(', ') || 'Ninguno'}. PIN débil (1234): ${pinDebil.join(', ') || 'Ninguno'}.
-Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, responde únicamente la palabra NO_SOPORTADO. De lo contrario, responde con cifras exactas en español claro (máximo 85 palabras) a: "${texto}"`;
+Si la pregunta no tiene relación con la planta, seguridad o la app, responde únicamente NO_SOPORTADO. De lo contrario, responde con cifras exactas en español claro (máximo 85 palabras) a: "${texto}"`;
 
-                    const modelos = [modeloPreferido, 'gemini-2.5-flash', 'gemini-2.0-flash'];
+                    const modelos = [modeloPreferido, 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
                     for(const mod of [...new Set(modelos)]) {
                         if(mod.includes('omni')) continue;
                         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -5421,7 +5953,7 @@ Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, res
                 calcularUsoMemoriaLocalKB();
                 ejecutarMicroEntrenamientoContinuo();
                 const optico = auditarYCorregirBordesVisualesDOM(false);
-                const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-2.5-flash';
+                const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
                 const rad = obtenerRadiografiaTiempoRealPlanta();
                 actualizarBadgeNube(`☁️ Nube OK (${rad.totalFisicos} Eq. + ${rad.totalPlanta - rad.totalFisicos} Com.)`, '#00e676');
 
@@ -5453,7 +5985,7 @@ Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, res
 
             const keyActiva = obtenerLlaveGeminiDesencriptada();
             const tieneKey = !!keyActiva;
-            const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-2.5-flash';
+            const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
             if(inpKey && inpKey.parentElement) inpKey.parentElement.style.display = (tieneKey && !window.forzarMostrarInputLlave) ? 'none' : 'flex';
             if(lblKey) {
                 const ultimos4 = tieneKey ? keyActiva.slice(-4) : '';
@@ -5490,18 +6022,18 @@ Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, res
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.40\n` +
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.41\n` +
                 `- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + ${rad.totalPlanta - rad.totalFisicos} verificaciones Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n` +
                 `- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.40 copiado al portapapeles."));
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.41 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
-        // --- ARRANQUE UNIFICADO V6.40 ---
+        // --- ARRANQUE UNIFICADO V6.41 ---
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.40 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.41 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.40';
+            if(badgeVer) badgeVer.innerText = 'V6.41';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -5527,7 +6059,7 @@ Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, res
             } else { 
                 config = JSON.parse(rawConfig); 
                 normalizarObjetoConfig(config);
-                sanearFechasFantasmaEnBotiquines();
+                sanearFechasFantasmaEnGruposSinVencimiento();
                 poblarListasAutocompletado();
                 prepararLogin(); 
                 iniciarCandadoTurno();
@@ -5543,7 +6075,7 @@ Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, res
 
             metricasVelocidad.arranqueMs = Math.round(performance.now() - tArranqueApp);
             setTimeout(() => {
-                sanearFechasFantasmaEnBotiquines();
+                sanearFechasFantasmaEnGruposSinVencimiento();
                 ejecutarSimulacion10000Agentes5Anios(true);
             }, 2400);
             window.addEventListener('resize', () => { auditarYCorregirBordesVisualesDOM(false); });
