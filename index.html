@@ -4808,10 +4808,50 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.39): CRUCE EXACTO SECCIÓN × GRUPO, CEREBRO GEMINI 2.5
-        // FLASH EN VIVO, 10.000 PERFILES CON NOMBRES EXACTOS Y ARRANQUE UNIFICADO
+        // MOTOR 7B FINAL (V6.40): BUSCADOR PROFUNDO POR TIPO/ATRIBUTO + GEMINI 2.5,
+        // BOTONES DE FALLBACK SIEMPRE ACTIVOS Y CORRECTOR GRAMATICAL GLOBAL
         // =========================================================================
 
+        // 1. Ampliación del Diccionario Gramatical y Corrector Global en toda la App
+        Object.assign(DICCIONARIO_ORTOGRAFICO, {
+            "oxigeno":"Oxígeno", "nitrogeno":"Nitrógeno", "dioxido":"Dióxido", "quimico":"Químico",
+            "polvo":"Polvo", "manguera":"Manguera", "mangueras":"Mangueras", "camilla":"Camilla",
+            "telefono":"Teléfono", "telefonos":"Teléfonos", "codigo":"Código", "codigos":"Códigos",
+            "seccion":"Sección", "secciones":"Secciones", "almacen":"Almacén", "deposito":"Depósito",
+            "administracion":"Administración", "produccion":"Producción", "recepcion":"Recepción",
+            "expedicion":"Expedición", "porteria":"Portería", "vestuario":"Vestuario", "comedor":"Comedor",
+            "galpon":"Galpón", "fabrica":"Fábrica", "vehiculo":"Vehículo", "camion":"Camión",
+            "bateria":"Batería", "camara":"Cámara", "ultimo":"Último", "ultima":"Última",
+            "proximo":"Próximo", "proxima":"Próxima", "tambien":"También", "ademas":"Además",
+            "ningun":"Ningún", "algun":"Algún", "rapido":"Rápido", "rapida":"Rápida",
+            "cuanto":"Cuánto", "cuantos":"Cuántos", "cuanta":"Cuánta", "cuantas":"Cuántas",
+            "cual":"Cuál", "cuales":"Cuáles", "como":"Cómo", "donde":"Dónde", "quien":"Quién", "quienes":"Quiénes"
+        });
+
+        function formatearPreguntaConGramatica(texto) {
+            if(!texto) return "";
+            let corr = corregirOrtografiaTexto(texto);
+            corr = corr.replace(/^¿?\s*(que)\b/i, "Qué");
+            if((corr.endsWith('?') || /^(Cuánt|Cuál|Cómo|Dónde|Quién|Qué|Hay\b|Tiene\b|Falta\b|Se\b|Puedo\b)/i.test(corr)) && !corr.startsWith('¿')) {
+                corr = '¿' + corr.charAt(0).toUpperCase() + corr.slice(1);
+                if(!corr.endsWith('?')) corr += '?';
+            }
+            return corr;
+        }
+
+        function activarCorrectorGramaticalGlobalDOM() {
+            document.addEventListener('change', function(e) {
+                const el = e.target;
+                if(!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+                const ignorarIds = new Set(['loginInputUsuario', 'loginPin', 'inputGeminiApiKey', 'buscadorEquipos', 'buscadorTextoHistorial', 'buscadorPersonalComInput', 'txtBulkData', 'txtBulkPersonal', 'ctrlTxtBulkPersonal']);
+                if(ignorarIds.has(el.id) || el.type === 'password' || el.type === 'number' || el.type === 'month' || el.type === 'date' || el.readOnly || el.disabled) return;
+                if(el.value && el.value.trim().length >= 2) {
+                    el.value = el.id === 'inputPreguntaAyuda' ? formatearPreguntaConGramatica(el.value) : corregirOrtografiaTexto(el.value);
+                }
+            }, true);
+        }
+
+        // 2. Simulador de 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años
         function generarADNPerfilUnico(idAgente, secs, grps) {
             const h1 = (idAgente * 2654435761) >>> 0;
             const h2 = (idAgente * 1597334677) >>> 0;
@@ -4820,13 +4860,11 @@ function descargarInventarioExcelProfesional() {
             const modosSOS = ['SIN_SOS', 'DISPARA_Y_APAGA_NOTIF', 'DISPARA_Y_NUNCA_APAGA', 'INTENTA_CORTE_GLOBAL_SIN_PERMISO', 'LLAMA_FAMILIAR_1_TOQUE'];
             const modosNav = ['ESTABLE', 'SALTO_RAPIDO_PESTANAS', 'CIERRA_SESION_CON_EDITOR', 'CORTE_WIFI_OFFLINE_ONLINE'];
             const anchosPantalla = [320, 360, 375, 390, 412, 430, 540, 768, 1024, 1366, 1920];
-
             const cantSec = (h1 % 3 === 0 && secs.length > 1) ? 2 : 1;
             const sec1 = secs[idAgente % Math.max(1, secs.length)] || 'Agrochaco';
             const sec2 = secs[(idAgente + 1) % Math.max(1, secs.length)] || sec1;
             const grp1 = grps[(h1 % Math.max(1, grps.length))] || 'Combate Extintores';
             const grp2 = grps[((h1 >> 3) % Math.max(1, grps.length))] || grp1;
-
             return {
                 idAgente,
                 secciones: cantSec === 2 ? [...new Set([sec1, sec2])] : [sec1],
@@ -4858,13 +4896,9 @@ function descargarInventarioExcelProfesional() {
                 const idEqPrueba = todosIds[idAg % Math.max(1, todosIds.length)];
                 if(idEqPrueba && config.equipos[idEqPrueba]) {
                     const eqObj = config.equipos[idEqPrueba];
-                    if(usuarioTienePermisoEquipo(uSim, eqObj) && !adn.secciones.includes('Todas') && !adn.secciones.includes(eqObj.seccion)) {
-                        fugasPermisos++;
-                    }
+                    if(usuarioTienePermisoEquipo(uSim, eqObj) && !adn.secciones.includes('Todas') && !adn.secciones.includes(eqObj.seccion)) fugasPermisos++;
                 }
-                if(adn.conductaSOS === 'INTENTA_CORTE_GLOBAL_SIN_PERMISO' && esUsuarioCreador({ nombre: 'Agente_' + idAg })) {
-                    fallosCorteSOS++;
-                }
+                if(adn.conductaSOS === 'INTENTA_CORTE_GLOBAL_SIN_PERMISO' && esUsuarioCreador({ nombre: 'Agente_' + idAg })) fallosCorteSOS++;
             }
 
             const anioActual = new Date().getFullYear();
@@ -4901,21 +4935,11 @@ function descargarInventarioExcelProfesional() {
             const emSinVerificar30d = (config.contactosEmergencia || []).filter(c => !c.verificadoTS || (Date.now() - c.verificadoTS) > 30 * 86400000).map(c => c.nombre);
 
             const recomendacionesVivas = [];
-            if(vencenProximos90Dias.length > 0) {
-                recomendacionesVivas.push(`⏳ <b>Alertas de Vencimiento/Stock (90 días):</b> <b>${vencenProximos90Dias.length} ítem(s)</b>: ${vencenProximos90Dias.slice(0, 5).join(', ')}.`);
-            }
-            if(empSinTelPersonal.length > 0 || empSinContactoFam.length > 0) {
-                recomendacionesVivas.push(`📞 <b>Nómina Comunicación:</b> Sin tel. personal (<b>${empSinTelPersonal.length}</b>: ${empSinTelPersonal.slice(0,5).join(', ')}) | Sin contacto familiar (<b>${empSinContactoFam.length}</b>).`);
-            }
-            if(empConPinDebil.length > 0) {
-                recomendacionesVivas.push(`🔐 <b>Seguridad PIN:</b> <b>${empConPinDebil.length} usuario(s)</b> con PIN genérico <i>1234</i> o corto: <b>${empConPinDebil.join(', ')}</b>.`);
-            }
-            if(idsSinUbi.length > 0 || eqSinFotoRef > 0 || idsSinFechaVenc.length > 0) {
-                recomendacionesVivas.push(`🏷️ <b>Inventario en Terreno:</b> Sin ubicación: <b>${idsSinUbi.length}</b> | Sin foto ref.: <b>${eqSinFotoRef}</b> | Sin fecha de vencimiento: <b>${idsSinFechaVenc.length}</b>${idsSinFechaVenc.length ? ' (<b>'+idsSinFechaVenc.join(', ')+'</b>)' : ''}.`);
-            }
-            if(emSinVerificar30d.length > 0) {
-                recomendacionesVivas.push(`🚨 <b>Emergencias S.O.S.:</b> Pendientes de verificar vigencia mensual: <b>${emSinVerificar30d.join(', ')}</b>.`);
-            }
+            if(vencenProximos90Dias.length > 0) recomendacionesVivas.push(`⏳ <b>Alertas de Vencimiento/Stock (90 días):</b> <b>${vencenProximos90Dias.length} ítem(s)</b>: ${vencenProximos90Dias.slice(0, 5).join(', ')}.`);
+            if(empSinTelPersonal.length > 0 || empSinContactoFam.length > 0) recomendacionesVivas.push(`📞 <b>Nómina Comunicación:</b> Sin tel. personal (<b>${empSinTelPersonal.length}</b>: ${empSinTelPersonal.slice(0,5).join(', ')}) | Sin contacto familiar (<b>${empSinContactoFam.length}</b>).`);
+            if(empConPinDebil.length > 0) recomendacionesVivas.push(`🔐 <b>Seguridad PIN:</b> <b>${empConPinDebil.length} usuario(s)</b> con PIN genérico <i>1234</i> o corto: <b>${empConPinDebil.join(', ')}</b>.`);
+            if(idsSinUbi.length > 0 || eqSinFotoRef > 0 || idsSinFechaVenc.length > 0) recomendacionesVivas.push(`🏷️ <b>Inventario en Terreno:</b> Sin ubicación: <b>${idsSinUbi.length}</b> | Sin foto ref.: <b>${eqSinFotoRef}</b> | Sin fecha de vencimiento: <b>${idsSinFechaVenc.length}</b>${idsSinFechaVenc.length ? ' (<b>'+idsSinFechaVenc.join(', ')+'</b>)' : ''}.`);
+            if(emSinVerificar30d.length > 0) recomendacionesVivas.push(`🚨 <b>Emergencias S.O.S.:</b> Pendientes de verificar vigencia mensual: <b>${emSinVerificar30d.join(', ')}</b>.`);
 
             const duracionMs = Math.max(1, Math.round(performance.now() - tIni));
             const resumen10k = `🧬 <b>Simulación 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años (18.250M pruebas en ${duracionMs} ms):</b> 10.000 ADNs validados | Fugas: <b>${fugasPermisos}</b> | Bloqueos: <b>${bloqueosEdicion}</b> | Fallos S.O.S.: <b>${fallosCorteSOS}</b> | Recambios 5 años: <b>${vencenEn5Anios}</b>.`;
@@ -4923,7 +4947,6 @@ function descargarInventarioExcelProfesional() {
             if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [], ultimoEstres10000: "", bordesCorregidos: 0 };
             config.gemeloAutonomo.ultimoEstres10000 = resumen10k;
             config.gemeloAutonomo.recomendacionesActivas = recomendacionesVivas;
-
             if(recomendacionesVivas.length > 0) {
                 const idxRot = (config.gemeloAutonomo.ciclos || 0) % recomendacionesVivas.length;
                 registrarAprendizajeContinuoIA(recomendacionesVivas[idxRot].replace(/<[^>]*>/g, ''));
@@ -4953,16 +4976,9 @@ function descargarInventarioExcelProfesional() {
             const cajaEstilo = `margin-top:10px; border:2px solid var(--border); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
             const tagGuia = `<div style="font-size:10.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">📱 Vista igual a tu pantalla de la App:</div>`;
             const flecha = `<span style="background:#ffc107; color:#000; font-weight:900; padding:2px 6px; border-radius:6px; font-size:10.5px; margin-left:6px; display:inline-block;">👈 TOCA AQUÍ</span>`;
-
-            if(tipo === 'COMUNICACION_CONTROL') {
-                return `<div style="${cajaEstilo}">${tagGuia}<div style="font-weight:bold; color:#0284c7; margin-bottom:6px;">📋 Control ➔ Grupo Comunicación:</div><div style="background:#0284c7; color:#fff; font-weight:bold; text-align:center; padding:7px; border-radius:6px;">🌎 Guardar Verificación de Toda la Planta (4/4 Secciones) ${flecha}</div></div>`;
-            }
-            if(tipo === 'HISTORIAL_GRUPOS') {
-                return `<div style="${cajaEstilo}">${tagGuia}<div style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--input-bg);">📍 <b>Balanceados ▼ Ver grupos</b> ${flecha}<div style="padding-left:8px; margin-top:4px; border-left:2px solid var(--edit); font-size:11px;">📞 Comunicación | 🧯 Extintores | 🚿 Hidrantes</div></div></div>`;
-            }
-            if(tipo === 'HILO_RECORRIDO') {
-                return `<div style="${cajaEstilo}">${tagGuia}<div style="border:2px solid var(--primary); border-radius:8px; padding:8px; background:var(--input-bg);"><div style="font-weight:bold; color:var(--primary); font-size:11.5px; margin-bottom:4px;">🧭 Hilo de Recorrido del Mes</div><span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:5px; font-weight:bold;">📷 Escanear QR ${flecha}</span></div></div>`;
-            }
+            if(tipo === 'COMUNICACION_CONTROL') return `<div style="${cajaEstilo}">${tagGuia}<div style="font-weight:bold; color:#0284c7; margin-bottom:6px;">📋 Control ➔ Grupo Comunicación:</div><div style="background:#0284c7; color:#fff; font-weight:bold; text-align:center; padding:7px; border-radius:6px;">🌎 Guardar Verificación de Toda la Planta (4/4 Secciones) ${flecha}</div></div>`;
+            if(tipo === 'HISTORIAL_GRUPOS') return `<div style="${cajaEstilo}">${tagGuia}<div style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--input-bg);">📍 <b>Balanceados ▼ Ver grupos</b> ${flecha}<div style="padding-left:8px; margin-top:4px; border-left:2px solid var(--edit); font-size:11px;">📞 Comunicación | 🧯 Extintores | 🚿 Hidrantes</div></div></div>`;
+            if(tipo === 'HILO_RECORRIDO') return `<div style="${cajaEstilo}">${tagGuia}<div style="border:2px solid var(--primary); border-radius:8px; padding:8px; background:var(--input-bg);"><div style="font-weight:bold; color:var(--primary); font-size:11.5px; margin-bottom:4px;">🧭 Hilo de Recorrido del Mes</div><span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:5px; font-weight:bold;">📷 Escanear QR ${flecha}</span></div></div>`;
             return '';
         }
 
@@ -4972,13 +4988,20 @@ function descargarInventarioExcelProfesional() {
             const db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
             const controlesMes = db.filter(r => parsearMesDeRegistro(r) === mesActual && config.equipos[r.ID_Equipo]);
             const visitadosMesSet = new Set(controlesMes.map(r => r.ID_Equipo));
-
             const todosIds = Object.keys(config.equipos || {}).sort(sortNatural);
             const misIds = usuarioActual ? todosIds.filter(id => usuarioTienePermisoEquipo(usuarioActual, config.equipos[id])) : todosIds;
             const misPendientesIds = misIds.filter(id => !visitadosMesSet.has(id));
             const misControladosIds = misIds.filter(id => visitadosMesSet.has(id));
 
-            const matrizSeccionGrupo = {}, estadoSecciones = {}, seccionesSinIniciar = [], seccionesEnProgreso = [], seccionesCompletas = [];
+            const matrizSeccionGrupo = {}, desgloseTiposPorGrupo = {}, estadoSecciones = {}, seccionesSinIniciar = [], seccionesEnProgreso = [], seccionesCompletas = [];
+            Object.keys(config.grupos || {}).filter(g => g !== 'Todos').forEach(g => desgloseTiposPorGrupo[g] = {});
+            todosIds.filter(id => !esEquipoVirtualComunicacion(id)).forEach(id => {
+                const eq = config.equipos[id];
+                const tNom = eq.tipo || 'Sin especificar';
+                if(!desgloseTiposPorGrupo[eq.grupo]) desgloseTiposPorGrupo[eq.grupo] = {};
+                desgloseTiposPorGrupo[eq.grupo][tNom] = (desgloseTiposPorGrupo[eq.grupo][tNom] || 0) + 1;
+            });
+
             (config.secciones || []).slice().sort(sortNatural).forEach(sec => {
                 matrizSeccionGrupo[sec] = {};
                 const eqsSec = todosIds.filter(id => config.equipos[id].seccion === sec);
@@ -5017,7 +5040,7 @@ function descargarInventarioExcelProfesional() {
                 mesActual, totalPlanta: todosIds.length, totalFisicos: todosIds.filter(id => !esEquipoVirtualComunicacion(id)).length,
                 totalControladosPlanta: visitadosMesSet.size, totalPendientesPlanta: todosIds.length - visitadosMesSet.size,
                 misTotal: misIds.length, misControlados: misControladosIds.length, misPendientes: misPendientesIds.length,
-                misPendientesPorSec, misPendientesPorGrp, matrizSeccionGrupo, visitadosMesSet,
+                misPendientesPorSec, misPendientesPorGrp, matrizSeccionGrupo, desgloseTiposPorGrupo, visitadosMesSet,
                 estadoSecciones, seccionesSinIniciar, seccionesEnProgreso, seccionesCompletas,
                 equiposVencidos, fallasActivas: config.fallas || {}, enRecarga: config.enRecarga || {}, controlesMes
             };
@@ -5043,13 +5066,12 @@ function descargarInventarioExcelProfesional() {
         const PREGUNTAS_ANALISTA_JACK = [
             "🚀 ¿Qué detectaron los 10.000 Perfiles IA con nombres y códigos exactos?",
             "🚿 ¿Cuántos equipos de hidrantes tiene registrado Balanceados?",
-            "📞 ¿Qué empleados activos no tienen teléfono o contacto familiar?",
-            "🚨 ¿Qué equipos o botiquines tienen fallas o vencimientos activos?"
+            "🧯 ¿Qué tipos de extintores hay registrados en la planta?",
+            "📞 ¿Qué empleados activos no tienen teléfono o contacto familiar?"
         ];
 
         function obtenerPreguntasSegunPermisosUsuario() {
             if(modoChatIAActual === 'ANALISTA' && esUsuarioCreador()) return PREGUNTAS_ANALISTA_JACK;
-            if(!usuarioActual) return Object.keys(GUIAS_AYUDA_CATALOGO);
             return Object.keys(GUIAS_AYUDA_CATALOGO);
         }
 
@@ -5102,7 +5124,35 @@ function descargarInventarioExcelProfesional() {
             document.getElementById('modalAyudaIA').classList.remove('hidden');
         }
 
-        function detectarEntidadesEnPregunta(pNorm) {
+        window.ejecutarSugerenciaDirectaIA = function(preguntaSugerida) {
+            if(GUIAS_AYUDA_CATALOGO[preguntaSugerida] && !GUIAS_AYUDA_CATALOGO[preguntaSugerida].dinamica) {
+                mostrarGuiaEnModal(preguntaSugerida);
+            } else {
+                document.getElementById('inputPreguntaAyuda').value = preguntaSugerida;
+                consultarAsistenteAyudaLibre();
+            }
+        };
+
+        function generarFallbackHonestoConSimilares(preguntaOriginal) {
+            const rad = obtenerRadiografiaTiempoRealPlanta();
+            const todasOpciones = [...new Set([...obtenerPreguntasSegunPermisosUsuario(), ...PREGUNTAS_ANALISTA_JACK])].slice(0, 6);
+            const botonesHTML = todasOpciones.map(q => {
+                const qEsc = q.replace(/'/g, "\\'");
+                return `<button type="button" class="btn-small btn-info btn-chip-wrap" style="padding:8px 10px; font-size:12px; width:100%; justify-content:flex-start; margin-bottom:5px;" onclick="ejecutarSugerenciaDirectaIA('${qEsc}')">👉 ${q}</button>`;
+            }).join('');
+            return `
+                <div style="border-left:4px solid #ffc107; padding-left:10px; margin-bottom:10px;">
+                    <b style="color:var(--primary);">⚠️ No encontré un dato exacto para «${preguntaOriginal}»</b><br>
+                    <span class="text-muted" style="font-size:12px;">Aquí tienes las consultas que sí puedo responder con datos en vivo de la planta:</span>
+                </div>
+                <div>${botonesHTML}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">
+                    💡 <b>Dato en vivo:</b> Hay <b>${rad.totalFisicos} equipos físicos</b> y <b>${rad.totalPendientesPlanta} pendientes</b> este mes (${rad.mesActual}).
+                </div>`;
+        }
+
+        // 3. Detector Inteligente de Secciones, Grupos, Códigos y Subtipos/Atributos Específicos
+        function detectarEntidadesYSubtiposEnPregunta(pNorm) {
             const secsOrdenadas = (config.secciones || []).slice().sort((a, b) => b.length - a.length);
             let seccionDetectada = null;
             for(const s of secsOrdenadas) {
@@ -5127,14 +5177,20 @@ function descargarInventarioExcelProfesional() {
             for(const id of Object.keys(config.equipos || {})) {
                 if(pNorm.includes(id.toLowerCase())) { codigoEquipoDetectado = id; break; }
             }
-            return { seccionDetectada, grupoDetectado, codigoEquipoDetectado };
+
+            // Extraer palabras específicas de subtipo, agente extintor, pieza o insumo (ej. "oxigeno", "manguera", "co2", "pqs", "bie")
+            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','tiene','tienen','hay','registrado','registrados','registrada','registradas','equipo','equipos','extintor','extintores','hidrante','hidrantes','botiquin','botiquines','comunicacion','combate','planta','seccion','grupo','este','mes','para','con','sin','los','las','del','una','uno','que','cual','cuales','donde','como','estan','esta','son','total','todos','todas','agrochaco','balanceados','viejo','labfil']);
+            const tokens = pNorm.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stopWords.has(w));
+
+            return { seccionDetectada, grupoDetectado, codigoEquipoDetectado, tokensEspecificos: tokens };
         }
 
         function analizarYResponderPreguntaUsuario(preguntaOriginal) {
-            const p = preguntaOriginal.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const pregCorregida = formatearPreguntaConGramatica(preguntaOriginal);
+            const p = pregCorregida.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const rad = obtenerRadiografiaTiempoRealPlanta();
-            const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta Exacta para: "${preguntaOriginal}"</div>`;
-            const { seccionDetectada, grupoDetectado, codigoEquipoDetectado } = detectarEntidadesEnPregunta(p);
+            const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta Exacta para: "${pregCorregida}"</div>`;
+            const { seccionDetectada, grupoDetectado, codigoEquipoDetectado, tokensEspecificos } = detectarEntidadesYSubtiposEnPregunta(p);
 
             if(codigoEquipoDetectado) {
                 const eq = config.equipos[codigoEquipoDetectado];
@@ -5151,30 +5207,79 @@ function descargarInventarioExcelProfesional() {
             }
 
             if(seccionDetectada || grupoDetectado) {
-                const idsMatch = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => {
+                const idsBase = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => {
                     const eq = config.equipos[id];
                     if(seccionDetectada && eq.seccion !== seccionDetectada) return false;
                     if(grupoDetectado && eq.grupo !== grupoDetectado) return false;
                     if(!grupoDetectado && esEquipoVirtualComunicacion(id)) return false;
                     return true;
                 });
-                const totalReg = idsMatch.length;
-                const ctrlMes = idsMatch.filter(id => rad.visitadosMesSet.has(id)).length;
+
+                // Si la pregunta incluye un término específico adicional (ej. "mangueras", "oxigeno", "co2", "pqs", "10 kg")
+                if(tokensEspecificos.length > 0) {
+                    const terminoBuscado = tokensEspecificos.join(' ');
+                    const raiz = tokensEspecificos[0].replace(/es$|s$/, '');
+                    const idsConAtributo = idsBase.filter(id => {
+                        const eq = config.equipos[id];
+                        const insStr = Array.isArray(eq.insumos) ? eq.insumos.map(i => i.nombre).join(' ') : '';
+                        const textoEq = `${eq.tipo||''} ${eq.capacidad||''} ${eq.ubicacion||''} ${eq.serie||''} ${insStr}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        return textoEq.includes(raiz);
+                    });
+
+                    // Verificar también si el término es un Punto de Chequeo del Grupo (ej. "Manguera" en Combate Hidrantes)
+                    const paramsGrupo = grupoDetectado ? (config.grupos[grupoDetectado] || []) : [];
+                    const paramCoincidente = paramsGrupo.find(pr => pr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(raiz));
+
+                    // Resumen de los tipos reales que sí existen en ese grupo/sección
+                    const conteoTiposReales = {};
+                    idsBase.forEach(id => {
+                        const t = config.equipos[id].tipo || 'Sin tipo';
+                        conteoTiposReales[t] = (conteoTiposReales[t] || 0) + 1;
+                    });
+                    const strTiposReales = Object.entries(conteoTiposReales).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') || 'Ninguno';
+
+                    let respEspecificaHTML = encabezado;
+                    if(idsConAtributo.length > 0) {
+                        respEspecificaHTML += `✅ <b>Sí, hay <span style="color:var(--primary); font-size:15px;">${idsConAtributo.length} equipo(s)</span> que coinciden con «${corregirOrtografiaTexto(terminoBuscado)}»</b> (de un total de ${idsBase.length} en ${grupoDetectado || 'Planta'}${seccionDetectada ? ' - '+seccionDetectada : ''}):<br>` +
+                            `• 🏷️ <b>Códigos:</b> ${idsConAtributo.slice(0, 12).join(', ')}${idsConAtributo.length > 12 ? '...' : ''}<br>`;
+                    } else if(paramCoincidente) {
+                        respEspecificaHTML += `🔎 <b>Análisis Exacto de «${corregirOrtografiaTexto(terminoBuscado)}» en ${grupoDetectado}:</b><br>` +
+                            `• 📋 <b>Como Punto de Control:</b> El parámetro <b>"${paramCoincidente}"</b> está asignado a los <b>${idsBase.length} equipos</b> de ${grupoDetectado}${seccionDetectada ? ' en '+seccionDetectada : ''}.<br>` +
+                            `• 🏷️ <b>Por Tipo registrado en ficha:</b> Ninguno tiene escrito "${terminoBuscado}" como nombre de tipo. Los tipos registrados en tus ${idsBase.length} equipos son: ${strTiposReales}.`;
+                    } else {
+                        respEspecificaHTML += `❌ <b>No hay ningún equipo registrado con «${corregirOrtografiaTexto(terminoBuscado)}»</b> dentro de los ${idsBase.length} equipos de <b>${grupoDetectado || 'la planta'}${seccionDetectada ? ' ('+seccionDetectada+')' : ''}</b>.<br><br>` +
+                            `📌 <b>Tipos reales que sí están registrados actualmente (${idsBase.length} en total):</b><br>• ${strTiposReales}`;
+                    }
+
+                    return {
+                        exacta: true,
+                        esCruceEspecifico: true,
+                        html: respEspecificaHTML
+                    };
+                }
+
+                // Si solo preguntó por la Sección y/o el Grupo sin subtipo extra (ej. "¿Cuántos hidrantes tiene Balanceados?")
+                const totalReg = idsBase.length;
+                const ctrlMes = idsBase.filter(id => rad.visitadosMesSet.has(id)).length;
                 const pendMes = totalReg - ctrlMes;
                 const pct = totalReg > 0 ? Math.round((ctrlMes / totalReg) * 100) : 0;
+
+                const conteoTipos = {};
+                idsBase.forEach(id => { const t = config.equipos[id].tipo || 'S/D'; conteoTipos[t] = (conteoTipos[t] || 0) + 1; });
+                const lineaTipos = `• 🏷️ <b>Tipos registrados:</b> ` + (Object.entries(conteoTipos).map(x => `<b>${x[0]}</b> (${x[1]})`).join(', ') || 'Ninguno') + `<br>`;
 
                 let desgloseHTML = '';
                 if(seccionDetectada && !grupoDetectado) {
                     const porGrp = {};
-                    idsMatch.forEach(id => { const g = config.equipos[id].grupo; porGrp[g] = (porGrp[g] || 0) + 1; });
+                    idsBase.forEach(id => { const g = config.equipos[id].grupo; porGrp[g] = (porGrp[g] || 0) + 1; });
                     desgloseHTML = `• 📑 <b>Por Grupo en ${seccionDetectada}:</b> ` + Object.entries(porGrp).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') + `<br>`;
                 } else if(!seccionDetectada && grupoDetectado) {
                     const porSec = {};
-                    idsMatch.forEach(id => { const s = config.equipos[id].seccion; porSec[s] = (porSec[s] || 0) + 1; });
+                    idsBase.forEach(id => { const s = config.equipos[id].seccion; porSec[s] = (porSec[s] || 0) + 1; });
                     desgloseHTML = `• 📍 <b>Por Sección en ${grupoDetectado}:</b> ` + Object.entries(porSec).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') + `<br>`;
                 } else if(seccionDetectada && grupoDetectado) {
-                    const cods = idsMatch.length <= 16 ? idsMatch.join(', ') : `${idsMatch.slice(0, 8).join(', ')} ... hasta ${idsMatch[idsMatch.length - 1]}`;
-                    desgloseHTML = `• 🏷️ <b>Códigos registrados:</b> <small>${cods || 'Ninguno'}</small><br>`;
+                    const cods = idsBase.length <= 16 ? idsBase.join(', ') : `${idsBase.slice(0, 8).join(', ')} ... hasta ${idsBase[idsBase.length - 1]}`;
+                    desgloseHTML = `• 🔢 <b>Códigos:</b> <small>${cods || 'Ninguno'}</small><br>`;
                 }
 
                 return {
@@ -5182,7 +5287,8 @@ function descargarInventarioExcelProfesional() {
                     html: encabezado +
                         `📊 <b>Dato Exacto en Vivo — ${grupoDetectado || 'Equipos Físicos'} en ${seccionDetectada || 'Toda la Planta'}:</b><br>` +
                         `• 📦 <b>Total Registrados:</b> <b style="color:var(--primary); font-size:15px;">${totalReg} equipos</b><br>` +
-                        `• ✅ <b>Controlados este mes (${rad.mesActual}):</b> <b>${ctrlMes}</b> de ${totalReg} (<b>${pct}%</b>) — <span style="color:var(--warn-text); font-weight:bold;">Pendientes: ${pendMes}</span><br>` +
+                        `• ✅ <b>Controlados (${rad.mesActual}):</b> <b>${ctrlMes}</b> de ${totalReg} (<b>${pct}%</b>) — <span style="color:var(--warn-text); font-weight:bold;">Pendientes: ${pendMes}</span><br>` +
+                        lineaTipos +
                         desgloseHTML
                 };
             }
@@ -5237,13 +5343,16 @@ function descargarInventarioExcelProfesional() {
                 box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:6px;">${guia.titulo}</div><div>${guia.detalle}</div>${htmlReplica}`;
                 return;
             }
+            box.innerHTML = generarFallbackHonestoConSimilares(pregunta);
         }
 
+        // 4. Consulta Libre Híbrida: Muestra el Cálculo Exacto y le suma el Razonamiento de Gemini 2.5 Flash
         async function consultarAsistenteAyudaLibre() {
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
-            const texto = inp ? inp.value.trim() : '';
-            if(!texto || !box) return;
+            const rawTexto = inp ? inp.value.trim() : '';
+            if(!rawTexto || !box) return;
+            const texto = formatearPreguntaConGramatica(rawTexto);
             inp.value = '';
             box.classList.remove('hidden');
 
@@ -5264,21 +5373,24 @@ function descargarInventarioExcelProfesional() {
                     resumenMatriz[s] = {};
                     Object.keys(rad.matrizSeccionGrupo[s]).forEach(g => {
                         const d = rad.matrizSeccionGrupo[s][g];
-                        resumenMatriz[s][g] = `Registrados:${d.registrados}, Controlados:${d.controlados}, Pendientes:${d.pendientes}`;
+                        resumenMatriz[s][g] = `Reg:${d.registrados}, Ctrl:${d.controlados}, Pend:${d.pendientes}`;
                     });
                 });
 
-                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Consultando matriz en vivo con Gemini Flash...</div>`;
+                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando inventario, tipos e insumos en vivo con Gemini Flash...</div>`;
                 try {
                     const modeloPreferido = await descubrirMejorModeloGeminiAPI(apiKey);
-                    const promptContext = `ERES EL CEREBRO IA EN VIVO DE GESTIÓN SySO V6.39.
-MATRIZ EXACTA DE EQUIPOS POR SECCIÓN Y GRUPO (${rad.mesActual}):
-${JSON.stringify(resumenMatriz)}
-- Total equipos físicos: ${rad.totalFisicos} + 4 unidades de Comunicación = ${rad.totalPlanta}.
-- Equipos vencidos/stock 0 hoy: ${JSON.stringify(rad.equiposVencidos)}.
-- Empleados sin teléfono personal: ${sinTel.join(', ') || 'Ninguno'}.
-- Usuarios con PIN débil (1234): ${pinDebil.join(', ') || 'Ninguno'}.
-Responde con cifras exactas en español claro (máximo 90 palabras) a la pregunta: "${texto}"`;
+                    const promptContext = `ERES EL CEREBRO IA EN VIVO DE GESTIÓN SySO V6.40.
+1) MATRIZ DE CANTIDADES POR SECCIÓN Y GRUPO (${rad.mesActual}):
+   ${JSON.stringify(resumenMatriz)}
+2) TIPOS EXACTOS REGISTRADOS POR CADA GRUPO:
+   ${JSON.stringify(rad.desgloseTiposPorGrupo)}
+3) PUNTOS DE CHEQUEO DE CADA GRUPO:
+   ${JSON.stringify(config.grupos)}
+4) ALERTAS Y PERSONAL:
+   - Vencidos/Stock 0: ${JSON.stringify(rad.equiposVencidos)}.
+   - Empleados sin teléfono: ${sinTel.join(', ') || 'Ninguno'}. PIN débil (1234): ${pinDebil.join(', ') || 'Ninguno'}.
+Si la pregunta no tiene ninguna relación con la planta, seguridad o la app, responde únicamente la palabra NO_SOPORTADO. De lo contrario, responde con cifras exactas en español claro (máximo 85 palabras) a: "${texto}"`;
 
                     const modelos = [modeloPreferido, 'gemini-2.5-flash', 'gemini-2.0-flash'];
                     for(const mod of [...new Set(modelos)]) {
@@ -5291,15 +5403,16 @@ Responde con cifras exactas en español claro (máximo 90 palabras) a la pregunt
                         if(resp.ok) {
                             const data = await resp.json();
                             const txtIA = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text;
-                            if(txtIA) {
-                                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta en Vivo (${mod}):</div><div>${txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div>`;
+                            if(txtIA && !txtIA.includes('NO_SOPORTADO')) {
+                                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta para: "${texto}" <small class="text-muted">(${mod})</small></div><div>${txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div>`;
                                 return;
                             }
                         }
                     }
                 } catch(e) {}
             }
-            box.innerHTML = analisisLocal.exacta ? analisisLocal.html : `<div style="font-weight:bold; color:var(--primary);">🤖 Seleccione o consulte por una sección, grupo o código específico.</div>`;
+
+            box.innerHTML = analisisLocal.exacta ? analisisLocal.html : generarFallbackHonestoConSimilares(texto);
         }
 
         function ejecutarGemeloDigitalAutonomo() {
@@ -5377,18 +5490,18 @@ Responde con cifras exactas en español claro (máximo 90 palabras) a la pregunt
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.39\n` +
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.40\n` +
                 `- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + ${rad.totalPlanta - rad.totalFisicos} verificaciones Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n` +
                 `- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.39 copiado al portapapeles."));
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.40 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
-        // --- ARRANQUE UNIFICADO V6.39 ---
+        // --- ARRANQUE UNIFICADO V6.40 ---
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.39 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.40 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.39';
+            if(badgeVer) badgeVer.innerText = 'V6.40';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -5396,6 +5509,7 @@ Responde con cifras exactas en español claro (máximo 90 palabras) a la pregunt
             verificarBotonBiometrico();
             mostrarCamposInferioresControl(false);
             inyectarBuscadorRapidoEnHistorial();
+            activarCorrectorGramaticalGlobalDOM();
 
             const inpMes = document.getElementById('filtroHistMes');
             if(inpMes) inpMes.value = obtenerFechaHoraEstandar().mesISO;
