@@ -5307,12 +5307,322 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.49): DETECTOR DOBLE DE ACCESO RÁPIDO (PREGUNTA + IA),
-        // PRE-CARGA EXACTA DE SECCIÓN/GRUPO/CORRELATIVO Y GEMINI 3.5 FLASH-LITE
+        // MOTOR 7B FINAL (V6.50): ESCUDO ANTI-SALIDA ACCIDENTAL, TEMPORIZADOR DE
+        // 30 MINUTOS Y AUTO-RECUPERACIÓN DE BORRADORES EN CONTROL Y NUEVO EQUIPO
         // =========================================================================
 
         window.ultimaPreguntaUsuarioIA = '';
+        const BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V650';
+        const TIEMPO_GRACIA_BORRADOR_MS = 30 * 60 * 1000; // 30 minutos de persistencia
 
+        // --- 1. SISTEMA DE AUTO-GUARDADO Y RECUPERACIÓN DE BORRADORES (30 MINUTOS) ---
+        function hayTrabajoEnCursoSinGuardar() {
+            const idCtrl = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value.trim() : '';
+            const modDin = document.getElementById('moduloDinamico');
+            const controlAbierto = !!(idCtrl && modDin && !modDin.classList.contains('hidden'));
+
+            const accAlta = document.getElementById('accFormAltaQR');
+            const ubiAlta = document.getElementById('qrUbicacion') ? document.getElementById('qrUbicacion').value.trim() : '';
+            const tipoAlta = document.getElementById('qrTipo') ? document.getElementById('qrTipo').value.trim() : '';
+            const capAlta = document.getElementById('qrCapacidad') ? document.getElementById('qrCapacidad').value.trim() : '';
+            const grpAlta = document.getElementById('qrGrupo') ? document.getElementById('qrGrupo').value : '';
+            const secAlta = document.getElementById('qrSeccion') ? document.getElementById('qrSeccion').value : '';
+            const altaEnCurso = !!(accAlta && accAlta.classList.contains('active') && (secAlta || grpAlta || ubiAlta || tipoAlta || capAlta));
+
+            return { hay: (controlAbierto || altaEnCurso), controlAbierto, altaEnCurso };
+        }
+
+        function guardarBorradorTrabajoEnVivo() {
+            if(!usuarioActual || window.restaurandoBorradorEnCurso) return;
+            try {
+                const vistaAct = document.querySelector('.view.active');
+                const pestanaId = vistaAct ? vistaAct.id.replace('view-', '') : 'control';
+                const idCtrl = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value.trim() : '';
+
+                // A. Capturar estado de Registrar Nuevo Equipo (📦 Equipos)
+                const accAlta = document.getElementById('accFormAltaQR');
+                const secAlta = document.getElementById('qrSeccion') ? document.getElementById('qrSeccion').value : '';
+                const grpAlta = document.getElementById('qrGrupo') ? document.getElementById('qrGrupo').value : '';
+                let borradorAlta = null;
+                if(secAlta || grpAlta) {
+                    const insumosFilas = [];
+                    document.querySelectorAll('#contenedorFilasInsumos .insumo-row').forEach(fila => {
+                        const n = fila.querySelector('.inp-ins-nom') ? fila.querySelector('.inp-ins-nom').value : '';
+                        const s = fila.querySelector('.inp-ins-stk') ? fila.querySelector('.inp-ins-stk').value : '';
+                        const v = fila.querySelector('.inp-ins-venc') ? fila.querySelector('.inp-ins-venc').value : '';
+                        if(n || s || v) insumosFilas.push({ nombre: n, stock: s, vencimiento: v });
+                    });
+                    borradorAlta = {
+                        abierto: !!(accAlta && accAlta.classList.contains('active')),
+                        editQRId: editQRId || null,
+                        seccion: secAlta,
+                        grupo: grpAlta,
+                        numero: document.getElementById('qrNumero') ? document.getElementById('qrNumero').value : '',
+                        ubicacion: document.getElementById('qrUbicacion') ? document.getElementById('qrUbicacion').value : '',
+                        tipo: document.getElementById('qrTipo') ? document.getElementById('qrTipo').value : '',
+                        capacidad: document.getElementById('qrCapacidad') ? document.getElementById('qrCapacidad').value : '',
+                        serie: document.getElementById('qrSerie') ? document.getElementById('qrSerie').value : '',
+                        vencimiento: document.getElementById('qrVencimiento') ? document.getElementById('qrVencimiento').value : '',
+                        insumos: insumosFilas
+                    };
+                }
+
+                // B. Capturar estado de Control Mensual y Ficha en Terreno (📋 Control)
+                let borradorControl = null;
+                if(idCtrl && config.equipos && config.equipos[idCtrl]) {
+                    const estadosPts = {};
+                    const params = config.grupos[config.equipos[idCtrl].grupo] || [];
+                    params.forEach((p, idx) => {
+                        const sel = document.getElementById(`dynChk_${idx}`);
+                        if(sel) estadosPts[idx] = sel.value;
+                    });
+                    const consumosBot = [];
+                    const eqObj = config.equipos[idCtrl];
+                    if(Array.isArray(eqObj.insumos)) {
+                        eqObj.insumos.forEach((ins, iIdx) => {
+                            const cEl = document.getElementById(`inpBotCons_${iIdx}`);
+                            const rEl = document.getElementById(`inpBotRep_${iIdx}`);
+                            const vEl = document.getElementById(`inpBotVenc_${iIdx}`);
+                            consumosBot.push({
+                                cons: cEl ? cEl.value : '0',
+                                rep: rEl ? rEl.value : '0',
+                                venc: vEl ? vEl.value : ''
+                            });
+                        });
+                    }
+                    const boxEdTerreno = document.getElementById('boxEditorFichaTerreno');
+                    borradorControl = {
+                        idEquipo: idCtrl,
+                        estadosPts,
+                        motivosFalla: JSON.parse(JSON.stringify(motivosFallaPorIndex || {})),
+                        observaciones: document.getElementById('observaciones') ? document.getElementById('observaciones').value : '',
+                        consumosBot,
+                        fichaTerrenoAbierta: !!(boxEdTerreno && !boxEdTerreno.classList.contains('hidden')),
+                        editUbi: document.getElementById('fieldEditUbi') ? document.getElementById('fieldEditUbi').value : '',
+                        editTipo: document.getElementById('fieldEditTipo') ? document.getElementById('fieldEditTipo').value : '',
+                        editCap: document.getElementById('fieldEditCap') ? document.getElementById('fieldEditCap').value : '',
+                        editSerie: document.getElementById('fieldEditSerie') ? document.getElementById('fieldEditSerie').value : '',
+                        editVenc: document.getElementById('fieldEditVenc') ? document.getElementById('fieldEditVenc').value : '',
+                        editMudanzaSec: document.getElementById('fieldEditMudanzaSec') ? document.getElementById('fieldEditMudanzaSec').value : ''
+                    };
+                }
+
+                const paquete = {
+                    ts: Date.now(),
+                    usuarioNombre: usuarioActual.nombre,
+                    pestanaId,
+                    borradorAlta,
+                    borradorControl
+                };
+                localStorage.setItem(BORRADOR_TRABAJO_KEY, JSON.stringify(paquete));
+            } catch(e) {}
+        }
+
+        window.limpiarBorradorTrabajoEnVivo = function(tipo = 'TODOS') {
+            try {
+                const raw = localStorage.getItem(BORRADOR_TRABAJO_KEY);
+                if(!raw) return;
+                if(tipo === 'TODOS') {
+                    localStorage.removeItem(BORRADOR_TRABAJO_KEY);
+                    return;
+                }
+                const data = JSON.parse(raw);
+                if(tipo === 'ALTA_EQUIPO') data.borradorAlta = null;
+                if(tipo === 'CONTROL') data.borradorControl = null;
+                data.ts = Date.now();
+                localStorage.setItem(BORRADOR_TRABAJO_KEY, JSON.stringify(data));
+            } catch(e) {}
+        };
+
+        function restaurarBorradorTrabajoEnVivo() {
+            if(!usuarioActual) return;
+            try {
+                const raw = localStorage.getItem(BORRADOR_TRABAJO_KEY);
+                if(!raw) return;
+                const data = JSON.parse(raw);
+                if(!data || data.usuarioNombre !== usuarioActual.nombre) return;
+                if((Date.now() - (data.ts || 0)) > TIEMPO_GRACIA_BORRADOR_MS) {
+                    localStorage.removeItem(BORRADOR_TRABAJO_KEY);
+                    return;
+                }
+
+                const tieneAlta = data.borradorAlta && (data.borradorAlta.ubicacion || data.borradorAlta.tipo || data.borradorAlta.capacidad || data.borradorAlta.serie || (data.borradorAlta.insumos && data.borradorAlta.insumos.length > 0));
+                const tieneCtrl = data.borradorControl && data.borradorControl.idEquipo && config.equipos && config.equipos[data.borradorControl.idEquipo];
+                if(!tieneAlta && !tieneCtrl) return;
+
+                window.restaurandoBorradorEnCurso = true;
+
+                // 1. Restaurar formulario de Nuevo Equipo si el Admin estaba registrando uno
+                if(tieneAlta && usuarioActual.rol === 'Admin') {
+                    const bA = data.borradorAlta;
+                    if(data.pestanaId === 'equipos' || bA.abierto) {
+                        nav('equipos', document.getElementById('tabBtnEquipos'));
+                    }
+                    const acc = document.getElementById('accFormAltaQR');
+                    if(acc && bA.abierto) acc.classList.add('active');
+                    editQRId = bA.editQRId || null;
+                    const selS = document.getElementById('qrSeccion');
+                    const selG = document.getElementById('qrGrupo');
+                    if(selS && bA.seccion) selS.value = bA.seccion;
+                    if(selG && bA.grupo) selG.value = bA.grupo;
+                    if(typeof actualizarPrefijoUI === 'function') actualizarPrefijoUI();
+
+                    if(document.getElementById('qrNumero') && bA.numero) document.getElementById('qrNumero').value = bA.numero;
+                    if(document.getElementById('qrUbicacion')) document.getElementById('qrUbicacion').value = bA.ubicacion || '';
+                    if(document.getElementById('qrTipo')) document.getElementById('qrTipo').value = bA.tipo || '';
+                    if(document.getElementById('qrCapacidad')) document.getElementById('qrCapacidad').value = bA.capacidad || '';
+                    if(document.getElementById('qrSerie')) document.getElementById('qrSerie').value = bA.serie || '';
+                    if(document.getElementById('qrVencimiento')) document.getElementById('qrVencimiento').value = bA.vencimiento || '';
+
+                    if(Array.isArray(bA.insumos) && bA.insumos.length > 0) {
+                        const contIns = document.getElementById('contenedorFilasInsumos');
+                        if(contIns) {
+                            contIns.innerHTML = '';
+                            bA.insumos.forEach(ins => agregarFilaInsumoBotiquin(ins.nombre, ins.stock, ins.vencimiento));
+                        }
+                    }
+                    mostrarToastGuardado("🔄 Borrador de Nuevo Equipo recuperado automáticamente");
+                }
+
+                // 2. Restaurar Control en Terreno si tenía un equipo abierto en Control
+                if(tieneCtrl) {
+                    const bC = data.borradorControl;
+                    esCargaManual = false;
+                    procesarEscaneo(bC.idEquipo);
+                    setTimeout(() => {
+                        if(bC.estadosPts) {
+                            Object.keys(bC.estadosPts).forEach(idx => {
+                                const sel = document.getElementById(`dynChk_${idx}`);
+                                if(sel) sel.value = bC.estadosPts[idx];
+                            });
+                        }
+                        if(bC.motivosFalla) {
+                            motivosFallaPorIndex = bC.motivosFalla;
+                            actualizarCajaResumenFallas();
+                        }
+                        if(document.getElementById('observaciones') && bC.observaciones) {
+                            document.getElementById('observaciones').value = bC.observaciones;
+                        }
+                        if(Array.isArray(bC.consumosBot)) {
+                            bC.consumosBot.forEach((cb, iIdx) => {
+                                if(document.getElementById(`inpBotCons_${iIdx}`)) document.getElementById(`inpBotCons_${iIdx}`).value = cb.cons || '0';
+                                if(document.getElementById(`inpBotRep_${iIdx}`)) document.getElementById(`inpBotRep_${iIdx}`).value = cb.rep || '0';
+                                if(document.getElementById(`inpBotVenc_${iIdx}`) && cb.venc) document.getElementById(`inpBotVenc_${iIdx}`).value = cb.venc;
+                            });
+                        }
+                        if(bC.fichaTerrenoAbierta) {
+                            const boxEd = document.getElementById('boxEditorFichaTerreno');
+                            if(boxEd) boxEd.classList.remove('hidden');
+                            if(document.getElementById('fieldEditUbi')) document.getElementById('fieldEditUbi').value = bC.editUbi || '';
+                            if(document.getElementById('fieldEditTipo')) document.getElementById('fieldEditTipo').value = bC.editTipo || '';
+                            if(document.getElementById('fieldEditCap')) document.getElementById('fieldEditCap').value = bC.editCap || '';
+                            if(document.getElementById('fieldEditSerie')) document.getElementById('fieldEditSerie').value = bC.editSerie || '';
+                            if(document.getElementById('fieldEditVenc')) document.getElementById('fieldEditVenc').value = bC.editVenc || '';
+                            if(document.getElementById('fieldEditMudanzaSec') && bC.editMudanzaSec) document.getElementById('fieldEditMudanzaSec').value = bC.editMudanzaSec;
+                        }
+                        actualizarEstadoRequisitoFoto();
+                        mostrarToastGuardado(`🔄 Control de ${bC.idEquipo} recuperado donde lo dejaste`);
+                    }, 120);
+                }
+
+                setTimeout(() => { window.restaurandoBorradorEnCurso = false; }, 350);
+            } catch(e) {
+                window.restaurandoBorradorEnCurso = false;
+            }
+        }
+
+        // --- 2. ESCUDO ANTI-SALIDA ACCIDENTAL (BOTÓN ATRÁS DEL CELULAR + CIERRE DE PESTAÑA) ---
+        function activarEscudoAntiSalidaYAutoGuardado() {
+            // Auto-guardar cada vez que el usuario escribe o cambia un selector
+            document.addEventListener('input', () => guardarBorradorTrabajoEnVivo(), true);
+            document.addEventListener('change', () => guardarBorradorTrabajoEnVivo(), true);
+
+            // Limpiar borrador de Alta Equipo cuando se guarda o se toca Cancelar/Limpiar
+            if(typeof cancelarEdicionQR === 'function') {
+                const _cancelarEdQRBase = cancelarEdicionQR;
+                cancelarEdicionQR = function() {
+                    limpiarBorradorTrabajoEnVivo('ALTA_EQUIPO');
+                    return _cancelarEdQRBase();
+                };
+            }
+            if(typeof crearQR === 'function') {
+                const _crearQRBase = crearQR;
+                crearQR = async function() {
+                    await _crearQRBase();
+                    const ubiRestante = document.getElementById('qrUbicacion') ? document.getElementById('qrUbicacion').value.trim() : '';
+                    if(!ubiRestante && !editQRId) limpiarBorradorTrabajoEnVivo('ALTA_EQUIPO');
+                };
+            }
+            if(typeof limpiarEquipoEnControl === 'function') {
+                const _limpiarCtrlBase = limpiarEquipoEnControl;
+                limpiarEquipoEnControl = function(volverAlInicio = true) {
+                    if(!window.restaurandoBorradorEnCurso) limpiarBorradorTrabajoEnVivo('CONTROL');
+                    return _limpiarCtrlBase(volverAlInicio);
+                };
+            }
+
+            // Envolver el inicio de sesión para que al entrar (o al recuperar turno) restaure el borrador
+            if(typeof iniciarSesion === 'function') {
+                const _iniciarSesionBase = iniciarSesion;
+                iniciarSesion = function() {
+                    _iniciarSesionBase();
+                    if(usuarioActual) setTimeout(restaurarBorradorTrabajoEnVivo, 220);
+                };
+            }
+
+            // Proteger el botón "Cerrar Sesión" si hay trabajo sin guardar
+            if(typeof cerrarSesion === 'function') {
+                const _cerrarSesionBase = cerrarSesion;
+                cerrarSesion = function() {
+                    const est = hayTrabajoEnCursoSinGuardar();
+                    if(est.hay) {
+                        if(!confirm("⚠️ Tienes un registro o control en curso sin guardar.\n\n¿Estás seguro de que deseas cerrar la sesión?")) return;
+                    }
+                    limpiarBorradorTrabajoEnVivo('TODOS');
+                    return _cerrarSesionBase();
+                };
+            }
+
+            // Interceptar el cierre o recarga accidental de pestaña (beforeunload)
+            window.addEventListener('beforeunload', function(e) {
+                if(!usuarioActual) return;
+                guardarBorradorTrabajoEnVivo();
+                const est = hayTrabajoEnCursoSinGuardar();
+                if(est.hay) {
+                    e.preventDefault();
+                    e.returnValue = 'Tienes datos cargados sin guardar. ¿Seguro que deseas salir?';
+                    return e.returnValue;
+                }
+            });
+
+            // Interceptar el botón / gesto "Atrás" en celulares Android / iOS (popstate)
+            try {
+                history.pushState({ sysoGuard: true }, document.title, location.href);
+                window.addEventListener('popstate', function() {
+                    if(!usuarioActual) {
+                        history.pushState({ sysoGuard: true }, document.title, location.href);
+                        return;
+                    }
+                    // Si hay algún modal abierto (Ayuda IA, S.O.S., Lista, Fotos), cerrarlo primero sin salir de la app
+                    const modalesAbiertos = ['modalAyudaIA', 'modalContingencia', 'modalMotivoFalla', 'modalFotoRef', 'modalSOS'].map(id => document.getElementById(id)).filter(el => el && !el.classList.contains('hidden'));
+                    if(modalesAbiertos.length > 0) {
+                        modalesAbiertos[0].classList.add('hidden');
+                        history.pushState({ sysoGuard: true }, document.title, location.href);
+                        return;
+                    }
+                    guardarBorradorTrabajoEnVivo();
+                    const est = hayTrabajoEnCursoSinGuardar();
+                    const msg = est.hay
+                        ? "⚠️ ¡ATENCIÓN! Tienes un registro o control en curso.\n\nTu progreso ya quedó resguardado en borrador por 30 minutos, pero ¿estás seguro de que deseas salir de la pantalla actual?\n\n(Toca 'Cancelar' para quedarte y seguir trabajando)."
+                        : "⚠️ ¿Estás seguro de que deseas salir de Gestión SySO?\n\n(Toca 'Cancelar' para permanecer dentro de la aplicación).";
+                    if(!confirm(msg)) {
+                        history.pushState({ sysoGuard: true }, document.title, location.href);
+                    }
+                });
+            } catch(e) {}
+        }
+
+        // --- 3. MOTOR GEMINI 3.5 FLASH-LITE Y FUNCIONES IA (V6.50) ---
         async function descubrirMejorModeloGeminiAPI(apiKey) {
             const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             if(!apiKey) return 'gemini-3.5-flash-lite';
@@ -5408,9 +5718,9 @@ function descargarInventarioExcelProfesional() {
             listaBit.parentElement.insertBefore(inpBusq, listaBit);
         }
 
-        const _obtenerRegFiltradosBaseV649 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV650 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV649();
+            const base = _obtenerRegFiltradosBaseV650();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
@@ -5565,7 +5875,6 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- NAVEGADOR INTERACTIVO CON PRE-CARGA EXACTA DE SECCIÓN, GRUPO Y CORRELATIVO ---
         window.irDirectoDesdeAyudaIA = function(destino) {
             document.getElementById('modalAyudaIA').classList.add('hidden');
             if(destino === 'ALTA_EQUIPO') {
@@ -5591,6 +5900,7 @@ function descargarInventarioExcelProfesional() {
                         }
                         if(inpNum) inpNum.value = '';
                         if(typeof actualizarPrefijoUI === 'function') actualizarPrefijoUI();
+                        guardarBorradorTrabajoEnVivo();
                         acc.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         const inpUbi = document.getElementById('qrUbicacion');
                         if(inpUbi) inpUbi.focus();
@@ -5632,6 +5942,7 @@ function descargarInventarioExcelProfesional() {
                             const modDin = document.getElementById('moduloDinamico');
                             if(modDin) modDin.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
+                        guardarBorradorTrabajoEnVivo();
                     }, 180);
                 }, 100);
                 return;
@@ -5730,7 +6041,7 @@ function descargarInventarioExcelProfesional() {
             if(tipo === 'SOS') {
                 return `<div style="${caja}">${tag}
                     <div onclick="irDirectoDesdeAyudaIA('SOS')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:var(--primary); color:#fff; padding:9px 12px; border-radius:8px;">
-                        <b>Gestión SySO V6.49</b>
+                        <b>Gestión SySO V6.50</b>
                         <span style="background:#dc3545; color:#fff; border:2px solid #fff; padding:5px 10px; border-radius:8px; font-weight:bold;">🚨 S.O.S. ${flecha}</span>
                     </div>
                 </div>`;
@@ -5763,7 +6074,7 @@ function descargarInventarioExcelProfesional() {
             const idAbierto = (document.getElementById('idEquipo') && document.getElementById('idEquipo').value) || 'Ninguno';
 
             return {
-                versionActual: 'V6.49',
+                versionActual: 'V6.50',
                 usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : (u.rol === 'Inspector' ? 'Inspector / Brigadista' : 'Sin sesión'),
                 esAdmin,
@@ -5778,10 +6089,9 @@ function descargarInventarioExcelProfesional() {
                 pestanaAbiertaAhora: pestanaActiva,
                 equipoCargadoEnControl: idAbierto,
                 reglasExactasDeModulos: {
-                    autoCreacionDesdeElChat: "Si el usuario pide registrar, crear o dar de alta cualquier equipo nuevo (ej. un botiquín, extintor, hidrante, corte de energía, evacuación, etc.): Si es Administrador, respóndele que puede pre-cargar automáticamente el formulario con esa Sección, ese Grupo y el siguiente código correlativo libre tocando el botón amarillo interactivo de abajo. Si NO es Administrador, respóndele que no tiene permisos para crear equipos nuevos y que debe pedírselo a un Administrador.",
-                    permisosDeControlPorGrupoYSeccion: "REGLA ESTRICTA: Un usuario con rol Inspector/Brigadista SOLO puede controlar equipos que pertenezcan simultáneamente a sus 'seccionesHabilitadasUsuario' y a sus 'gruposHabilitadosUsuario'. Si pregunta cómo controlar o quiere controlar un grupo en 'gruposPROHIBIDOSUsuario' o una sección en 'seccionesPROHIBIDASUsuario', dile claramente que NO tiene permiso para ese grupo/sección y que solo puede controlar sus grupos asignados (" + grpsUsuario.join(', ') + " en " + secsUsuario.join(', ') + ").",
-                    registrarNuevoEquipo: "SOLO Administradores: Pestaña inferior '📦 Equipos' ➔ abrir desplegable azul '➕ Registrar Nuevo Equipo / Generar QR' ➔ elegir '1. Sección de Planta' y '2. Grupo de Equipo' ➔ completar campos y tocar 'Guardar Equipo'.",
-                    qrsDanadosYBotonesEquipos: "En '📋 Control' existe el botón '🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir' (y la casilla opcional en '⌨️ Lista') para enviar stickers rotos a la cola sin pedir foto obligatoria si el equipo está OK."
+                    autoCreacionDesdeElChat: "Si el usuario pide registrar, crear o dar de alta cualquier equipo nuevo: Si es Administrador, respóndele que puede pre-cargar automáticamente el formulario con esa Sección, ese Grupo y el siguiente código correlativo libre tocando el botón amarillo interactivo de abajo. Si NO es Administrador, respóndele que no tiene permisos para crear equipos nuevos y que debe pedírselo a un Administrador.",
+                    proteccionBorrador30Minutos: "La versión V6.50 cuenta con Escudo Anti-Salida Accidental (pide confirmación al tocar Atrás o cerrar pestaña) y Auto-Guardado de Borrador por 30 minutos: si alguien sale sin querer mientras registra un equipo o hace un control, al volver a entrar se recupera automáticamente todo lo que estaba escribiendo.",
+                    permisosDeControlPorGrupoYSeccion: "REGLA ESTRICTA: Un usuario con rol Inspector/Brigadista SOLO puede controlar equipos que pertenezcan simultáneamente a sus 'seccionesHabilitadasUsuario' y a sus 'gruposHabilitadosUsuario'."
                 }
             };
         }
@@ -5969,7 +6279,6 @@ function descargarInventarioExcelProfesional() {
             return { seccionDetectada, grupoDetectado, codigoEquipoDetectado };
         }
 
-        // --- DETECTOR DOBLE (PREGUNTA DEL USUARIO + RESPUESTA DE GEMINI) PARA MOSTRAR SIEMPRE EL BOTÓN INTERACTIVO ---
         function detectarReplicaVisualApropiada(preguntaNorm, respuestaIANorm = '') {
             const mapaApp = construirMapaVivoDeLaApp();
             const combinado = `${preguntaNorm} ${respuestaIANorm}`;
@@ -5983,7 +6292,6 @@ function descargarInventarioExcelProfesional() {
                 }
             }
 
-            // Si el usuario o la respuesta de Gemini habla de registrar / dar de alta / crear un nuevo equipo o menciona cualquier grupo (ej. "nuevo botiquín", "registrar extintor", "generar qr", "botón amarillo")
             const intencionAlta = (
                 preguntaNorm.includes('registrar') || preguntaNorm.includes('crear') || preguntaNorm.includes('agregar') ||
                 preguntaNorm.includes('dar de alta') || preguntaNorm.includes('nuevo') || preguntaNorm.includes('nueva') ||
@@ -6207,15 +6515,15 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.49\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.49 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.50\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.50 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.49 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.50 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.49';
+            if(badgeVer) badgeVer.innerText = 'V6.50';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -6224,6 +6532,7 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
             mostrarCamposInferioresControl(false);
             inyectarBuscadorRapidoEnHistorial();
             activarCorrectorGramaticalGlobalDOM();
+            activarEscudoAntiSalidaYAutoGuardado();
 
             const inpMes = document.getElementById('filtroHistMes');
             if(inpMes) inpMes.value = obtenerFechaHoraEstandar().mesISO;
@@ -6248,6 +6557,9 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
                 poblarListasAutocompletado();
                 prepararLogin(); 
                 iniciarCandadoTurno();
+                if(usuarioActual) {
+                    setTimeout(restaurarBorradorTrabajoEnVivo, 280);
+                }
                 sincronizarDesdeNube(false);
             }
 
