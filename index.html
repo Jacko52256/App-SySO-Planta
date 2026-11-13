@@ -4580,11 +4580,13 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 6 DE 7 ===
 // =========================================================================
-        // MOTOR 7A (V6.41): FOTO OPCIONAL SI ESTÁ OK (SOLO OBLIGATORIA EN FALLA),
-        // PERFILADOR PERSONALIZADO POR GRUPO Y COMUNICACIÓN POR SECCIÓN
+        // MOTOR 7A (V6.46): COLA 100% REAL DE QRs DAÑADOS (CON BOTÓN EN CONTROL Y
+        // OPCIÓN EN LISTA), FOTO OPCIONAL SI ESTÁ OK Y PERFILADOR POR GRUPO
         // =========================================================================
 
-        // 1. Regla Estricta de Foto: Solo obligatoria si hay Falla (Opcional si todos los puntos están OK)
+        window.qrDanadoMarcadoEnControl = false;
+
+        // 1. Regla Estricta de Foto: Solo obligatoria si hay Falla en un punto (Opcional si está en regla)
         actualizarEstadoRequisitoFoto = function() {
             const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
             const badge = document.getElementById('badgeEstadoFotoControl'), btnCam = document.getElementById('btnAdjuntarFoto');
@@ -4620,20 +4622,113 @@ function descargarInventarioExcelProfesional() {
                     btnCam.classList.add('urgent');
                 }
             } else {
-                badge.innerText = fotoActualBase64 ? '✅ Foto adjunta' : 'Opcional si está OK';
+                badge.innerText = fotoActualBase64 ? '✅ Foto adjunta' : 'Opcional si el equipo está en regla';
                 badge.style.color = fotoActualBase64 ? 'var(--success)' : 'var(--text-muted)';
                 btnCam.classList.remove('urgent');
             }
         };
 
-        // Envolver guardarRegistro para que NUNCA exija foto si no hay fallas detectadas
-        const _guardarRegistroBaseV641 = guardarRegistro;
-        guardarRegistro = async function() {
-            esCargaManual = false;
-            return await _guardarRegistroBaseV641();
+        // 2. Gestión 100% Exacta y Reversible de Etiquetas QR Dañadas en Control y en Lista
+        window.toggleReporteQRDanadoEnControl = async function(idEquipo) {
+            if(!idEquipo || !config.equipos[idEquipo] || esEquipoVirtualComunicacion(idEquipo)) return;
+            if(!config.telemetria) config.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, edicionesCanceladas: 0, cambiosPestana: 0, equiposSinQR: {} };
+            if(!config.telemetria.equiposSinQR) config.telemetria.equiposSinQR = {};
+
+            const yaEstaba = (config.telemetria.equiposSinQR[idEquipo] || 0) >= 1;
+            if(yaEstaba) {
+                delete config.telemetria.equiposSinQR[idEquipo];
+                window.qrDanadoMarcadoEnControl = false;
+                mostrarToastGuardado(`🧹 ${idEquipo} quitado de QRs Dañados`);
+            } else {
+                config.telemetria.equiposSinQR[idEquipo] = 1;
+                config.telemetria.cargasManuales = (config.telemetria.cargasManuales || 0) + 1;
+                window.qrDanadoMarcadoEnControl = true;
+                mostrarToastGuardado(`🖨️ ${idEquipo} enviado a cola de QRs Dañados`);
+            }
+            await parchearSubnodoConfigNube('telemetria', config.telemetria);
+            actualizarBotonVisualQRDanado(idEquipo);
+            if(usuarioActual && usuarioActual.rol === 'Admin') renderListas();
         };
 
-        // 2. Perfilador Personalizado por cada Grupo (Equipos y Control en Terreno)
+        function actualizarBotonVisualQRDanado(idEquipo) {
+            const btn = document.getElementById('btnToggleQRDanadoCtrl');
+            if(!btn || !idEquipo) return;
+            const enCola = config.telemetria && config.telemetria.equiposSinQR && (config.telemetria.equiposSinQR[idEquipo] || 0) >= 1;
+            if(enCola) {
+                btn.style.background = 'var(--warn-bg)';
+                btn.style.color = 'var(--warn-text)';
+                btn.style.borderColor = '#ffc107';
+                btn.innerHTML = `🖨️ Etiqueta QR en Cola de Reimpresión (Tocar para desmarcar)`;
+            } else {
+                btn.style.background = 'var(--card-bg)';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderColor = 'var(--border)';
+                btn.innerHTML = `🏷️ ¿Etiqueta QR Dañada o Ilegible? ➔ Enviar a Reimprimir`;
+            }
+        }
+
+        // Adaptar el modal de "⌨️ Elegir de Lista" para que no obligue a foto y tenga casilla opcional de QR Dañado
+        const _abrirModalContingenciaBaseV646 = abrirModalContingencia;
+        abrirModalContingencia = function() {
+            _abrirModalContingenciaBaseV646();
+            esCargaManual = false;
+            const modal = document.getElementById('modalContingencia');
+            if(modal) {
+                const pDesc = modal.querySelector('p.text-muted');
+                if(pDesc) pDesc.innerHTML = 'Seleccione la Sección, el Grupo y el Equipo. <b>No requiere foto obligatoria si el equipo está en regla.</b>';
+                if(!document.getElementById('boxChkQRDanadoModal')) {
+                    const eqSelectWrap = document.getElementById('contingenciaEq') ? document.getElementById('contingenciaEq').parentElement : null;
+                    if(eqSelectWrap) {
+                        const divChk = document.createElement('div');
+                        divChk.id = 'boxChkQRDanadoModal';
+                        divChk.style.cssText = 'margin-bottom:12px; padding:8px 10px; border-radius:6px; background:var(--warn-bg); border:1px dashed #ffc107;';
+                        divChk.innerHTML = `
+                            <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-size:12px; color:var(--warn-text);">
+                                <input type="checkbox" id="chkMarcarQRDanadoEnLista" style="width:auto; transform:scale(1.2);">
+                                <span>🏷️ <b>La etiqueta QR física está dañada / ilegible</b> (Sumar a cola de QRs Dañados)</span>
+                            </label>`;
+                        eqSelectWrap.insertAdjacentElement('afterend', divChk);
+                    }
+                }
+                const chkQR = document.getElementById('chkMarcarQRDanadoEnLista');
+                if(chkQR) chkQR.checked = false;
+            }
+        };
+
+        window.procesarContingencia = async function() {
+            const id = document.getElementById('contingenciaEq').value;
+            if(!id) return alert("Seleccione un equipo o unidad válida.");
+            const marcarRotura = document.getElementById('chkMarcarQRDanadoEnLista') && document.getElementById('chkMarcarQRDanadoEnLista').checked;
+            cerrarModalContingencia();
+            esCargaManual = false;
+            procesarEscaneo(id);
+            if(marcarRotura && !esEquipoVirtualComunicacion(id)) {
+                if(!config.telemetria) config.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, edicionesCanceladas: 0, cambiosPestana: 0, equiposSinQR: {} };
+                if(!config.telemetria.equiposSinQR) config.telemetria.equiposSinQR = {};
+                config.telemetria.equiposSinQR[id] = (config.telemetria.equiposSinQR[id] || 0) + 1;
+                config.telemetria.cargasManuales = (config.telemetria.cargasManuales || 0) + 1;
+                await parchearSubnodoConfigNube('telemetria', config.telemetria);
+                actualizarBotonVisualQRDanado(id);
+                mostrarToastGuardado(`🖨️ ${id} sumado a cola de QRs Dañados`);
+            }
+            actualizarEstadoRequisitoFoto();
+        };
+
+        // Envolver guardarRegistro: nunca pide foto si está OK, y si en la nota o falla menciona "QR", lo suma a la cola
+        const _guardarRegistroBaseV646 = guardarRegistro;
+        guardarRegistro = async function() {
+            esCargaManual = false;
+            const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
+            const obsVal = (document.getElementById('observaciones') ? document.getElementById('observaciones').value : '').toLowerCase();
+            if(id && !esEquipoVirtualComunicacion(id) && (obsVal.includes('qr dañado') || obsVal.includes('qr roto') || obsVal.includes('etiqueta qr') || obsVal.includes('sin qr'))) {
+                if(!config.telemetria) config.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, edicionesCanceladas: 0, cambiosPestana: 0, equiposSinQR: {} };
+                if(!config.telemetria.equiposSinQR) config.telemetria.equiposSinQR = {};
+                if(!config.telemetria.equiposSinQR[id]) config.telemetria.equiposSinQR[id] = 1;
+            }
+            return await _guardarRegistroBaseV646();
+        };
+
+        // 3. Perfilador Personalizado por cada Grupo
         function obtenerPerfilVisualGrupo(nomGrupo) {
             const g = String(nomGrupo || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -4912,7 +5007,7 @@ function descargarInventarioExcelProfesional() {
             return [...new Set([...base, ...aprendidas.slice(-5)])];
         };
 
-        // 3. Renderizador de Control en Terreno Adaptativo por Grupo
+        // 4. Renderizador de Control en Terreno con Botón de Reporte QR Dañado (Sin exigir foto si está OK)
         renderFormularioControlInspeccion = function(id) {
             const eq = config.equipos[id];
             if(!eq) return;
@@ -4963,9 +5058,14 @@ function descargarInventarioExcelProfesional() {
 
                 warningHTML += `
                     <div style="margin-bottom:12px;">
-                        <button type="button" class="btn btn-outline" style="padding:9px 12px; font-size:13px; margin-bottom:6px; border-color:var(--edit); color:var(--edit);" onclick="toggleEditorFichaTerreno()">
-                            ${perf.lblBtnTerreno} ${abrirEditorAuto ? '⚠️ (Completar Ubicación/Tipo)' : (faltaFotoRef ? '(Sin Foto Ref.)' : '')}
-                        </button>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                            <button type="button" class="btn btn-outline" style="flex:1.5; min-width:190px; padding:9px 10px; font-size:12.5px; margin-bottom:0; border-color:var(--edit); color:var(--edit);" onclick="toggleEditorFichaTerreno()">
+                                ${perf.lblBtnTerreno} ${abrirEditorAuto ? '⚠️ (Completar)' : (faltaFotoRef ? '(Sin Foto Ref.)' : '')}
+                            </button>
+                            <button type="button" id="btnToggleQRDanadoCtrl" class="btn btn-outline" style="flex:1; min-width:170px; padding:9px 10px; font-size:12px; margin-bottom:0;" onclick="toggleReporteQRDanadoEnControl('${id}')">
+                                🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir
+                            </button>
+                        </div>
                         <div id="boxEditorFichaTerreno" class="${abrirEditorAuto ? '' : 'hidden'}" style="border:2px solid var(--edit); border-radius:8px; padding:12px; background:var(--input-bg); margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
                                 <span style="font-size:13px; font-weight:bold; color:var(--edit);">🛠️ Ficha en Terreno — ${eq.grupo} (${id})</span>
@@ -5201,6 +5301,7 @@ function descargarInventarioExcelProfesional() {
             html += '</div>';
             container.innerHTML = warningHTML + html;
             window.fotoRefTerrenoTempBase64 = null;
+            actualizarBotonVisualQRDanado(id);
             actualizarEstadoRequisitoFoto();
             setTimeout(() => { if(typeof auditarYCorregirBordesVisualesDOM === 'function') auditarYCorregirBordesVisualesDOM(false); }, 100);
         };
