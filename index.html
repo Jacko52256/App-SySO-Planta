@@ -4580,42 +4580,34 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 6 DE 7 ===
 // =========================================================================
-        // MOTOR 7 UNIFICADO FINAL (V6.52): VISTA ORIGINAL DE ACORDEONES EN EQUIPOS
-        // CON ORDEN 1° SECCIÓN ➔ 2° GRUPO, BOTONES EDITAR/TRASLADAR/ELIMINAR,
-        // EXCEL COMPLETO, FOTO OPCIONAL EN OK, BORRADOR 30M Y CEREBRO IA GEMINI 3.5
+        // MOTOR 7 DEFINITIVO (V6.53): BOTONES DE EQUIPOS 100% AUTO-CONTENIDOS
+        // (QR, EDITAR, TRASLADAR INLINE, ELIMINAR, EXCEL), ORDEN 1° SECCIÓN ➔ 2° GRUPO,
+        // FOTO OPCIONAL EN OK, ESCUDO BORRADOR 30M Y CEREBRO IA GEMINI 3.5 FLASH-LITE
         // =========================================================================
 
         window.qrDanadoMarcadoEnControl = false;
         window.seccionesAbiertasInventario = {};
         window.gruposAbiertosInventario = {};
         window.ultimaPreguntaUsuarioIA = '';
-        var BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V652';
+        var BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V653';
         var TIEMPO_GRACIA_BORRADOR_MS = 30 * 60 * 1000;
 
-        // --- 1. FOTO OPCIONAL SI ESTÁ EN REGLA (SOLO OBLIGATORIA EN FALLA) Y COLA DE QRs DAÑADOS ---
+        // --- 1. REGLA FOTO OPCIONAL SI ESTÁ OK Y COLA EXACTA DE QRs DAÑADOS ---
         actualizarEstadoRequisitoFoto = function() {
             const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
             const badge = document.getElementById('badgeEstadoFotoControl'), btnCam = document.getElementById('btnAdjuntarFoto');
             const zFoto = document.getElementById('zonaFotoEvidenciaControl');
             if(!badge || !btnCam) return;
             if(!id || !config.equipos[id]) {
-                badge.innerText = 'Opcional si está OK';
-                badge.style.color = 'var(--text-muted)';
-                btnCam.classList.remove('urgent');
-                return;
+                badge.innerText = 'Opcional si está OK'; badge.style.color = 'var(--text-muted)'; btnCam.classList.remove('urgent'); return;
             }
             if(esEquipoVirtualComunicacion(id)) {
-                if(zFoto) zFoto.classList.add('hidden');
-                btnCam.classList.remove('urgent');
-                return;
+                if(zFoto) zFoto.classList.add('hidden'); btnCam.classList.remove('urgent'); return;
             }
             if(zFoto) zFoto.classList.remove('hidden');
             const params = config.grupos[config.equipos[id].grupo] || [];
             let hayFalla = false;
-            params.forEach((p, idx) => {
-                const el = document.getElementById(`dynChk_${idx}`);
-                if(el && el.value === 'Falla') hayFalla = true;
-            });
+            params.forEach((p, idx) => { const el = document.getElementById(`dynChk_${idx}`); if(el && el.value === 'Falla') hayFalla = true; });
             if(hayFalla) {
                 badge.innerText = fotoActualBase64 ? '✅ Evidencia de falla adjunta' : '🚨 OBLIGATORIA POR FALLA (Falta foto)';
                 badge.style.color = fotoActualBase64 ? 'var(--success)' : 'var(--danger)';
@@ -4639,6 +4631,7 @@ function descargarInventarioExcelProfesional() {
                 config.telemetria.cargasManuales = (config.telemetria.cargasManuales || 0) + 1;
                 mostrarToastGuardado(`🖨️ ${idEquipo} enviado a cola de QRs Dañados`);
             }
+            guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
             await parchearSubnodoConfigNube('telemetria', config.telemetria);
             actualizarBotonVisualQRDanado(idEquipo);
             if(usuarioActual && usuarioActual.rol === 'Admin') renderListas();
@@ -4689,6 +4682,7 @@ function descargarInventarioExcelProfesional() {
                 if(!config.telemetria.equiposSinQR) config.telemetria.equiposSinQR = {};
                 config.telemetria.equiposSinQR[id] = (config.telemetria.equiposSinQR[id] || 0) + 1;
                 config.telemetria.cargasManuales = (config.telemetria.cargasManuales || 0) + 1;
+                guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
                 await parchearSubnodoConfigNube('telemetria', config.telemetria);
                 actualizarBotonVisualQRDanado(id);
                 mostrarToastGuardado(`🖨️ ${id} sumado a cola de QRs Dañados`);
@@ -4699,17 +4693,10 @@ function descargarInventarioExcelProfesional() {
         if(!window._guardarRegistroOrig) window._guardarRegistroOrig = guardarRegistro;
         guardarRegistro = async function() {
             esCargaManual = false;
-            const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
-            const obsVal = (document.getElementById('observaciones') ? document.getElementById('observaciones').value : '').toLowerCase();
-            if(id && !esEquipoVirtualComunicacion(id) && (obsVal.includes('qr dañado') || obsVal.includes('qr roto') || obsVal.includes('etiqueta qr') || obsVal.includes('sin qr'))) {
-                if(!config.telemetria) config.telemetria = { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, edicionesCanceladas: 0, cambiosPestana: 0, equiposSinQR: {} };
-                if(!config.telemetria.equiposSinQR) config.telemetria.equiposSinQR = {};
-                if(!config.telemetria.equiposSinQR[id]) config.telemetria.equiposSinQR[id] = 1;
-            }
             return await window._guardarRegistroOrig();
         };
 
-        // --- 2. PERFILADOR PERSONALIZADO POR GRUPO (EQUIPOS, CONTROL Y EXCEL) ---
+        // --- 2. PERFILADOR PERSONALIZADO POR GRUPO ---
         function obtenerPerfilVisualGrupo(nomGrupo) {
             const g = String(nomGrupo || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             if(g.includes('corte') || g.includes('energia') || g.includes('electr') || g.includes('tablero')) {
@@ -4817,16 +4804,11 @@ function descargarInventarioExcelProfesional() {
             };
         }
 
-        deducirCamposPorDefecto = function(nomGrupo) {
-            return obtenerPerfilVisualGrupo(nomGrupo).camposActivos;
-        };
-
+        deducirCamposPorDefecto = function(nomGrupo) { return obtenerPerfilVisualGrupo(nomGrupo).camposActivos; };
         obtenerCamposActivosGrupo = function(nomGrupo) {
             const perf = obtenerPerfilVisualGrupo(nomGrupo);
             if(perf.codigo !== 'EXTINTORES') return perf.camposActivos;
-            if(config.camposGrupo && Array.isArray(config.camposGrupo[nomGrupo])) {
-                return config.camposGrupo[nomGrupo].filter(c => c !== 'responsable' && c !== 'vencimientoPH');
-            }
+            if(config.camposGrupo && Array.isArray(config.camposGrupo[nomGrupo])) return config.camposGrupo[nomGrupo].filter(c => c !== 'responsable' && c !== 'vencimientoPH');
             return perf.camposActivos;
         };
 
@@ -4842,8 +4824,7 @@ function descargarInventarioExcelProfesional() {
             if(bloqueCampos) bloqueCampos.classList.remove('hidden');
             if(prefijoInput) prefijoInput.value = obtenerPrefijoCompuesto(grp, sec);
 
-            const perf = obtenerPerfilVisualGrupo(grp);
-            const activos = obtenerCamposActivosGrupo(grp);
+            const perf = obtenerPerfilVisualGrupo(grp), activos = obtenerCamposActivosGrupo(grp);
             const inpUbi = document.getElementById('qrUbicacion');
             if(inpUbi) {
                 inpUbi.placeholder = perf.phUbi;
@@ -4876,8 +4857,7 @@ function descargarInventarioExcelProfesional() {
                 else { wrapEl.classList.add('campo-oculto'); inpEl.disabled = true; if(!editQRId) inpEl.value = ''; }
             });
 
-            const wrapInsumos = document.getElementById('wrapInsumosBotiquin');
-            const contInsumos = document.getElementById('contenedorFilasInsumos');
+            const wrapInsumos = document.getElementById('wrapInsumosBotiquin'), contInsumos = document.getElementById('contenedorFilasInsumos');
             if(wrapInsumos && contInsumos) {
                 if(activos.includes('insumos') || perf.codigo === 'PA_BOTIQUINES') {
                     wrapInsumos.classList.remove('campo-oculto');
@@ -5112,33 +5092,193 @@ function descargarInventarioExcelProfesional() {
             actualizarEstadoRequisitoFoto();
         };
 
-        // --- 3. VISTA ORIGINAL DE EQUIPOS CON ORDEN 1° SECCIÓN ➔ 2° GRUPO Y BOTONES EDITAR / TRASLADAR / ELIMINAR ---
+        // --- 3. FUNCIONES 100% AUTO-CONTENIDAS DE TODOS LOS BOTONES DE EQUIPOS (QR, EDITAR, TRASLADAR, ELIMINAR, FOTO) ---
 
-        // Función para Trasladar un equipo de una Sección a otra directamente desde el botón 🚚 en Inventario de Equipos
-        window.trasladarEquipoDirecto = async function(idOrigin) {
+        // A. Impresora Universal Auto-Contenida de Planchas y Etiquetas QR
+        window.abrirImpresionQRsSySO = function(listaIds, tituloPlancha) {
+            const idsValidos = (listaIds || []).filter(id => config.equipos && config.equipos[id] && !esEquipoVirtualComunicacion(id));
+            if(idsValidos.length === 0) return alert("⚠️ No hay equipos físicos en esta selección para imprimir QR.");
+
+            const tarjetasHTML = idsValidos.map(id => {
+                const eq = config.equipos[id];
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=4&data=${encodeURIComponent(id)}`;
+                return `<div class="qr-card">
+                    <div class="qr-hdr">${config.empresa || 'GESTIÓN SySO'}</div>
+                    <div class="qr-sec">${eq.seccion || ''} — ${eq.grupo || ''}</div>
+                    <img src="${qrUrl}" alt="${id}" class="qr-img">
+                    <div class="qr-id">${id}</div>
+                    <div class="qr-ubi">${eq.ubicacion || 'Planta Industrial'}</div>
+                </div>`;
+            }).join('');
+
+            const win = window.open('', '_blank');
+            if(!win) return alert("⚠️ Permita las ventanas emergentes en su navegador para imprimir las etiquetas QR.");
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tituloPlancha}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 15px; background: #f4f6f9; color: #111; }
+                    .no-print { background: #0f2942; color: #fff; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+                    .btn-p { background: #ffc107; color: #000; border: none; padding: 9px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
+                    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 12px; }
+                    .qr-card { background: #fff; border: 2px solid #0f2942; border-radius: 8px; padding: 10px; text-align: center; page-break-inside: avoid; }
+                    .qr-hdr { font-size: 10px; font-weight: bold; color: #555; text-transform: uppercase; }
+                    .qr-sec { font-size: 11px; font-weight: bold; color: #0f2942; margin: 3px 0 6px 0; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+                    .qr-img { width: 135px; height: 135px; object-fit: contain; }
+                    .qr-id { font-size: 16px; font-weight: 900; color: #000; margin-top: 4px; letter-spacing: 0.5px; }
+                    .qr-ubi { font-size: 10.5px; color: #444; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    @media print { body { background: #fff; margin: 0; } .no-print { display: none !important; } }
+                </style>
+            </head><body>
+                <div class="no-print">
+                    <div><b>🖨️ ${tituloPlancha} (${idsValidos.length} etiqueta${idsValidos.length>1?'s':''})</b></div>
+                    <button class="btn-p" onclick="window.print()">🖨️ Imprimir Ahora</button>
+                </div>
+                <div class="grid">${tarjetasHTML}</div>
+            </body></html>`);
+            win.document.close();
+        };
+
+        window.imprimirQRIndividual = function(id, event) {
+            if(event) event.stopPropagation();
+            window.abrirImpresionQRsSySO([id], `Etiqueta QR Individual — ${id}`);
+        };
+
+        window.imprimirLoteSeccionCompleta = function(sec, event) {
+            if(event) event.stopPropagation();
+            const ids = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => !esEquipoVirtualComunicacion(id) && config.equipos[id].seccion === sec);
+            window.abrirImpresionQRsSySO(ids, `Lote Completo — Sección: ${sec}`);
+        };
+
+        window.imprimirLoteGrupoSeccion = function(grp, sec, event) {
+            if(event) event.stopPropagation();
+            const ids = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => !esEquipoVirtualComunicacion(id) && config.equipos[id].seccion === sec && config.equipos[id].grupo === grp);
+            window.abrirImpresionQRsSySO(ids, `Lote QR — ${sec} ➔ ${grp}`);
+        };
+
+        window.imprimirLoteSeccion = window.imprimirLoteGrupoSeccion;
+
+        window.imprimirQRsDanados = function() {
+            const mapaSinQR = (config.telemetria && config.telemetria.equiposSinQR) || {};
+            const idsDanados = Object.keys(mapaSinQR).filter(id => mapaSinQR[id] >= 1 && config.equipos && config.equipos[id] && !esEquipoVirtualComunicacion(id)).sort(sortNatural);
+            if(idsDanados.length === 0) return alert("✅ No hay etiquetas QR reportadas como dañadas en este momento.");
+            window.abrirImpresionQRsSySO(idsDanados, `Plancha de Reimpresión — QRs Dañados (${idsDanados.length})`);
+        };
+
+        window.limpiarContadorQRsDanados = async function() {
+            const mapaSinQR = (config.telemetria && config.telemetria.equiposSinQR) || {};
+            const cant = Object.keys(mapaSinQR).filter(id => mapaSinQR[id] >= 1).length;
+            if(cant === 0) return alert("✅ La cola de QRs dañados ya está limpia (0 pendientes).");
+            if(!confirm(`¿Confirmas que ya reimprimiste las ${cant} etiqueta(s) QR dañadas y deseas reiniciar el contador en cero?`)) return;
+            config.telemetria.equiposSinQR = {};
+            guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
+            await parchearSubnodoConfigNube('telemetria', config.telemetria);
+            renderListas();
+            mostrarToastGuardado("🧹 Cola de QRs Dañados reiniciada en cero");
+        };
+
+        window.resetearContadorQRs = window.limpiarContadorQRsDanados;
+
+        // B. Botón 📷 Foto: Ver Foto de Referencia del Equipo
+        window.verFotoReferenciaEquipo = async function(id, event) {
+            if(event) event.stopPropagation();
+            const modal = document.getElementById('modalFotoRef');
+            const img = document.getElementById('imgFotoRefGrande');
+            const tit = document.getElementById('tituloModalFotoRef');
+            let b64 = null;
+            try {
+                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
+                b64 = cacheF[id] || null;
+                if(!b64 && config. syncUrl) {
+                    const res = await fetch(`${ obtenerUrlBaseFirebase() }/syso_eq_photos/${encodeURIComponent(id)}.json`);
+                    if(res.ok) {
+                        const d = await res.json();
+                        if(d && d.f) { b64 = d.f; cacheF[id] = b64; localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF)); }
+                    }
+                }
+            } catch(e) {}
+            if(!b64) return alert("⚠️ No se encontró la foto de referencia almacenada para " + id);
+            if(modal && img) {
+                if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
+                img.src = b64;
+                modal.classList.remove('hidden');
+            } else {
+                const w = window.open('', '_blank');
+                if(w) w.document.write(`<img src="${b64}" style="max-width:100%;">`);
+            }
+        };
+
+        // C. Botón ✏️ Editar: Abre el desplegable de Registro/Edición, carga todos los datos del equipo y desliza la vista
+        window.prepararEdicionQR = function(id, event) {
+            if(event) event.stopPropagation();
+            const eq = config.equipos && config.equipos[id];
+            if(!eq) return alert("No se encontró el equipo " + id);
+
+            editQRId = id;
+            const acc = document.getElementById('accFormAltaQR');
+            if(acc) acc.classList.add('active');
+
+            const selS = document.getElementById('qrSeccion');
+            const selG = document.getElementById('qrGrupo');
+            if(selS) selS.value = eq.seccion || '';
+            if(selG) selG.value = eq.grupo || '';
+            actualizarPrefijoUI();
+
+            const partesId = String(id).split('-');
+            const numId = partesId.length >= 3 ? partesId.slice(2).join('-') : id;
+            const inpNum = document.getElementById('qrNumero');
+            if(inpNum) { inpNum.value = numId; inpNum.readOnly = true; }
+
+            if(document.getElementById('qrUbicacion')) document.getElementById('qrUbicacion').value = (eq.ubicacion && eq.ubicacion !== 'Pendiente en terreno') ? eq.ubicacion : '';
+            if(document.getElementById('qrTipo')) document.getElementById('qrTipo').value = (eq.tipo && eq.tipo !== 'Pendiente en terreno') ? eq.tipo : '';
+            if(document.getElementById('qrCapacidad')) document.getElementById('qrCapacidad').value = eq.capacidad || '';
+            if(document.getElementById('qrSerie')) document.getElementById('qrSerie').value = eq.serie || '';
+            if(document.getElementById('qrVencimiento')) document.getElementById('qrVencimiento').value = eq.vencimiento || '';
+
+            const contIns = document.getElementById('contenedorFilasInsumos');
+            if(contIns) {
+                contIns.innerHTML = '';
+                if(Array.isArray(eq.insumos) && eq.insumos.length > 0) {
+                    eq.insumos.forEach(ins => agregarFilaInsumoBotiquin(ins.nombre, ins.stock, ins.vencimiento));
+                } else if(obtenerCamposActivosGrupo(eq.grupo).includes('insumos')) {
+                    agregarFilaInsumoBotiquin();
+                }
+            }
+
+            const btnG = document.getElementById('btnGuardarQR');
+            if(btnG) btnG.innerText = `💾 Guardar Cambios en ${id}`;
+
+            if(acc) {
+                setTimeout(() => {
+                    acc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const inpUbi = document.getElementById('qrUbicacion');
+                    if(inpUbi) inpUbi.focus();
+                }, 100);
+            }
+            mostrarToastGuardado(`✏️ Editando ${id} abajo en el formulario`);
+        };
+
+        window.editarQR = window.prepararEdicionQR;
+
+        // D. Botón 🚚 Trasladar: Despliega un panel visual inline en la misma fila del equipo (Nunca se bloquea)
+        window.abrirTrasladoInline = function(idOrigin, event) {
+            if(event) event.stopPropagation();
+            const boxId = `boxTrasladoInline_${idOrigin.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const box = document.getElementById(boxId);
+            if(box) {
+                box.classList.toggle('hidden');
+            }
+        };
+
+        window.confirmarTrasladoInline = async function(idOrigin, event) {
+            if(event) event.stopPropagation();
             const eq = config.equipos && config.equipos[idOrigin];
             if(!eq) return;
-            const otrasSecs = (config.secciones || []).filter(s => s !== eq.seccion);
-            if(otrasSecs.length === 0) return alert("No hay otras secciones registradas para trasladar el equipo.");
-
-            const opcionesTxt = otrasSecs.map((s, idx) => `${idx + 1}. ${s} [${obtenerSiglaSeccion(s)}]`).join('\n');
-            const resp = prompt(`🚚 TRASLADAR EQUIPO ${idOrigin} (Actualmente en ${eq.seccion})\n\nEscriba el número o nombre de la nueva Sección destino:\n${opcionesTxt}`);
-            if(!resp || !resp.trim()) return;
-
-            let nuevaSec = null;
-            const num = parseInt(resp.trim(), 10);
-            if(!isNaN(num) && num >= 1 && num <= otrasSecs.length) {
-                nuevaSec = otrasSecs[num - 1];
-            } else {
-                const rNorm = resp.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                nuevaSec = otrasSecs.find(s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(rNorm));
-            }
-            if(!nuevaSec) return alert("⚠️ Selección no válida. Operación cancelada.");
+            const selId = `selTrasladoSec_${idOrigin.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const sel = document.getElementById(selId);
+            const nuevaSec = sel ? sel.value : '';
+            if(!nuevaSec || nuevaSec === eq.seccion) return alert("Seleccione una Sección destino distinta.");
 
             const nuevoNum = calcularSiguienteCorrelativo(eq.grupo, nuevaSec);
             const nuevoId = obtenerPrefijoCompuesto(eq.grupo, nuevaSec) + nuevoNum;
-
-            if(!confirm(`¿Confirmar traslado de "${idOrigin}" (${eq.seccion}) hacia "${nuevaSec}"?\n\n• Nuevo código asignado: ${nuevoId}\n• Se conservarán su ubicación, tipo, foto y estado.`)) return;
 
             const copiaEq = JSON.parse(JSON.stringify(eq));
             copiaEq.seccion = nuevaSec;
@@ -5163,15 +5303,53 @@ function descargarInventarioExcelProfesional() {
             window.seccionesAbiertasInventario[nuevaSec] = true;
             window.gruposAbiertosInventario[`${nuevaSec}__${eq.grupo}`] = true;
             renderListas();
-            mostrarToastGuardado(`🚚 Trasladado a ${nuevaSec} como ${nuevoId}`);
+            mostrarToastGuardado(`🚚 ${idOrigin} trasladado a ${nuevaSec} como ${nuevoId}`);
         };
 
-        // Localizador infalible del contenedor donde van las barras desplegables debajo del buscador
+        // E. Botón 🗑️ Eliminar: Despliega confirmación inline o directa y elimina el equipo de Local y Firebase
+        window.abrirConfirmarEliminarInline = function(id, event) {
+            if(event) event.stopPropagation();
+            const boxId = `boxEliminarInline_${id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const box = document.getElementById(boxId);
+            if(box) box.classList.toggle('hidden');
+        };
+
+        window.ejecutarEliminacionDefinitivaQR = async function(id, event) {
+            if(event) event.stopPropagation();
+            const eq = config.equipos && config.equipos[id];
+            if(!eq) return;
+            const sec = eq.seccion, grp = eq.grupo;
+
+            delete config.equipos[id];
+            if(config.fallas && config.fallas[id]) {
+                delete config.fallas[id];
+                await parchearSubnodoConfigNube('fallas', { [id]: null });
+            }
+            if(config.enRecarga && config.enRecarga[id]) {
+                delete config.enRecarga[id];
+                await parchearSubnodoConfigNube('enRecarga', { [id]: null });
+            }
+            if(config.telemetria && config.telemetria.equiposSinQR && config.telemetria.equiposSinQR[id]) {
+                delete config.telemetria.equiposSinQR[id];
+                await parchearSubnodoConfigNube('telemetria', config.telemetria);
+            }
+
+            guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
+            await parchearSubnodoConfigNube('equipos', { [id]: null });
+
+            window.seccionesAbiertasInventario[sec] = true;
+            window.gruposAbiertosInventario[`${sec}__${grp}`] = true;
+            renderListas();
+            mostrarToastGuardado(`🗑️ Equipo ${id} eliminado correctamente`);
+        };
+
+        window.eliminarQR = window.abrirConfirmarEliminarInline;
+        window.borrarQR = window.abrirConfirmarEliminarInline;
+
+        // --- 4. RENDERIZADOR DEL INVENTARIO EN ORDEN 1° SECCIÓN ➔ 2° GRUPO CON BOTONES VINCULADOS ---
         function obtenerContenedorInventarioDOM() {
-            // Eliminar si quedó el filtro doble blanco de la prueba anterior
             const filtroViejo = document.getElementById('boxDobleFiltroInventario');
             if(filtroViejo) filtroViejo.remove();
-
             const busc = document.getElementById('buscadorEquipos');
             if(busc && busc.parentElement) {
                 const hijos = Array.from(busc.parentElement.children);
@@ -5183,12 +5361,28 @@ function descargarInventarioExcelProfesional() {
             return document.getElementById('listaQR') || document.getElementById('listaEquipos') || document.getElementById('listaQRs');
         }
 
+        function vincularBotonesSuperioresInventarioDOM() {
+            const viewEq = document.getElementById('view-equipos');
+            if(!viewEq) return;
+            viewEq.querySelectorAll('button').forEach(btn => {
+                const t = (btn.innerText || '').toLowerCase();
+                if(t.includes('qrs dañados') || t.includes('qrs danados')) {
+                    btn.onclick = (e) => { e.preventDefault(); window.imprimirQRsDanados(); };
+                } else if(t.includes('limpiar cont')) {
+                    btn.onclick = (e) => { e.preventDefault(); window.limpiarContadorQRsDanados(); };
+                } else if(t.includes('exportar excel')) {
+                    btn.onclick = (e) => { e.preventDefault(); window.exportarInventarioEquiposExcel(); };
+                }
+            });
+        }
+
         function inyectarMejorasOrdenYExcelEnEquipos() {
             const filtroViejo = document.getElementById('boxDobleFiltroInventario');
             if(filtroViejo) filtroViejo.remove();
+            vincularBotonesSuperioresInventarioDOM();
 
             const selBulkSec = document.getElementById('bulkSeccion'), selBulkGrp = document.getElementById('bulkGrupo');
-            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV652) {
+            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV653) {
                 const wrapSec = selBulkSec.parentElement, wrapGrp = selBulkGrp.parentElement;
                 const gridPadre = wrapSec ? wrapSec.parentElement : null;
                 if(gridPadre && wrapSec && wrapGrp) {
@@ -5198,7 +5392,7 @@ function descargarInventarioExcelProfesional() {
                     gridPadre.insertBefore(wrapSec, wrapGrp);
                     selBulkSec.onchange = () => actualizarGuiaColumnasImportacionExcel();
                     selBulkGrp.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    window.ordenBulkInvertidoV652 = true;
+                    window.ordenBulkInvertidoV653 = true;
                 }
             }
 
@@ -5302,19 +5496,11 @@ function descargarInventarioExcelProfesional() {
             window.gruposAbiertosInventario[claveSecGrp] = !window.gruposAbiertosInventario[claveSecGrp];
             renderListas();
         };
-        window.imprimirLoteSeccionCompleta = function(sec, event) {
-            if(event) event.stopPropagation();
-            const ids = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => !esEquipoVirtualComunicacion(id) && config.equipos[id].seccion === sec);
-            if(ids.length === 0) return alert(`No hay equipos físicos registrados en ${sec}.`);
-            generarVentanaImpresionQR(ids, `Lote Completo — Sección: ${sec}`);
-        };
 
-        // Guardar referencia al renderListas original de la Parte 5 para poblar Ajustes sin perder nada
         if(!window._origRenderListasBase && typeof renderListas === 'function') {
             window._origRenderListasBase = renderListas;
         }
 
-        // Renderizador con la VISTA ORIGINAL de barras azul oscuro pero en orden: 1° Sección ➔ 2° Grupo ➔ 3° Equipos (con Editar, Trasladar y Eliminar)
         renderListas = function() {
             if(typeof window._origRenderListasBase === 'function') {
                 try { window._origRenderListasBase(); } catch(e) {}
@@ -5366,6 +5552,7 @@ function descargarInventarioExcelProfesional() {
                         const fallaAct = config.fallas && config.fallas[id];
                         const enRec = config.enRecarga && config.enRecarga[id];
                         const cantSinQR = mapaSinQR[id] || 0;
+                        const idDomSafe = id.replace(/[^a-zA-Z0-9]/g, '_');
 
                         let badgesEstado = '';
                         if(fallaAct) badgesEstado += `<span style="background:var(--danger); color:#fff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-weight:bold; margin-left:4px;">🚨 Falla: ${fallaAct}</span>`;
@@ -5381,28 +5568,48 @@ function descargarInventarioExcelProfesional() {
                         if(eq.vencimiento && perf.camposActivos.includes('vencimiento')) metaDetalles.push(`📅 Venc: ${eq.vencimiento}`);
                         if(Array.isArray(eq.insumos) && eq.insumos.length > 0) metaDetalles.push(`💊 ${eq.insumos.length} insumo(s)`);
 
-                        return `<div class="list-item" style="padding:9px 10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                            <div style="flex:1; min-width:190px;">
-                                <div style="font-size:13.5px;"><b>${id}</b> ${badgesEstado}</div>
-                                <div class="text-muted" style="font-size:11.5px; margin-top:2px;">${metaDetalles.join(' | ') || 'Sin detalles adicionales'}</div>
+                        const opcionesOtrasSecs = secsOrdenadas.filter(s => s !== eq.seccion).map(s => `<option value="${s}">📍 ${s} [${obtenerSiglaSeccion(s)}]</option>`).join('');
+
+                        return `<div class="list-item" style="padding:10px; border-bottom:1px solid var(--border); display:block;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div style="flex:1; min-width:190px;">
+                                    <div style="font-size:13.5px;"><b>${id}</b> ${badgesEstado}</div>
+                                    <div class="text-muted" style="font-size:11.5px; margin-top:2px;">${metaDetalles.join(' | ') || 'Sin detalles adicionales'}</div>
+                                </div>
+                                <div class="action-btns">
+                                    ${eq.tieneFotoRef ? `<button type="button" class="btn-small btn-info" onclick="window.verFotoReferenciaEquipo('${id}', event)">📷 Foto</button>` : ''}
+                                    <button type="button" class="btn-small btn-dark" onclick="window.imprimirQRIndividual('${id}', event)">🖨️ QR</button>
+                                    <button type="button" class="btn-small btn-s-edit" onclick="window.prepararEdicionQR('${id}', event)">✏️ Editar</button>
+                                    <button type="button" class="btn-small btn-warning" style="color:#000;" onclick="window.abrirTrasladoInline('${id}', event)">🚚 Trasladar</button>
+                                    <button type="button" class="btn-small btn-s-del" onclick="window.abrirConfirmarEliminarInline('${id}', event)">🗑️ Eliminar</button>
+                                </div>
                             </div>
-                            <div class="action-btns">
-                                ${eq.tieneFotoRef ? `<button type="button" class="btn-small btn-info" title="Ver Foto" onclick="verFotoReferenciaEquipo('${id}')">📷 Foto</button>` : ''}
-                                <button type="button" class="btn-small btn-dark" title="Imprimir QR" onclick="imprimirQRIndividual('${id}')">🖨️ QR</button>
-                                <button type="button" class="btn-small btn-s-edit" title="Editar Equipo" onclick="prepararEdicionQR('${id}')">✏️ Editar</button>
-                                <button type="button" class="btn-small btn-warning" style="color:#000;" title="Trasladar a otra Sección" onclick="trasladarEquipoDirecto('${id}')">🚚 Trasladar</button>
-                                <button type="button" class="btn-small btn-s-del" title="Eliminar Equipo" onclick="eliminarQR('${id}')">🗑️ Eliminar</button>
+                            <!-- Panel Inline de Traslado (Se abre al tocar 🚚 Trasladar) -->
+                            <div id="boxTrasladoInline_${idDomSafe}" class="hidden" style="margin-top:8px; padding:8px 10px; background:var(--input-bg); border:1.5px solid #ffc107; border-radius:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                <span style="font-size:12px; font-weight:bold;">🚚 Mudar <b>${id}</b> hacia la sección:</span>
+                                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                    <select id="selTrasladoSec_${idDomSafe}" style="padding:5px 8px; font-size:12px; width:auto;">${opcionesOtrasSecs}</select>
+                                    <button type="button" class="btn-small btn-success" onclick="window.confirmarTrasladoInline('${id}', event)">✅ Confirmar Mudanza</button>
+                                    <button type="button" class="btn-small btn-dark" onclick="window.abrirTrasladoInline('${id}', event)">✖ Cancelar</button>
+                                </div>
+                            </div>
+                            <!-- Panel Inline de Eliminación (Se abre al tocar 🗑️ Eliminar) -->
+                            <div id="boxEliminarInline_${idDomSafe}" class="hidden" style="margin-top:8px; padding:8px 10px; background:#ffebee; border:1.5px solid var(--danger); border-radius:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                <span style="font-size:12px; font-weight:bold; color:var(--danger);">⚠️ ¿Confirmas eliminar definitivamente el equipo <b>${id}</b>?</span>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="btn-small btn-s-del" onclick="window.ejecutarEliminacionDefinitivaQR('${id}', event)">🗑️ Sí, Eliminar Ahora</button>
+                                    <button type="button" class="btn-small btn-dark" onclick="window.abrirConfirmarEliminarInline('${id}', event)">✖ Cancelar</button>
+                                </div>
                             </div>
                         </div>`;
                     }).join('');
 
-                    // 2° Nivel: Barra del Grupo con el mismo estilo visual limpio
                     htmlGruposDentroDeSeccion += `
                         <div class="accordion ${grpAbierto ? 'active' : ''}" style="margin:6px 0;">
-                            <div class="accordion-header" onclick="toggleAcordeonGrupoInventario('${claveEsc}')" style="background:#3b6998; padding:10px 14px;">
+                            <div class="accordion-header" onclick="window.toggleAcordeonGrupoInventario('${claveEsc}')" style="background:#3b6998; padding:10px 14px;">
                                 <span>${grp} (${idsSecGrp.length})</span>
                                 <div class="action-btns" onclick="event.stopPropagation();">
-                                    <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="imprimirLoteSeccion('${grpEsc}', '${secEsc}', event)">🖨️ QR</button>
+                                    <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="window.imprimirLoteGrupoSeccion('${grpEsc}', '${secEsc}', event)">🖨️ QR</button>
                                 </div>
                             </div>
                             <div class="accordion-content" style="display:${grpAbierto ? 'block' : 'none'}; padding:6px 8px;">
@@ -5411,13 +5618,12 @@ function descargarInventarioExcelProfesional() {
                         </div>`;
                 });
 
-                // 1° Nivel: Barra principal azul oscuro de la Sección (Igual a la vista original)
                 contQR.innerHTML += `
                     <div class="accordion ${secAbierta ? 'active' : ''}">
-                        <div class="accordion-header" onclick="toggleAcordeonSeccionInventario('${secEsc}')">
+                        <div class="accordion-header" onclick="window.toggleAcordeonSeccionInventario('${secEsc}')">
                             <span>${sec} (${idsDeSeccion.length})</span>
                             <div class="action-btns" onclick="event.stopPropagation();">
-                                <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="imprimirLoteSeccionCompleta('${secEsc}', event)">🖨️ QR</button>
+                                <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="window.imprimirLoteSeccionCompleta('${secEsc}', event)">🖨️ QR</button>
                             </div>
                         </div>
                         <div class="accordion-content" style="display:${secAbierta ? 'block' : 'none'}; padding:8px 10px;">
@@ -5431,7 +5637,7 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- 4. MOTOR DE IMPORTACIÓN Y EXPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
+        // --- 5. MOTOR DE IMPORTACIÓN Y EXPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
         function serializarInsumosParaTextoExcel(insumosArr) {
             if(!Array.isArray(insumosArr) || insumosArr.length === 0) return '';
             return insumosArr.map(i => `${i.nombre}:${i.stock ?? 0}:${i.vencimiento || 'N/A'}`).join(' | ');
@@ -5698,7 +5904,7 @@ function descargarInventarioExcelProfesional() {
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Stock_y_Vencimientos_Botiquines_${fechaHoy}.xls`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         };
 
-        // --- 5. ESCUDO ANTI-SALIDA ACCIDENTAL Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
+        // --- 6. ESCUDO ANTI-SALIDA ACCIDENTAL Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
         function hayTrabajoEnCursoSinGuardar() {
             const idCtrl = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value.trim() : '';
             const modDin = document.getElementById('moduloDinamico');
@@ -5863,7 +6069,7 @@ function descargarInventarioExcelProfesional() {
             } catch(e) {}
         }
 
-        // --- 6. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ACCESO RÁPIDO (V6.52) ---
+        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ACCESO RÁPIDO (V6.53) ---
         async function descubrirMejorModeloGeminiAPI(apiKey) {
             const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             if(!apiKey) return 'gemini-3.5-flash-lite';
@@ -6159,7 +6365,7 @@ function descargarInventarioExcelProfesional() {
             const secsUsuario = (esAdmin || !u.secciones || u.secciones.includes('Todas')) ? todasSecs : u.secciones.filter(s => todasSecs.includes(s));
             const grpsUsuario = (esAdmin || !u.grupo || u.grupo.includes('Todos')) ? todosGrps : todosGrps.filter(g => u.grupo.includes(g) || (esGrupoComunicacionNombre(g) && u.grupo.some(ug => esGrupoComunicacionNombre(ug))));
             return {
-                versionActual: 'V6.52', usuarioNombre: u.nombre,
+                versionActual: 'V6.53', usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : 'Inspector / Brigadista',
                 esAdmin, soloTieneComunicacion: (!esAdmin && grpsUsuario.length === 1 && esGrupoComunicacionNombre(grpsUsuario[0])),
                 seccionesHabilitadasUsuario: secsUsuario, seccionesPROHIBIDASUsuario: todasSecs.filter(s => !secsUsuario.includes(s)),
@@ -6227,7 +6433,7 @@ function descargarInventarioExcelProfesional() {
         const PREGUNTAS_ANALISTA_JACK = [
             "🚀 ¿Qué detectaron los 10.000 Perfiles IA con nombres y códigos exactos?",
             "🚿 ¿Cuántos equipos de hidrantes tiene registrado Balanceados y de qué tipos son?",
-            "📥 ¿Cómo importo o exporto documentos enteros de Excel en la V6.52?",
+            "📥 ¿Cómo importo o exporto documentos enteros de Excel en la V6.53?",
             "📞 ¿Qué empleados activos no tienen teléfono personal o contacto familiar?"
         ];
 
@@ -6357,10 +6563,10 @@ function descargarInventarioExcelProfesional() {
                 const modInicial = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('3.8')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando tu pregunta exacta con Gemini (${modInicial})...</div>`;
                 try {
-                    const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO V6.52".
+                    const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO V6.53".
 Responde DIRECTAMENTE a la frase ("${texto}").
 1. USUARIO: "${mapaApp.usuarioNombre}" (${mapaApp.usuarioRol}) | Secciones habilitadas: ${mapaApp.seccionesHabilitadasUsuario.join(', ')} | Grupos habilitados: ${mapaApp.gruposHabilitadosUsuario.join(', ')} | Grupos PROHIBIDOS: ${mapaApp.gruposPROHIBIDOSUsuario.join(', ') || 'Ninguno'}.
-2. NOVEDADES V6.52: En Equipos se mantiene la vista de barras azul oscuro ordenada 1° por Sección y 2° por Grupo, con botones para Editar, Trasladar de sección y Eliminar en cada equipo. Permite importar y exportar documentos enteros de Excel y tiene borrador de 30 minutos.
+2. NOVEDADES V6.53: En Equipos el inventario se despliega 1° por Sección y 2° por Grupo, con botones operativos para Imprimir QR, Editar, Trasladar (con selector inline) y Eliminar. Permite importar/exportar documentos completos de Excel y tiene borrador de 30 minutos.
 3. DATOS EN VIVO (${rad.mesActual}): Total: ${rad.totalFisicos} equipos físicos + 4 Comunicación = ${rad.totalPlanta}. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Tipos: ${JSON.stringify(rad.desgloseTiposPorGrupo)}. Hallazgos: ${hallazgos10k.join(' | ')}.
 Si no tiene relación con la planta o la app, responde solo: FUERA_DE_TEMA. De lo contrario responde en español claro en máximo 90 palabras.`;
 
@@ -6432,15 +6638,15 @@ Si no tiene relación con la planta o la app, responde solo: FUERA_DE_TEMA. De l
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.52\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.52 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.53\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.53 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.52 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.53 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.52';
+            if(badgeVer) badgeVer.innerText = 'V6.53';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
