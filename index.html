@@ -5307,8 +5307,8 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.48): GEMINI 3.5 FLASH-LITE RESPONDE SIEMPRE LA PREGUNTA
-        // EXACTA EN 1° LUGAR + TARJETA INTERACTIVA Y PRE-CARGA AUTOMÁTICA DE ALTA
+        // MOTOR 7B FINAL (V6.49): DETECTOR DOBLE DE ACCESO RÁPIDO (PREGUNTA + IA),
+        // PRE-CARGA EXACTA DE SECCIÓN/GRUPO/CORRELATIVO Y GEMINI 3.5 FLASH-LITE
         // =========================================================================
 
         window.ultimaPreguntaUsuarioIA = '';
@@ -5408,9 +5408,9 @@ function descargarInventarioExcelProfesional() {
             listaBit.parentElement.insertBefore(inpBusq, listaBit);
         }
 
-        const _obtenerRegFiltradosBaseV648 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV649 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV648();
+            const base = _obtenerRegFiltradosBaseV649();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
@@ -5565,7 +5565,7 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- NAVEGADOR INTERACTIVO CON PRE-CARGA AUTOMÁTICA INTELIGENTE ---
+        // --- NAVEGADOR INTERACTIVO CON PRE-CARGA EXACTA DE SECCIÓN, GRUPO Y CORRELATIVO ---
         window.irDirectoDesdeAyudaIA = function(destino) {
             document.getElementById('modalAyudaIA').classList.add('hidden');
             if(destino === 'ALTA_EQUIPO') {
@@ -5577,11 +5577,11 @@ function descargarInventarioExcelProfesional() {
                 if(acc) {
                     acc.classList.add('active');
                     setTimeout(() => {
-                        // Si el Admin mencionó una sección o grupo en su pregunta, o si pre-llenamos el primer sector por defecto
                         const pNorm = String(window.ultimaPreguntaUsuarioIA || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                         const { seccionDetectada, grupoDetectado } = detectarGrupoYSeccionEnTexto(pNorm);
                         const selS = document.getElementById('qrSeccion');
                         const selG = document.getElementById('qrGrupo');
+                        const inpNum = document.getElementById('qrNumero');
                         if(selS && (seccionDetectada || !selS.value)) {
                             selS.value = seccionDetectada || (config.secciones && config.secciones[0]) || '';
                         }
@@ -5589,7 +5589,8 @@ function descargarInventarioExcelProfesional() {
                             const primerGrp = Object.keys(config.grupos || {}).find(g => g !== 'Todos' && !esGrupoComunicacionNombre(g)) || '';
                             selG.value = grupoDetectado || primerGrp;
                         }
-                        alCambiarGrupoOSeccionQR();
+                        if(inpNum) inpNum.value = '';
+                        if(typeof actualizarPrefijoUI === 'function') actualizarPrefijoUI();
                         acc.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         const inpUbi = document.getElementById('qrUbicacion');
                         if(inpUbi) inpUbi.focus();
@@ -5667,19 +5668,24 @@ function descargarInventarioExcelProfesional() {
 
         function generarReplicaVisualApp(tipo) {
             const caja = `margin-top:10px; border:2px solid var(--primary); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
-            const tag = `<div style="font-size:10.5px; font-weight:bold; color:var(--primary); text-transform:uppercase; margin-bottom:6px;">📱 Imagen de Referencia Interactiva (Toca encima para ir allí):</div>`;
+            const tag = `<div style="font-size:10.5px; font-weight:bold; color:var(--primary); text-transform:uppercase; margin-bottom:6px;">📱 Acceso Rápido Interactivo (Toca encima para ir allí):</div>`;
             const flecha = `<span style="background:#ffc107; color:#000; font-weight:900; padding:2px 6px; border-radius:6px; font-size:10.5px; margin-left:4px; display:inline-block;">👈 TOCA AQUÍ</span>`;
             const esAdmin = usuarioActual && usuarioActual.rol === 'Admin';
 
             if(tipo === 'ALTA_EQUIPO') {
+                const pNorm = String(window.ultimaPreguntaUsuarioIA || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const { seccionDetectada, grupoDetectado } = detectarGrupoYSeccionEnTexto(pNorm);
+                const detallePreCarga = (seccionDetectada || grupoDetectado)
+                    ? `⚡ Pre-Cargar ${grupoDetectado ? '"' + grupoDetectado + '"' : 'Equipo'}${seccionDetectada ? ' en "' + seccionDetectada + '"' : ''} y Abrir Ahora`
+                    : `⚡ Pre-Cargar y Abrir Registro de Nuevo Equipo Ahora`;
                 const accClick = esAdmin ? `onclick="irDirectoDesdeAyudaIA('ALTA_EQUIPO')"` : `onclick="irDirectoDesdeAyudaIA('ACTUALIZAR_FICHA')"`;
                 return `<div style="${caja}">${tag}
                     <div ${accClick} style="cursor:pointer; display:flex; justify-content:space-around; background:var(--input-bg); padding:6px; border-radius:6px; margin-bottom:6px; font-size:11px;">
                         <span>📋 Control</span><span>📊 Historial</span><span style="color:var(--primary); font-weight:bold; border-bottom:2px solid var(--primary);">📦 Equipos ${flecha}</span><span>⚙️ Ajustes</span>
                     </div>
                     <div ${accClick} style="cursor:pointer; background:var(--primary); color:#fff; padding:8px 10px; border-radius:6px; font-weight:bold; margin-bottom:6px;">➕ Registrar Nuevo Equipo / Generar QR ▼ ${flecha}</div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Pre-carga Sección, Grupo y el siguiente ID correlativo automáticamente</div>
-                    <button type="button" class="btn btn-warning" style="margin:0; padding:9px; font-size:13px;" ${accClick}>⚡ Pre-Cargar y Abrir Registro de Nuevo Equipo Ahora</button>
+                    <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Selecciona automáticamente Sección, Grupo y el siguiente ID correlativo libre</div>
+                    <button type="button" class="btn btn-warning" style="margin:0; padding:10px; font-size:13px; font-weight:bold;" ${accClick}>${detallePreCarga}</button>
                 </div>`;
             }
             if(tipo === 'ACTUALIZAR_FICHA') {
@@ -5724,7 +5730,7 @@ function descargarInventarioExcelProfesional() {
             if(tipo === 'SOS') {
                 return `<div style="${caja}">${tag}
                     <div onclick="irDirectoDesdeAyudaIA('SOS')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:var(--primary); color:#fff; padding:9px 12px; border-radius:8px;">
-                        <b>Gestión SySO V6.48</b>
+                        <b>Gestión SySO V6.49</b>
                         <span style="background:#dc3545; color:#fff; border:2px solid #fff; padding:5px 10px; border-radius:8px; font-weight:bold;">🚨 S.O.S. ${flecha}</span>
                     </div>
                 </div>`;
@@ -5757,7 +5763,7 @@ function descargarInventarioExcelProfesional() {
             const idAbierto = (document.getElementById('idEquipo') && document.getElementById('idEquipo').value) || 'Ninguno';
 
             return {
-                versionActual: 'V6.48',
+                versionActual: 'V6.49',
                 usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : (u.rol === 'Inspector' ? 'Inspector / Brigadista' : 'Sin sesión'),
                 esAdmin,
@@ -5772,7 +5778,7 @@ function descargarInventarioExcelProfesional() {
                 pestanaAbiertaAhora: pestanaActiva,
                 equipoCargadoEnControl: idAbierto,
                 reglasExactasDeModulos: {
-                    autoCreacionDesdeElChat: "Si el usuario pregunta '¿Puedes registrar/crear un nuevo equipo para mí de forma automática?': Si es Administrador, respóndele directamente que por seguridad industrial el chat no guarda equipos en la nube sin su confirmación final, PERO que SÍ puede pre-cargarle automáticamente el formulario (con la Sección, el Grupo y el próximo código correlativo libre ya listos) tocando el botón amarillo '⚡ Pre-Cargar y Abrir Registro de Nuevo Equipo Ahora' que aparece debajo. Si NO es Administrador, respóndele que no tiene permisos para crear equipos nuevos y que debe pedírselo a un Administrador.",
+                    autoCreacionDesdeElChat: "Si el usuario pide registrar, crear o dar de alta cualquier equipo nuevo (ej. un botiquín, extintor, hidrante, corte de energía, evacuación, etc.): Si es Administrador, respóndele que puede pre-cargar automáticamente el formulario con esa Sección, ese Grupo y el siguiente código correlativo libre tocando el botón amarillo interactivo de abajo. Si NO es Administrador, respóndele que no tiene permisos para crear equipos nuevos y que debe pedírselo a un Administrador.",
                     permisosDeControlPorGrupoYSeccion: "REGLA ESTRICTA: Un usuario con rol Inspector/Brigadista SOLO puede controlar equipos que pertenezcan simultáneamente a sus 'seccionesHabilitadasUsuario' y a sus 'gruposHabilitadosUsuario'. Si pregunta cómo controlar o quiere controlar un grupo en 'gruposPROHIBIDOSUsuario' o una sección en 'seccionesPROHIBIDASUsuario', dile claramente que NO tiene permiso para ese grupo/sección y que solo puede controlar sus grupos asignados (" + grpsUsuario.join(', ') + " en " + secsUsuario.join(', ') + ").",
                     registrarNuevoEquipo: "SOLO Administradores: Pestaña inferior '📦 Equipos' ➔ abrir desplegable azul '➕ Registrar Nuevo Equipo / Generar QR' ➔ elegir '1. Sección de Planta' y '2. Grupo de Equipo' ➔ completar campos y tocar 'Guardar Equipo'.",
                     qrsDanadosYBotonesEquipos: "En '📋 Control' existe el botón '🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir' (y la casilla opcional en '⌨️ Lista') para enviar stickers rotos a la cola sin pedir foto obligatoria si el equipo está OK."
@@ -5963,9 +5969,11 @@ function descargarInventarioExcelProfesional() {
             return { seccionDetectada, grupoDetectado, codigoEquipoDetectado };
         }
 
-        function detectarReplicaVisualApropiada(preguntaNorm) {
+        // --- DETECTOR DOBLE (PREGUNTA DEL USUARIO + RESPUESTA DE GEMINI) PARA MOSTRAR SIEMPRE EL BOTÓN INTERACTIVO ---
+        function detectarReplicaVisualApropiada(preguntaNorm, respuestaIANorm = '') {
             const mapaApp = construirMapaVivoDeLaApp();
-            const { seccionDetectada, grupoDetectado } = detectarGrupoYSeccionEnTexto(preguntaNorm);
+            const combinado = `${preguntaNorm} ${respuestaIANorm}`;
+            const { seccionDetectada, grupoDetectado } = detectarGrupoYSeccionEnTexto(combinado);
 
             if(!mapaApp.esAdmin) {
                 const pideGrupoProhibido = grupoDetectado && !mapaApp.gruposHabilitadosUsuario.includes(grupoDetectado);
@@ -5975,12 +5983,24 @@ function descargarInventarioExcelProfesional() {
                 }
             }
 
-            if((preguntaNorm.includes('registrar') || preguntaNorm.includes('crear') || preguntaNorm.includes('agregar') || preguntaNorm.includes('nuevo') || preguntaNorm.includes('alta') || preguntaNorm.includes('imagen')) && (preguntaNorm.includes('equipo') || preguntaNorm.includes('qr') || preguntaNorm.includes('donde') || preguntaNorm.includes('automatic'))) {
+            // Si el usuario o la respuesta de Gemini habla de registrar / dar de alta / crear un nuevo equipo o menciona cualquier grupo (ej. "nuevo botiquín", "registrar extintor", "generar qr", "botón amarillo")
+            const intencionAlta = (
+                preguntaNorm.includes('registrar') || preguntaNorm.includes('crear') || preguntaNorm.includes('agregar') ||
+                preguntaNorm.includes('dar de alta') || preguntaNorm.includes('nuevo') || preguntaNorm.includes('nueva') ||
+                respuestaIANorm.includes('registrar nuevo equipo') || respuestaIANorm.includes('generar qr') ||
+                respuestaIANorm.includes('guardar equipo') || respuestaIANorm.includes('boton amarillo') || respuestaIANorm.includes('pre-cargar')
+            ) && (
+                !!grupoDetectado || !!seccionDetectada || combinado.includes('equipo') || combinado.includes('qr') ||
+                combinado.includes('donde') || combinado.includes('automatic') || combinado.includes('botiquin') ||
+                combinado.includes('extintor') || combinado.includes('hidrante') || combinado.includes('tablero')
+            );
+
+            if(intencionAlta) {
                 if(mapaApp.esAdmin) return generarReplicaVisualApp('ALTA_EQUIPO');
                 if(mapaApp.soloTieneComunicacion) return generarReplicaVisualApp('COMUNICACION_CONTROL');
                 return generarReplicaVisualApp('ACTUALIZAR_FICHA');
             }
-            if(preguntaNorm.includes('actualizar') || preguntaNorm.includes('terreno') || (preguntaNorm.includes('cambiar') && preguntaNorm.includes('ubicacion'))) {
+            if(combinado.includes('actualizar ubicacion') || preguntaNorm.includes('terreno') || (preguntaNorm.includes('cambiar') && preguntaNorm.includes('ubicacion'))) {
                 return generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'ACTUALIZAR_FICHA');
             }
             if(preguntaNorm.includes('comunicacion')) return generarReplicaVisualApp('COMUNICACION_CONTROL');
@@ -5992,7 +6012,6 @@ function descargarInventarioExcelProfesional() {
             return '';
         }
 
-        // Detector de bloqueo de permisos (solo bloquea en 0.1s si un brigadista sin permiso intenta ir a un grupo/sección prohibido)
         function verificarBloqueoEstrictoDePermisos(pregCorregida) {
             const p = pregCorregida.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const rad = obtenerRadiografiaTiempoRealPlanta();
@@ -6027,7 +6046,6 @@ function descargarInventarioExcelProfesional() {
             return null;
         }
 
-        // --- MOTOR PRINCIPAL V6.48: GEMINI 3.5 FLASH-LITE RESPONDE SIEMPRE LA PREGUNTA EXACTA EN 1° LUGAR ---
         async function consultarAsistenteAyudaLibre() {
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
@@ -6038,19 +6056,16 @@ function descargarInventarioExcelProfesional() {
             inp.value = '';
             box.classList.remove('hidden');
 
-            // 1. Verificar únicamente si un brigadista sin permiso está pidiendo controlar un grupo/sección prohibido
             const bloqueoPermiso = verificarBloqueoEstrictoDePermisos(texto);
             if(bloqueoPermiso) {
                 box.innerHTML = bloqueoPermiso;
                 return;
             }
 
-            // 2. Consultar SIEMPRE en 1° lugar a Gemini 3.5 Flash-Lite para responder la pregunta exacta del usuario
             const apiKey = obtenerLlaveGeminiDesencriptada();
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const mapaApp = construirMapaVivoDeLaApp();
             const pNorm = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const replicaExtra = detectarReplicaVisualApropiada(pNorm);
 
             if(apiKey) {
                 const activos = (config.usuarios || []).filter(u => u.activo !== false);
@@ -6062,7 +6077,7 @@ function descargarInventarioExcelProfesional() {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando tu pregunta exacta con Gemini (${modInicial})...</div>`;
                 try {
                     const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO ${mapaApp.versionActual}".
-INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está preguntando en su frase ("${texto}"), sin evadir la pregunta con un tutorial genérico si pregunta algo específico (por ejemplo, si pregunta "¿Puedes hacerlo por mí de forma automática?", respóndele directamente qué parte sí puedes hacer o pre-cargar automáticamente y qué parte requiere su confirmación final).
+INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está preguntando en su frase ("${texto}"), sin evadir la pregunta.
 
 1. PERFIL Y PERMISOS DEL USUARIO QUE PREGUNTA AHORA:
    - Nombre: "${mapaApp.usuarioNombre}" | Rol: ${mapaApp.usuarioRol}.
@@ -6111,6 +6126,8 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
                                         box.innerHTML = generarBotonesOpcionesSiNoSabe(texto, true);
                                         return;
                                     }
+                                    const respNorm = txtIA.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                    const replicaExtra = detectarReplicaVisualApropiada(pNorm, respNorm);
                                     const htmlLimpio = txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
                                     box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta para ${mapaApp.usuarioNombre}: "${texto}" <small class="text-muted">(${mod})</small></div><div>${htmlLimpio}</div>${replicaExtra}`;
                                     return;
@@ -6121,8 +6138,8 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
                 } catch(e) {}
             }
 
-            // 3. Respaldo Offline únicamente si no hubo conexión con Gemini
-            box.innerHTML = generarBotonesOpcionesSiNoSabe(texto, true) + replicaExtra;
+            const replicaFallback = detectarReplicaVisualApropiada(pNorm, '');
+            box.innerHTML = generarBotonesOpcionesSiNoSabe(texto, true) + replicaFallback;
         }
 
         function ejecutarGemeloDigitalAutonomo() {
@@ -6190,15 +6207,15 @@ INSTRUCCIÓN PRINCIPAL: Responde DIRECTAMENTE a lo que el usuario está pregunta
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.48\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.48 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.49\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.49 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.48 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.49 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.48';
+            if(badgeVer) badgeVer.innerText = 'V6.49';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
