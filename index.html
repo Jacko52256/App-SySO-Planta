@@ -5307,8 +5307,8 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.46): ZONAS "👈 TOCA AQUÍ" 100% INTERACTIVAS Y CLICABLES,
-        // AUTO-APERTURA DE FICHA EN CONTROL Y CEREBRO IA AUTO-EVOLUTIVO
+        // MOTOR 7B FINAL (V6.46): INSIGNIA V6.46 SINCRONIZADA, ZONAS "👈 TOCA AQUÍ"
+        // CLICABLES Y CEREBRO IA CON CONOCIMIENTO DE COLA DE QRs DAÑADOS
         // =========================================================================
 
         async function descubrirMejorModeloGeminiAPI(apiKey) {
@@ -5406,9 +5406,9 @@ function descargarInventarioExcelProfesional() {
             listaBit.parentElement.insertBefore(inpBusq, listaBit);
         }
 
-        const _obtenerRegFiltradosBaseV645 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV646 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV645();
+            const base = _obtenerRegFiltradosBaseV646();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
@@ -5460,7 +5460,7 @@ function descargarInventarioExcelProfesional() {
         function formatearPreguntaConGramatica(texto) {
             if(!texto) return "";
             let corr = corregirOrtografiaTexto(texto).replace(/^¿?\s*(que)\b/i, "Qué");
-            if((corr.endsWith('?') || /^(Cuánt|Cuál|Cómo|Dónde|Quién|Qué|Hay\b|Tiene\b|Falta\b|Se\b|Puedo\b|Puedes\b)/i.test(corr)) && !corr.startsWith('¿')) {
+            if((corr.endsWith('?') || /^(Cuánt|Cuál|Cómo|Dónde|Quién|Qué|Hay\b|Tiene\b|Falta\b|Se\b|Puedo\b|Puedes\b|Para\b)/i.test(corr)) && !corr.startsWith('¿')) {
                 corr = '¿' + corr.charAt(0).toUpperCase() + corr.slice(1);
                 if(!corr.endsWith('?')) corr += '?';
             }
@@ -5562,7 +5562,6 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- NAVEGADOR INTERACTIVO EN VIVO: LLEVA AL USUARIO AL PUNTO EXACTO QUE TOCÓ ---
         window.irDirectoDesdeAyudaIA = function(destino) {
             document.getElementById('modalAyudaIA').classList.add('hidden');
             if(destino === 'ALTA_EQUIPO') {
@@ -5642,7 +5641,6 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- RÉPLICAS VISUALES 100% CLICABLES EN CADA "👈 TOCA AQUÍ" Y EN EL BOTÓN INFERIOR ---
         function generarReplicaVisualApp(tipo) {
             const caja = `margin-top:10px; border:2px solid var(--primary); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
             const tag = `<div style="font-size:10.5px; font-weight:bold; color:var(--primary); text-transform:uppercase; margin-bottom:6px;">📱 Imagen de Referencia Interactiva (Toca encima para ir allí):</div>`;
@@ -5702,7 +5700,7 @@ function descargarInventarioExcelProfesional() {
             if(tipo === 'SOS') {
                 return `<div style="${caja}">${tag}
                     <div onclick="irDirectoDesdeAyudaIA('SOS')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:var(--primary); color:#fff; padding:9px 12px; border-radius:8px;">
-                        <b>Gestión SySO V6.45</b>
+                        <b>Gestión SySO V6.46</b>
                         <span style="background:#dc3545; color:#fff; border:2px solid #fff; padding:5px 10px; border-radius:8px; font-weight:bold;">🚨 S.O.S. ${flecha}</span>
                     </div>
                 </div>`;
@@ -5729,7 +5727,7 @@ function descargarInventarioExcelProfesional() {
             const idAbierto = (document.getElementById('idEquipo') && document.getElementById('idEquipo').value) || 'Ninguno';
 
             return {
-                versionActual: 'V6.45',
+                versionActual: 'V6.46',
                 usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : (u.rol === 'Inspector' ? 'Inspector / Brigadista' : 'Sin sesión'),
                 esAdmin,
@@ -5743,7 +5741,8 @@ function descargarInventarioExcelProfesional() {
                 equipoCargadoEnControl: idAbierto,
                 reglasExactasDeModulos: {
                     registrarNuevoEquipo: "SOLO Administradores: Pestaña inferior '📦 Equipos' ➔ abrir desplegable azul '➕ Registrar Nuevo Equipo / Generar QR' ➔ elegir '1. Sección de Planta' y '2. Grupo de Equipo' ➔ completar campos y tocar 'Guardar Equipo'. Los Inspectores/Brigadistas NO tienen visible la pestaña '📦 Equipos'; deben pedir el alta a un Administrador (" + adminsPlanta.join(', ') + ").",
-                    editarEnTerrenoOComunicacion: "En '📋 Control', los brigadistas de equipos físicos pueden tocar '✏️ Actualizar Ubicación / Foto Ref. / Vencimiento', y los encargados de Comunicación pueden editar o agregar teléfonos de empleados y contactos de su sección directamente en su ficha de Comunicación."
+                    editarEnTerrenoOComunicacion: "En '📋 Control', los brigadistas de equipos físicos pueden tocar '✏️ Actualizar Ubicación / Foto Ref. / Vencimiento', y los encargados de Comunicación pueden editar teléfonos de empleados y contactos de su sección directamente en su ficha.",
+                    qrsDanadosYBotonesEquipos: "En '📋 Control' existe el botón '🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir' (y la casilla opcional en '⌨️ Lista') para enviar stickers rotos a la cola sin pedir foto obligatoria si el equipo está OK. En '📦 Equipos', los 3 botones superiores sirven para: 1) '🖨️ QRs Dañados' genera la plancha lista para imprimir solo con las etiquetas dañadas; 2) '🧹 Limpiar Cont. QR' reinicia en cero la cola después de pegar las etiquetas nuevas; 3) '📥 Exportar Excel' descarga la planilla completa del inventario."
                 }
             };
         }
@@ -5918,6 +5917,17 @@ function descargarInventarioExcelProfesional() {
             const mapaApp = construirMapaVivoDeLaApp();
             const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta para ${mapaApp.usuarioNombre}: "${pregCorregida}"</div>`;
 
+            // Explicación instantánea si preguntan por QRs Dañados / Limpiar Cont. QR / Exportar Excel
+            if(p.includes('qr danado') || p.includes('qrs danados') || p.includes('limpiar cont') || p.includes('reimprimir')) {
+                const mapaSinQR = (config.telemetria && config.telemetria.equiposSinQR) || {};
+                const listaDanados = Object.keys(mapaSinQR).filter(id => mapaSinQR[id] >= 1 && !esEquipoVirtualComunicacion(id));
+                return encabezado +
+                    `🏷️ <b>Funcionamiento de la Cola de QRs Dañados (${listaDanados.length} en cola hoy: ${listaDanados.join(', ') || 'Ninguno'}):</b><br>` +
+                    `• <b>En 📋 Control:</b> Si un sticker QR está roto o ilegible, toca el botón <b>🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir</b> (o marca la casilla al elegir desde <b>⌨️ Lista</b>) sin necesidad de tomar foto si el equipo está en regla.<br>` +
+                    `• <b>🖨️ QRs Dañados (en 📦 Equipos):</b> Genera una plancha lista para imprimir únicamente con las etiquetas reportadas como dañadas.<br>` +
+                    `• <b>🧹 Limpiar Cont. QR:</b> Reinicia en cero la cola una vez que ya imprimiste y pegaste las etiquetas nuevas.`;
+            }
+
             if((p.includes('registrar') || p.includes('crear') || p.includes('agregar') || p.includes('alta') || p.includes('imagen')) && (p.includes('equipo') || p.includes('nuevo') || p.includes('donde'))) {
                 if(mapaApp.esAdmin) {
                     return encabezado +
@@ -5930,7 +5940,7 @@ function descargarInventarioExcelProfesional() {
                     return encabezado +
                         `Hola <b>${mapaApp.usuarioNombre}</b>, tu perfil actual es de <b>Inspector / Brigadista</b> habilitado para la sección <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b> y el grupo <b>Comunicación</b>.<br><br>` +
                         `• ⛔ <b>Sobre dar de alta equipos físicos nuevos:</b> La pestaña <b>📦 Equipos</b> solo está habilitada para Administradores (<b>${mapaApp.administradoresDeLaPlanta.slice(0, 3).join(', ')}</b>).<br>` +
-                        `• ✅ <b>Lo que SÍ puedes hacer ahora mismo en tu sección (${mapaApp.seccionesHabilitadasUsuario.join(', ')}):</b> Toca el recuadro interactivo de abajo para abrir directamente tu panel de <b>Comunicación en 📋 Control</b>, donde puedes editar teléfonos de empleados, contactos familiares y verificar tu sección:` +
+                        `• ✅ <b>Lo que SÍ puedes hacer ahora mismo en tu sección (${mapaApp.seccionesHabilitadasUsuario.join(', ')}):</b> Toca el recuadro interactivo de abajo para abrir directamente tu panel de <b>Comunicación en 📋 Control</b>:` +
                         generarReplicaVisualApp('COMUNICACION_CONTROL');
                 } else {
                     return encabezado +
@@ -6142,15 +6152,15 @@ De lo contrario, responde en español claro, personalizado para ${mapaApp.usuari
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.45\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.45 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.46\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.46 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.45 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.46 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.45';
+            if(badgeVer) badgeVer.innerText = 'V6.46';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
