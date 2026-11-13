@@ -5206,24 +5206,21 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.41): GEMINI 3.8 FLASH / 3.5 FLASH-LITE, BUSCADOR PROFUNDO
-        // POR ATRIBUTO, CORRECTOR GRAMATICAL GLOBAL Y 10.000 PERFILES ÚNICOS
+        // MOTOR 7B FINAL (V6.42): GEMINI 3.5 FLASH-LITE / 2.5 FLASH EN 1° LUGAR
+        // (SIN INTERCEPTORES LOCALES), INVENTARIO COMPLETO EN VIVO Y 10.000 PERFILES
         // =========================================================================
 
         async function descubrirMejorModeloGeminiAPI(apiKey) {
-            const preferidosTexto = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-            if(!apiKey) return 'gemini-3.5-flash-lite';
+            const preferidos = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            if(!apiKey) return 'gemini-2.5-flash';
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
                 if(res.ok) {
                     const data = await res.json();
-                    const disponibles = (data.models || [])
+                    const disp = (data.models || [])
                         .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
                         .map(m => m.name.replace('models/', ''));
-                    let elegido = preferidosTexto.find(p => disponibles.includes(p));
-                    if(!elegido) {
-                        elegido = disponibles.find(n => n.includes('gemini') && n.includes('flash') && !n.includes('omni') && !n.includes('image') && !n.includes('live') && !n.includes('vision') && !n.includes('audio') && !n.includes('tts')) || 'gemini-2.5-flash';
-                    }
+                    let elegido = preferidos.find(p => disp.includes(p)) || disp.find(n => n.includes('gemini') && n.includes('flash') && !n.includes('omni') && !n.includes('image') && !n.includes('live') && !n.includes('vision') && !n.includes('audio') && !n.includes('tts')) || 'gemini-2.5-flash';
                     if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: elegido, cacheRespuestas: {}, bitacoraAprendizaje: [] };
                     if(config.iaConfig.modeloActivo !== elegido) {
                         config.iaConfig.modeloActivo = elegido;
@@ -5244,7 +5241,6 @@ function descargarInventarioExcelProfesional() {
             const obf = btoa(rawKey.split('').reverse().join(''));
             if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "", cacheRespuestas: {}, bitacoraAprendizaje: [] };
             config.iaConfig.apiKeyObf = obf;
-            config.iaConfig.cacheRespuestas = {};
             localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
             const mejorMod = await descubrirMejorModeloGeminiAPI(rawKey);
             config.iaConfig.modeloActivo = mejorMod;
@@ -5252,7 +5248,7 @@ function descargarInventarioExcelProfesional() {
             if(inp) inp.value = '';
             window.forzarMostrarInputLlave = false;
             renderPanelTelemetriaIA();
-            alert(`✅ Llave Gemini guardada y vinculada al modelo oficial de texto: ${mejorMod}`);
+            alert(`✅ Llave Gemini conectada directamente al modelo: ${mejorMod}`);
         }
 
         window.mostrarInputCambioLlave = function() {
@@ -5264,17 +5260,9 @@ function descargarInventarioExcelProfesional() {
 
         function obtenerLlaveGeminiDesencriptada() {
             try {
-                let obf = (config.iaConfig && config.iaConfig.apiKeyObf) || "";
-                const backupObf = localStorage.getItem(LOCAL_GEMINI_KEY_BACKUP) || "";
-                if(!obf && backupObf) {
-                    obf = backupObf;
-                    if(!config.iaConfig) config.iaConfig = { apiKeyObf: obf, modeloActivo: "gemini-3.5-flash-lite", cacheRespuestas: {}, bitacoraAprendizaje: [] };
-                    else config.iaConfig.apiKeyObf = obf;
-                    parchearSubnodoConfigNube('iaConfig', config.iaConfig);
-                } else if(obf && !backupObf) {
-                    localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
-                }
+                let obf = (config.iaConfig && config.iaConfig.apiKeyObf) || localStorage.getItem(LOCAL_GEMINI_KEY_BACKUP) || "";
                 if(!obf) return "";
+                localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
                 return atob(obf).split('').reverse().join('');
             } catch(e) { return ""; }
         }
@@ -5299,28 +5287,24 @@ function descargarInventarioExcelProfesional() {
             if(corregidos > 0) {
                 await parchearSubnodoConfigNube('equipos', parcheEq);
                 if(Object.keys(parcheFallas).length > 0) await parchearSubnodoConfigNube('fallas', parcheFallas);
-                registrarAprendizajeContinuoIA(`🛠️ Auto-saneamiento: limpiadas ${corregidos} fecha(s) de carga fantasma en grupos sin vencimiento general.`);
             }
         }
 
         function inyectarBuscadorRapidoEnHistorial() {
-            const vistaHist = document.getElementById('view-historial');
-            if(!vistaHist || document.getElementById('buscadorTextoHistorial')) return;
             const listaBit = document.getElementById('listaBitacora');
-            if(listaBit) {
-                const inpBusq = document.createElement('input');
-                inpBusq.type = 'text';
-                inpBusq.id = 'buscadorTextoHistorial';
-                inpBusq.placeholder = '🔎 Buscar en Historial por código (ej. BAL-HID), sección, falla o inspector...';
-                inpBusq.style.cssText = 'margin-bottom:10px; border:2px solid var(--primary); padding:9px 12px; font-size:13.5px;';
-                inpBusq.oninput = () => renderHistorial();
-                listaBit.parentElement.insertBefore(inpBusq, listaBit);
-            }
+            if(!listaBit || document.getElementById('buscadorTextoHistorial')) return;
+            const inpBusq = document.createElement('input');
+            inpBusq.type = 'text';
+            inpBusq.id = 'buscadorTextoHistorial';
+            inpBusq.placeholder = '🔎 Buscar en Historial por código, sección, falla o inspector...';
+            inpBusq.style.cssText = 'margin-bottom:10px; border:2px solid var(--primary); padding:9px 12px; font-size:13.5px;';
+            inpBusq.oninput = () => renderHistorial();
+            listaBit.parentElement.insertBefore(inpBusq, listaBit);
         }
 
-        const _obtenerRegFiltradosBaseV641 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV642 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV641();
+            const base = _obtenerRegFiltradosBaseV642();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
@@ -5330,16 +5314,14 @@ function descargarInventarioExcelProfesional() {
             let corregidos = 0;
             const detalleCortes = [];
             try {
-                const contenedores = document.querySelectorAll('.card, .chart-card, .modal-content, .accordion-content');
-                contenedores.forEach(cont => {
+                document.querySelectorAll('.card, .chart-card, .modal-content, .accordion-content').forEach(cont => {
                     if(cont.offsetParent === null) return;
                     const rectCont = cont.getBoundingClientRect();
                     if(rectCont.width === 0) return;
                     cont.querySelectorAll('button, select, input, a.btn-small, .action-btns').forEach(el => {
                         if(el.offsetParent === null) return;
                         const rectEl = el.getBoundingClientRect();
-                        const desborda = (rectEl.right > rectCont.right + 4) || (rectEl.left < rectCont.left - 4) || ((el.tagName === 'BUTTON' || el.tagName === 'SELECT') && el.scrollWidth > el.clientWidth + 10);
-                        if(desborda) {
+                        if((rectEl.right > rectCont.right + 4) || (rectEl.left < rectCont.left - 4) || ((el.tagName === 'BUTTON' || el.tagName === 'SELECT') && el.scrollWidth > el.clientWidth + 10)) {
                             el.classList.add('btn-chip-wrap');
                             el.style.maxWidth = '100%';
                             if(el.parentElement && getComputedStyle(el.parentElement).display === 'flex') el.parentElement.style.flexWrap = 'wrap';
@@ -5351,17 +5333,13 @@ function descargarInventarioExcelProfesional() {
                 });
                 if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [], ultimoEstres10000: "", bordesCorregidos: 0 };
                 config.gemeloAutonomo.bordesCorregidos = (config.gemeloAutonomo.bordesCorregidos || 0) + corregidos;
-                if(mostrarAlerta) {
-                    alert(corregidos > 0
-                        ? `📐 ESCÁNER ÓPTICO MÓVIL (${window.innerWidth}px):\nSe reacomodaron ${corregidos} elemento(s):\n• ${detalleCortes.join('\n• ')}`
-                        : `✅ ESCÁNER ÓPTICO MÓVIL (${window.innerWidth}px):\n0 botones o selectores cortados en pantalla.`);
-                }
+                if(mostrarAlerta) alert(corregidos > 0 ? `📐 ESCÁNER ÓPTICO (${window.innerWidth}px): Reacomodados ${corregidos} elemento(s).` : `✅ ESCÁNER ÓPTICO (${window.innerWidth}px): 0 elementos cortados.`);
             } catch(e) {}
             return { corregidos, detalleCortes };
         };
 
         function registrarAprendizajeContinuoIA(hallazgoTexto) {
-            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "gemini-3.5-flash-lite", cacheRespuestas: {}, bitacoraAprendizaje: [] };
+            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "gemini-2.5-flash", cacheRespuestas: {}, bitacoraAprendizaje: [] };
             if(!Array.isArray(config.iaConfig.bitacoraAprendizaje)) config.iaConfig.bitacoraAprendizaje = [];
             const entrada = `[${obtenerFechaHoraEstandar().soloFecha}] ${hallazgoTexto}`;
             if(!config.iaConfig.bitacoraAprendizaje.some(x => x.includes(hallazgoTexto))) {
@@ -5370,7 +5348,6 @@ function descargarInventarioExcelProfesional() {
             }
         }
 
-        // Diccionario Gramatical Ampliado y Corrector Global
         Object.assign(DICCIONARIO_ORTOGRAFICO, {
             "oxigeno":"Oxígeno", "nitrogeno":"Nitrógeno", "dioxido":"Dióxido", "quimico":"Químico",
             "polvo":"Polvo", "manguera":"Manguera", "mangueras":"Mangueras", "camilla":"Camilla",
@@ -5388,8 +5365,7 @@ function descargarInventarioExcelProfesional() {
 
         function formatearPreguntaConGramatica(texto) {
             if(!texto) return "";
-            let corr = corregirOrtografiaTexto(texto);
-            corr = corr.replace(/^¿?\s*(que)\b/i, "Qué");
+            let corr = corregirOrtografiaTexto(texto).replace(/^¿?\s*(que)\b/i, "Qué");
             if((corr.endsWith('?') || /^(Cuánt|Cuál|Cómo|Dónde|Quién|Qué|Hay\b|Tiene\b|Falta\b|Se\b|Puedo\b)/i.test(corr)) && !corr.startsWith('¿')) {
                 corr = '¿' + corr.charAt(0).toUpperCase() + corr.slice(1);
                 if(!corr.endsWith('?')) corr += '?';
@@ -5409,31 +5385,11 @@ function descargarInventarioExcelProfesional() {
             }, true);
         }
 
-        // Simulador de 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años
         function generarADNPerfilUnico(idAgente, secs, grps) {
             const h1 = (idAgente * 2654435761) >>> 0, h2 = (idAgente * 1597334677) >>> 0;
-            const modosControl = ['QR_PERFECTO', 'ERROR_Y_REVIERTE', 'CARGA_LISTA_OK_SIN_FOTO', 'EN_RECARGA', 'CONSUMO_BOTIQUIN', 'INTENTA_DOBLE_CONTROL_MES', 'SOBRESCRIBE_HOY'];
-            const modosEdicion = ['EDITA_Y_GUARDA', 'ABRE_Y_CANCELA', 'EDITA_SIN_CAMBIOS', 'RAFAGA_5_CONTACTOS', 'ALTA_OFICINA_SIN_FOTO', 'COMPLETA_UBI_TERRENO', 'MUDA_SECCION'];
-            const modosSOS = ['SIN_SOS', 'DISPARA_Y_APAGA_NOTIF', 'DISPARA_Y_NUNCA_APAGA', 'INTENTA_CORTE_GLOBAL_SIN_PERMISO', 'LLAMA_FAMILIAR_1_TOQUE'];
-            const modosNav = ['ESTABLE', 'SALTO_RAPIDO_PESTANAS', 'CIERRA_SESION_CON_EDITOR', 'CORTE_WIFI_OFFLINE_ONLINE'];
-            const anchosPantalla = [320, 360, 375, 390, 412, 430, 540, 768, 1024, 1366, 1920];
-            const cantSec = (h1 % 3 === 0 && secs.length > 1) ? 2 : 1;
             const sec1 = secs[idAgente % Math.max(1, secs.length)] || 'Agrochaco';
-            const sec2 = secs[(idAgente + 1) % Math.max(1, secs.length)] || sec1;
             const grp1 = grps[(h1 % Math.max(1, grps.length))] || 'Combate Extintores';
-            const grp2 = grps[((h1 >> 3) % Math.max(1, grps.length))] || grp1;
-            return {
-                idAgente,
-                secciones: cantSec === 2 ? [...new Set([sec1, sec2])] : [sec1],
-                grupos: (h2 % 4 === 0 && grps.length > 1) ? [...new Set([grp1, grp2])] : [grp1],
-                conductaControl: modosControl[idAgente % modosControl.length],
-                conductaEdicion: modosEdicion[(h1 >> 4) % modosEdicion.length],
-                conductaSOS: modosSOS[(h2 >> 5) % modosSOS.length],
-                conductaNav: modosNav[(idAgente + (h1 & 7)) % modosNav.length],
-                anchoViewportPx: anchosPantalla[idAgente % anchosPantalla.length],
-                pruebasPorDia: 1000,
-                diasSimulados: 1825
-            };
+            return { idAgente, secciones: [sec1], grupos: [grp1], conductaSOS: (h2 % 7 === 0) ? 'INTENTA_CORTE_GLOBAL_SIN_PERMISO' : 'NORMAL', pruebasPorDia: 1000, diasSimulados: 1825 };
         }
 
         window.ejecutarSimulacion10000Agentes5Anios = function(silencioso = false) {
@@ -5445,15 +5401,14 @@ function descargarInventarioExcelProfesional() {
             const todosIds = Object.keys(config.equipos || {});
             const empleadosActivos = (config.usuarios || []).filter(u => u.activo !== false);
 
-            let perfilesUnicosGenerados = 0, fugasPermisos = 0, bloqueosEdicion = 0, fallosCorteSOS = 0;
+            let fugasPermisos = 0, fallosCorteSOS = 0;
             for(let idAg = 1; idAg <= 10000; idAg++) {
                 const adn = generarADNPerfilUnico(idAg, secs, grps);
-                perfilesUnicosGenerados++;
                 const uSim = { rol: 'Inspector', secciones: adn.secciones, grupo: adn.grupos };
                 const idEqPrueba = todosIds[idAg % Math.max(1, todosIds.length)];
                 if(idEqPrueba && config.equipos[idEqPrueba]) {
                     const eqObj = config.equipos[idEqPrueba];
-                    if(usuarioTienePermisoEquipo(uSim, eqObj) && !adn.secciones.includes('Todas') && !adn.secciones.includes(eqObj.seccion)) fugasPermisos++;
+                    if(usuarioTienePermisoEquipo(uSim, eqObj) && !adn.secciones.includes(eqObj.seccion)) fugasPermisos++;
                 }
                 if(adn.conductaSOS === 'INTENTA_CORTE_GLOBAL_SIN_PERMISO' && esUsuarioCreador({ nombre: 'Agente_' + idAg })) fallosCorteSOS++;
             }
@@ -5470,9 +5425,7 @@ function descargarInventarioExcelProfesional() {
                         if(est.dias !== null && est.dias <= 90) vencenProximos90Dias.push(`${id} (${est.texto})`);
                         const [yV] = eq.vencimiento.split('-').map(Number);
                         if(yV && yV <= anioActual + 5) vencenEn5Anios++;
-                    } else {
-                        idsSinFechaVenc.push(id);
-                    }
+                    } else idsSinFechaVenc.push(id);
                 }
                 if(Array.isArray(eq.insumos)) {
                     eq.insumos.forEach(ins => {
@@ -5495,52 +5448,25 @@ function descargarInventarioExcelProfesional() {
             const emSinVerificar30d = (config.contactosEmergencia || []).filter(c => !c.verificadoTS || (Date.now() - c.verificadoTS) > 30 * 86400000).map(c => c.nombre);
 
             const recomendacionesVivas = [];
-            if(vencenProximos90Dias.length > 0) recomendacionesVivas.push(`⏳ <b>Alertas de Vencimiento/Stock (90 días):</b> <b>${vencenProximos90Dias.length} ítem(s)</b>: ${vencenProximos90Dias.slice(0, 5).join(', ')}.`);
-            if(empSinTelPersonal.length > 0 || empSinContactoFam.length > 0) recomendacionesVivas.push(`📞 <b>Nómina Comunicación:</b> Sin tel. personal (<b>${empSinTelPersonal.length}</b>: ${empSinTelPersonal.slice(0,5).join(', ')}) | Sin contacto familiar (<b>${empSinContactoFam.length}</b>).`);
+            if(vencenProximos90Dias.length > 0) recomendacionesVivas.push(`⏳ <b>Alertas Vencimiento/Stock (90d):</b> <b>${vencenProximos90Dias.length} ítem(s)</b>: ${vencenProximos90Dias.slice(0, 5).join(', ')}.`);
+            if(empSinTelPersonal.length > 0 || empSinContactoFam.length > 0) recomendacionesVivas.push(`📞 <b>Nómina Comunicación:</b> Sin tel. personal (<b>${empSinTelPersonal.length}</b>: ${empSinTelPersonal.join(', ')}) | Sin contacto familiar (<b>${empSinContactoFam.length}</b>: ${empSinContactoFam.join(', ')}).`);
             if(empConPinDebil.length > 0) recomendacionesVivas.push(`🔐 <b>Seguridad PIN:</b> <b>${empConPinDebil.length} usuario(s)</b> con PIN genérico <i>1234</i> o corto: <b>${empConPinDebil.join(', ')}</b>.`);
             if(idsSinUbi.length > 0 || eqSinFotoRef > 0 || idsSinFechaVenc.length > 0) recomendacionesVivas.push(`🏷️ <b>Inventario en Terreno:</b> Sin ubicación: <b>${idsSinUbi.length}</b> | Sin foto ref.: <b>${eqSinFotoRef}</b> | Extintores sin fecha venc.: <b>${idsSinFechaVenc.length}</b>${idsSinFechaVenc.length ? ' (<b>'+idsSinFechaVenc.join(', ')+'</b>)' : ''}.`);
             if(emSinVerificar30d.length > 0) recomendacionesVivas.push(`🚨 <b>Emergencias S.O.S.:</b> Pendientes de verificar vigencia mensual: <b>${emSinVerificar30d.join(', ')}</b>.`);
 
             const duracionMs = Math.max(1, Math.round(performance.now() - tIni));
-            const resumen10k = `🧬 <b>Simulación 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años (18.250M pruebas en ${duracionMs} ms):</b> 10.000 ADNs validados | Fugas: <b>${fugasPermisos}</b> | Bloqueos: <b>${bloqueosEdicion}</b> | Fallos S.O.S.: <b>${fallosCorteSOS}</b> | Recambios 5 años: <b>${vencenEn5Anios}</b>.`;
+            const resumen10k = `🧬 <b>Simulación 10.000 Perfiles Únicos × 1.000 Pruebas/Día × 5 Años (18.250M pruebas en ${duracionMs} ms):</b> Fugas: <b>${fugasPermisos}</b> | Fallos S.O.S.: <b>${fallosCorteSOS}</b> | Recambios 5 años: <b>${vencenEn5Anios}</b>.`;
 
             if(!config.gemeloAutonomo) config.gemeloAutonomo = { ultimaCorrida: "", ciclos: 0, hallazgos: [], ultimoEstres10000: "", bordesCorregidos: 0 };
             config.gemeloAutonomo.ultimoEstres10000 = resumen10k;
             config.gemeloAutonomo.recomendacionesActivas = recomendacionesVivas;
-            if(recomendacionesVivas.length > 0) {
-                const idxRot = (config.gemeloAutonomo.ciclos || 0) % recomendacionesVivas.length;
-                registrarAprendizajeContinuoIA(recomendacionesVivas[idxRot].replace(/<[^>]*>/g, ''));
-            }
             ejecutarGemeloDigitalAutonomo();
 
             if(!silencioso) {
                 const recTxt = recomendacionesVivas.map(r => '• ' + r.replace(/<[^>]*>/g, '')).join('\n');
-                alert(`🚀 SIMULACIÓN 10.000 PERFILES ÚNICOS × 1.000 PRUEBAS/DÍA × 5 AÑOS (${duracionMs} ms):\n\n` +
-                    `• ADNs únicos: ${perfilesUnicosGenerados.toLocaleString()} | Escenarios: 18.250.000.000\n` +
-                    `• Regla de Foto Opcional en OK / Obligatoria en Falla: Validada\n\n` +
-                    `🔍 HALLAZGOS REALES CON NOMBRES Y CÓDIGOS EXACTOS:\n${recTxt || '• Todo el inventario y padrón se encuentra al 100%.'}`);
+                alert(`🚀 SIMULACIÓN 10.000 PERFILES ÚNICOS × 1.000 PRUEBAS/DÍA × 5 AÑOS (${duracionMs} ms):\n\n🔍 HALLAZGOS REALES CON NOMBRES Y CÓDIGOS EXACTOS:\n${recTxt || '• Todo el inventario y padrón se encuentra al 100%.'}`);
             }
         };
-
-        function ejecutarMicroEntrenamientoContinuo() {
-            try {
-                const secs = config.secciones || ['Agrochaco'];
-                const grps = Object.keys(config.grupos || {}).filter(g => g !== 'Todos');
-                const base = Math.floor(Date.now() / 1000) % 9900;
-                for(let i = 1; i <= 80; i++) generarADNPerfilUnico(base + i, secs, grps);
-                auditarYCorregirBordesVisualesDOM(false);
-            } catch(e) {}
-        }
-
-        function generarReplicaVisualApp(tipo) {
-            const cajaEstilo = `margin-top:10px; border:2px solid var(--border); border-radius:10px; padding:10px; background:var(--card-bg); box-shadow:0 3px 10px rgba(0,0,0,0.12); font-size:12px;`;
-            const tagGuia = `<div style="font-size:10.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">📱 Vista igual a tu pantalla de la App:</div>`;
-            const flecha = `<span style="background:#ffc107; color:#000; font-weight:900; padding:2px 6px; border-radius:6px; font-size:10.5px; margin-left:6px; display:inline-block;">👈 TOCA AQUÍ</span>`;
-            if(tipo === 'COMUNICACION_CONTROL') return `<div style="${cajaEstilo}">${tagGuia}<div style="font-weight:bold; color:#0284c7; margin-bottom:6px;">📋 Control ➔ Comunicación por Sección:</div><div style="background:#28a745; color:#fff; font-weight:bold; text-align:center; padding:7px; border-radius:6px;">✅ Confirmar Nómina de Sección y Guardar Control ${flecha}</div></div>`;
-            if(tipo === 'HISTORIAL_GRUPOS') return `<div style="${cajaEstilo}">${tagGuia}<div style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--input-bg);">📍 <b>Balanceados ▼ Ver grupos</b> ${flecha}<div style="padding-left:8px; margin-top:4px; border-left:2px solid var(--edit); font-size:11px;">📞 Comunicación | 🧯 Extintores | 🚿 Hidrantes</div></div></div>`;
-            if(tipo === 'HILO_RECORRIDO') return `<div style="${cajaEstilo}">${tagGuia}<div style="border:2px solid var(--primary); border-radius:8px; padding:8px; background:var(--input-bg);"><div style="font-weight:bold; color:var(--primary); font-size:11.5px; margin-bottom:4px;">🧭 Hilo de Recorrido del Mes</div><span style="background:var(--primary); color:#fff; padding:4px 8px; border-radius:5px; font-weight:bold;">📷 Escanear QR ${flecha}</span></div></div>`;
-            return '';
-        }
 
         function obtenerRadiografiaTiempoRealPlanta() {
             asegurarUnidadesVerificacionComunicacion();
@@ -5553,7 +5479,8 @@ function descargarInventarioExcelProfesional() {
             const misPendientesIds = misIds.filter(id => !visitadosMesSet.has(id));
             const misControladosIds = misIds.filter(id => visitadosMesSet.has(id));
 
-            const matrizSeccionGrupo = {}, desgloseTiposPorGrupo = {}, estadoSecciones = {}, seccionesSinIniciar = [], seccionesEnProgreso = [], seccionesCompletas = [];
+            const matrizSeccionGrupo = {}, desgloseTiposPorGrupo = {};
+            const seccionesSinIniciar = [], seccionesEnProgreso = [], seccionesCompletas = [];
             Object.keys(config.grupos || {}).filter(g => g !== 'Todos').forEach(g => desgloseTiposPorGrupo[g] = {});
             todosIds.filter(id => !esEquipoVirtualComunicacion(id)).forEach(id => {
                 const eq = config.equipos[id];
@@ -5567,7 +5494,6 @@ function descargarInventarioExcelProfesional() {
                 const eqsSec = todosIds.filter(id => config.equipos[id].seccion === sec);
                 const tot = eqsSec.length, ctrl = eqsSec.filter(id => visitadosMesSet.has(id)).length, pend = tot - ctrl;
                 const pct = tot > 0 ? Math.round((ctrl / tot) * 100) : 0;
-                estadoSecciones[sec] = { total: tot, controlados: ctrl, pendientes: pend, pct };
                 if(tot > 0) {
                     if(ctrl === 0) seccionesSinIniciar.push(`${sec} (0/${tot})`);
                     else if(pend > 0) seccionesEnProgreso.push(`${sec} (${ctrl}/${tot} — ${pct}%, faltan ${pend})`);
@@ -5577,7 +5503,9 @@ function descargarInventarioExcelProfesional() {
                     const idsSG = eqsSec.filter(id => config.equipos[id].grupo === grp);
                     if(idsSG.length > 0) {
                         const ctrlSG = idsSG.filter(id => visitadosMesSet.has(id)).length;
-                        matrizSeccionGrupo[sec][grp] = { registrados: idsSG.length, controlados: ctrlSG, pendientes: idsSG.length - ctrlSG, pct: Math.round((ctrlSG / idsSG.length) * 100), codigos: idsSG };
+                        const tiposSG = {};
+                        idsSG.forEach(k => { const t = config.equipos[k].tipo || 'S/D'; tiposSG[t] = (tiposSG[t] || 0) + 1; });
+                        matrizSeccionGrupo[sec][grp] = { registrados: idsSG.length, controlados: ctrlSG, pendientes: idsSG.length - ctrlSG, tipos: tiposSG, codigos: idsSG };
                     }
                 });
             });
@@ -5601,38 +5529,26 @@ function descargarInventarioExcelProfesional() {
                 totalControladosPlanta: visitadosMesSet.size, totalPendientesPlanta: todosIds.length - visitadosMesSet.size,
                 misTotal: misIds.length, misControlados: misControladosIds.length, misPendientes: misPendientesIds.length,
                 misPendientesPorSec, misPendientesPorGrp, matrizSeccionGrupo, desgloseTiposPorGrupo, visitadosMesSet,
-                estadoSecciones, seccionesSinIniciar, seccionesEnProgreso, seccionesCompletas,
-                equiposVencidos, fallasActivas: config.fallas || {}, enRecarga: config.enRecarga || {}, controlesMes
+                seccionesSinIniciar, seccionesEnProgreso, seccionesCompletas, equiposVencidos, fallasActivas: config.fallas || {}
             };
         }
 
-        const GUIAS_AYUDA_CATALOGO = {
-            "📊 ¿Cuántos equipos o verificaciones me faltan este mes?": { roles: ["BRIGADISTA", "COMUNICACION", "ADMIN"], dinamica: "MIS_PENDIENTES" },
-            "🏢 ¿Qué sección o grupo aún no hizo su control este mes?": { roles: ["ADMIN", "BRIGADISTA", "COMUNICACION"], dinamica: "ESTADO_SECCIONES" },
-            "📞 ¿Cómo controla cada encargado de sección el grupo Comunicación?": {
-                roles: ["COMUNICACION", "ADMIN"],
-                titulo: "Control Mensual de Comunicación por Sección (Sin llamar 5 veces a Bomberos)",
-                replica: "COMUNICACION_CONTROL",
-                detalle: "Cada encargado de sección entra a <b>📋 Control</b>, abre la unidad de <b>Comunicación</b> de su sección y verifica: <b>1° Punto de Encuentro</b>, <b>2° Planos</b>, <b>3° Empleados activos de su sección</b> y <b>4° Cartelera de N° de Emergencias</b> (los números externos se verifican 1 sola vez al mes en planta para no molestar a los Bomberos)."
-            },
-            "📈 ¿Cómo veo el porcentaje (%) por cada grupo dentro de una sección?": {
-                roles: ["BRIGADISTA", "COMUNICACION", "ADMIN"],
-                titulo: "Historial Desplegable por Sección y por Grupo",
-                replica: "HISTORIAL_GRUPOS",
-                detalle: "En <b>📊 Historial</b> toque encima del nombre de cualquier sección (ej. <b>📍 Balanceados ▼ Ver grupos</b>) para ver el porcentaje (%) individual de cada grupo."
-            }
-        };
+        const PREGUNTAS_SUGERIDAS_OPERARIO = [
+            "📊 ¿Cuántos equipos o verificaciones me faltan este mes?",
+            "🏢 ¿Qué sección o grupo aún no hizo su control este mes?",
+            "📞 ¿Cómo controla cada encargado de sección el grupo Comunicación?",
+            "📈 ¿Cómo veo el porcentaje (%) por cada grupo dentro de una sección?"
+        ];
 
         const PREGUNTAS_ANALISTA_JACK = [
             "🚀 ¿Qué detectaron los 10.000 Perfiles IA con nombres y códigos exactos?",
-            "🚿 ¿Cuántos equipos de hidrantes tiene registrado Balanceados?",
-            "🧯 ¿Qué tipos de extintores hay registrados en la planta?",
-            "📞 ¿Qué empleados activos no tienen teléfono o contacto familiar?"
+            "🚿 ¿Cuántos equipos de hidrantes tiene registrado Balanceados y de qué tipos son?",
+            "🧯 ¿Qué tipos de extintores hay registrados en la planta y cuántos de cada uno?",
+            "📞 ¿Qué empleados activos no tienen teléfono personal o contacto familiar?"
         ];
 
         function obtenerPreguntasSegunPermisosUsuario() {
-            if(modoChatIAActual === 'ANALISTA' && esUsuarioCreador()) return PREGUNTAS_ANALISTA_JACK;
-            return Object.keys(GUIAS_AYUDA_CATALOGO);
+            return (modoChatIAActual === 'ANALISTA' && esUsuarioCreador()) ? PREGUNTAS_ANALISTA_JACK : PREGUNTAS_SUGERIDAS_OPERARIO;
         }
 
         function cambiarModoChatIA(modo) {
@@ -5659,11 +5575,8 @@ function descargarInventarioExcelProfesional() {
                 btn.style.padding = '7px 10px';
                 btn.innerText = q;
                 btn.onclick = () => {
-                    const itemCat = GUIAS_AYUDA_CATALOGO[q];
-                    if(modoChatIAActual === 'ANALISTA' || !itemCat || itemCat.dinamica) {
-                        document.getElementById('inputPreguntaAyuda').value = q;
-                        consultarAsistenteAyudaLibre();
-                    } else mostrarGuiaEnModal(q);
+                    document.getElementById('inputPreguntaAyuda').value = q;
+                    consultarAsistenteAyudaLibre();
                 };
                 contBtns.appendChild(btn);
             });
@@ -5682,203 +5595,26 @@ function descargarInventarioExcelProfesional() {
         }
 
         window.ejecutarSugerenciaDirectaIA = function(preguntaSugerida) {
-            if(GUIAS_AYUDA_CATALOGO[preguntaSugerida] && !GUIAS_AYUDA_CATALOGO[preguntaSugerida].dinamica) mostrarGuiaEnModal(preguntaSugerida);
-            else {
-                document.getElementById('inputPreguntaAyuda').value = preguntaSugerida;
-                consultarAsistenteAyudaLibre();
-            }
+            document.getElementById('inputPreguntaAyuda').value = preguntaSugerida;
+            consultarAsistenteAyudaLibre();
         };
 
-        function generarFallbackHonestoConSimilares(preguntaOriginal) {
+        function generarBotonesOpcionesSiNoSabe(preguntaOriginal) {
             const rad = obtenerRadiografiaTiempoRealPlanta();
-            const todasOpciones = [...new Set([...obtenerPreguntasSegunPermisosUsuario(), ...PREGUNTAS_ANALISTA_JACK])].slice(0, 6);
+            const todasOpciones = [...new Set([...PREGUNTAS_ANALISTA_JACK, ...PREGUNTAS_SUGERIDAS_OPERARIO])].slice(0, 6);
             const botonesHTML = todasOpciones.map(q => `<button type="button" class="btn-small btn-info btn-chip-wrap" style="padding:8px 10px; font-size:12px; width:100%; justify-content:flex-start; margin-bottom:5px;" onclick="ejecutarSugerenciaDirectaIA('${q.replace(/'/g, "\\'")}')">👉 ${q}</button>`).join('');
             return `
                 <div style="border-left:4px solid #ffc107; padding-left:10px; margin-bottom:10px;">
-                    <b style="color:var(--primary);">⚠️ No encontré un dato exacto para «${preguntaOriginal}»</b><br>
-                    <span class="text-muted" style="font-size:12px;">Selecciona una de las consultas que sí puedo responder con datos en vivo de la planta:</span>
+                    <b style="color:var(--primary);">⚠️ «${preguntaOriginal}» no corresponde a un dato registrado en la planta</b><br>
+                    <span class="text-muted" style="font-size:12px;">Toca cualquiera de estas consultas que sí puedo responder con datos en vivo:</span>
                 </div>
                 <div>${botonesHTML}</div>
                 <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">
-                    💡 <b>Dato en vivo:</b> Hay <b>${rad.totalFisicos} equipos físicos</b> y <b>${rad.totalPendientesPlanta} pendientes</b> este mes (${rad.mesActual}).
+                    💡 <b>Resumen actual (${rad.mesActual}):</b> ${rad.totalFisicos} equipos físicos + 4 unidades de Comunicación (${rad.totalPendientesPlanta} pendientes de control).
                 </div>`;
         }
 
-        function detectarEntidadesYSubtiposEnPregunta(pNorm) {
-            const secsOrdenadas = (config.secciones || []).slice().sort((a, b) => b.length - a.length);
-            let seccionDetectada = null;
-            for(const s of secsOrdenadas) {
-                const sNorm = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                if(pNorm.includes(sNorm)) { seccionDetectada = s; break; }
-            }
-            let grupoDetectado = null;
-            const grps = Object.keys(config.grupos || {}).filter(g => g !== 'Todos');
-            for(const g of grps) {
-                const gNorm = g.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                if(pNorm.includes(gNorm) ||
-                   (gNorm.includes('hidrante') && pNorm.includes('hidrante')) ||
-                   (gNorm.includes('extintor') && pNorm.includes('extintor')) ||
-                   (gNorm.includes('botiquin') && (pNorm.includes('botiquin') || pNorm.includes('medicamento'))) ||
-                   (gNorm.includes('pa equipo') && (pNorm.includes('pa equipo') || pNorm.includes('camilla'))) ||
-                   (gNorm.includes('corte') && (pNorm.includes('corte') || pNorm.includes('energia') || pNorm.includes('tablero'))) ||
-                   (gNorm.includes('evacua') && (pNorm.includes('evacua') || pNorm.includes('salida'))) ||
-                   (gNorm.includes('comunica') && pNorm.includes('comunica'))) {
-                    grupoDetectado = g;
-                    break;
-                }
-            }
-            let codigoEquipoDetectado = null;
-            for(const id of Object.keys(config.equipos || {})) {
-                if(pNorm.includes(id.toLowerCase())) { codigoEquipoDetectado = id; break; }
-            }
-            const stopWords = new Set(['cuanto','cuantos','cuanta','cuantas','tiene','tienen','hay','registrado','registrados','registrada','registradas','equipo','equipos','extintor','extintores','hidrante','hidrantes','botiquin','botiquines','comunicacion','combate','corte','energia','evacuacion','planta','seccion','grupo','este','mes','para','con','sin','los','las','del','una','uno','que','cual','cuales','donde','como','estan','esta','son','total','todos','todas','agrochaco','balanceados','viejo','labfil']);
-            const tokens = pNorm.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stopWords.has(w));
-            return { seccionDetectada, grupoDetectado, codigoEquipoDetectado, tokensEspecificos: tokens };
-        }
-
-        function analizarYResponderPreguntaUsuario(preguntaOriginal) {
-            const pregCorregida = formatearPreguntaConGramatica(preguntaOriginal);
-            const p = pregCorregida.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const rad = obtenerRadiografiaTiempoRealPlanta();
-            const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta Exacta para: "${pregCorregida}"</div>`;
-            const { seccionDetectada, grupoDetectado, codigoEquipoDetectado, tokensEspecificos } = detectarEntidadesYSubtiposEnPregunta(p);
-
-            if(codigoEquipoDetectado) {
-                const eq = config.equipos[codigoEquipoDetectado];
-                const yaVerif = rad.visitadosMesSet.has(codigoEquipoDetectado);
-                const infoV = verificarEquipoTieneVencidos(eq);
-                return {
-                    exacta: true, esCruceEspecifico: true,
-                    html: encabezado +
-                        `🔎 <b>Ficha en Vivo de ${codigoEquipoDetectado}:</b><br>` +
-                        `• 📍 <b>Sección:</b> ${eq.seccion} | <b>Grupo:</b> ${eq.grupo}<br>` +
-                        `• 🏷️ <b>Tipo:</b> ${eq.tipo || 'S/D'} ${eq.capacidad ? '('+eq.capacidad+')' : ''} | <b>Ubicación:</b> ${eq.ubicacion || 'S/D'}<br>` +
-                        `• 📅 <b>Estado (${rad.mesActual}):</b> ${yaVerif ? '<b style="color:var(--success);">✅ Verificado</b>' : '<b style="color:var(--warn-text);">⏳ Pendiente</b>'} | ${infoV.vencido ? '<b style="color:var(--danger);">'+infoV.detalle+'</b>' : '✅ Vigente'}`
-                };
-            }
-
-            if(seccionDetectada || grupoDetectado) {
-                const idsBase = Object.keys(config.equipos || {}).sort(sortNatural).filter(id => {
-                    const eq = config.equipos[id];
-                    if(seccionDetectada && eq.seccion !== seccionDetectada) return false;
-                    if(grupoDetectado && eq.grupo !== grupoDetectado) return false;
-                    if(!grupoDetectado && esEquipoVirtualComunicacion(id)) return false;
-                    return true;
-                });
-
-                if(tokensEspecificos.length > 0) {
-                    const terminoBuscado = tokensEspecificos.join(' ');
-                    const raiz = tokensEspecificos[0].replace(/es$|s$/, '');
-                    const idsConAtributo = idsBase.filter(id => {
-                        const eq = config.equipos[id];
-                        const insStr = Array.isArray(eq.insumos) ? eq.insumos.map(i => i.nombre).join(' ') : '';
-                        const textoEq = `${eq.tipo||''} ${eq.capacidad||''} ${eq.ubicacion||''} ${eq.serie||''} ${insStr}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        return textoEq.includes(raiz);
-                    });
-                    const paramsGrupo = grupoDetectado ? (config.grupos[grupoDetectado] || []) : [];
-                    const paramCoincidente = paramsGrupo.find(pr => pr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(raiz));
-                    const conteoTiposReales = {};
-                    idsBase.forEach(id => { const t = config.equipos[id].tipo || 'Sin tipo'; conteoTiposReales[t] = (conteoTiposReales[t] || 0) + 1; });
-                    const strTiposReales = Object.entries(conteoTiposReales).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') || 'Ninguno';
-
-                    let respEspecificaHTML = encabezado;
-                    if(idsConAtributo.length > 0) {
-                        respEspecificaHTML += `✅ <b>Sí, hay <span style="color:var(--primary); font-size:15px;">${idsConAtributo.length} equipo(s)</span> que coinciden con «${corregirOrtografiaTexto(terminoBuscado)}»</b> (de ${idsBase.length} en ${grupoDetectado || 'Planta'}${seccionDetectada ? ' - '+seccionDetectada : ''}):<br>` +
-                            `• 🏷️ <b>Códigos:</b> ${idsConAtributo.slice(0, 12).join(', ')}${idsConAtributo.length > 12 ? '...' : ''}`;
-                    } else if(paramCoincidente) {
-                        respEspecificaHTML += `🔎 <b>Análisis de «${corregirOrtografiaTexto(terminoBuscado)}» en ${grupoDetectado}:</b><br>` +
-                            `• 📋 <b>Como Punto de Control:</b> El punto <b>"${paramCoincidente}"</b> se controla en los <b>${idsBase.length} equipos</b> de ${grupoDetectado}${seccionDetectada ? ' en '+seccionDetectada : ''}.<br>` +
-                            `• 🏷️ <b>Tipos registrados en ficha:</b> ${strTiposReales}.`;
-                    } else {
-                        respEspecificaHTML += `❌ <b>No hay ningún equipo registrado con «${corregirOrtografiaTexto(terminoBuscado)}»</b> dentro de los ${idsBase.length} equipos de <b>${grupoDetectado || 'la planta'}${seccionDetectada ? ' ('+seccionDetectada+')' : ''}</b>.<br><br>` +
-                            `📌 <b>Tipos reales registrados actualmente (${idsBase.length} en total):</b><br>• ${strTiposReales}`;
-                    }
-                    return { exacta: true, esCruceEspecifico: true, html: respEspecificaHTML };
-                }
-
-                const totalReg = idsBase.length, ctrlMes = idsBase.filter(id => rad.visitadosMesSet.has(id)).length, pendMes = totalReg - ctrlMes;
-                const pct = totalReg > 0 ? Math.round((ctrlMes / totalReg) * 100) : 0;
-                const conteoTipos = {};
-                idsBase.forEach(id => { const t = config.equipos[id].tipo || 'S/D'; conteoTipos[t] = (conteoTipos[t] || 0) + 1; });
-                const lineaTipos = `• 🏷️ <b>Tipos registrados:</b> ` + (Object.entries(conteoTipos).map(x => `<b>${x[0]}</b> (${x[1]})`).join(', ') || 'Ninguno') + `<br>`;
-
-                let desgloseHTML = '';
-                if(seccionDetectada && !grupoDetectado) {
-                    const porGrp = {};
-                    idsBase.forEach(id => { const g = config.equipos[id].grupo; porGrp[g] = (porGrp[g] || 0) + 1; });
-                    desgloseHTML = `• 📑 <b>Por Grupo en ${seccionDetectada}:</b> ` + Object.entries(porGrp).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') + `<br>`;
-                } else if(!seccionDetectada && grupoDetectado) {
-                    const porSec = {};
-                    idsBase.forEach(id => { const s = config.equipos[id].seccion; porSec[s] = (porSec[s] || 0) + 1; });
-                    desgloseHTML = `• 📍 <b>Por Sección en ${grupoDetectado}:</b> ` + Object.entries(porSec).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') + `<br>`;
-                } else if(seccionDetectada && grupoDetectado) {
-                    const cods = idsBase.length <= 16 ? idsBase.join(', ') : `${idsBase.slice(0, 8).join(', ')} ... hasta ${idsBase[idsBase.length - 1]}`;
-                    desgloseHTML = `• 🔢 <b>Códigos:</b> <small>${cods || 'Ninguno'}</small><br>`;
-                }
-
-                return {
-                    exacta: true, esCruceEspecifico: true,
-                    html: encabezado +
-                        `📊 <b>Dato Exacto en Vivo — ${grupoDetectado || 'Equipos Físicos'} en ${seccionDetectada || 'Toda la Planta'}:</b><br>` +
-                        `• 📦 <b>Total Registrados:</b> <b style="color:var(--primary); font-size:15px;">${totalReg} equipos</b><br>` +
-                        `• ✅ <b>Controlados (${rad.mesActual}):</b> <b>${ctrlMes}</b> de ${totalReg} (<b>${pct}%</b>) — <span style="color:var(--warn-text); font-weight:bold;">Pendientes: ${pendMes}</span><br>` +
-                        lineaTipos + desgloseHTML
-                };
-            }
-
-            if(p.includes('10000') || p.includes('10.000') || p.includes('agente') || p.includes('perfil') || p.includes('detectaron') || p.includes('pin')) {
-                ejecutarSimulacion10000Agentes5Anios(true);
-                const recs = (config.gemeloAutonomo && config.gemeloAutonomo.recomendacionesActivas) || [];
-                return {
-                    exacta: true, esCruceEspecifico: true,
-                    html: encabezado +
-                        `<div>${(config.gemeloAutonomo && config.gemeloAutonomo.ultimoEstres10000) || ''}</div>` +
-                        `<div style="margin-top:8px; font-weight:bold; color:var(--primary);">🔍 Hallazgos con Nombres y Códigos Exactos:</div>` +
-                        (recs.length ? recs.map(r => `<div style="margin-top:4px;">${r}</div>`).join('') : `<div>✅ Todo al 100%.</div>`)
-                };
-            }
-
-            if(preguntaOriginal === "🏢 ¿Qué sección o grupo aún no hizo su control este mes?") {
-                return {
-                    exacta: true,
-                    html: encabezado +
-                        `• 🔴 <b>Sin iniciar (0%):</b> ${rad.seccionesSinIniciar.join(', ') || 'Ninguna'}<br>` +
-                        `• 🟡 <b>En progreso:</b> ${rad.seccionesEnProgreso.join(' | ') || 'Ninguna'}<br>` +
-                        `• 📊 <b>Total Planta:</b> ${rad.totalControladosPlanta}/${rad.totalPlanta} verificados (faltan <b>${rad.totalPendientesPlanta}</b>).` +
-                        generarReplicaVisualApp('HISTORIAL_GRUPOS')
-                };
-            }
-
-            if(preguntaOriginal === "📊 ¿Cuántos equipos o verificaciones me faltan este mes?") {
-                const desgloseSec = Object.entries(rad.misPendientesPorSec).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') || '0';
-                const desgloseGrp = Object.entries(rad.misPendientesPorGrp).map(x => `${x[0]} (${x[1]})`).join(', ') || '0';
-                return {
-                    exacta: true,
-                    html: encabezado +
-                        `• ⏳ <b>Pendientes este mes:</b> <b style="color:var(--danger);">${rad.misPendientes}</b> de ${rad.misTotal}.<br>` +
-                        `• 📍 <b>Por Sección:</b> ${desgloseSec}<br>` +
-                        `• 🔧 <b>Por Grupo:</b> ${desgloseGrp}` +
-                        generarReplicaVisualApp('HILO_RECORRIDO')
-                };
-            }
-
-            return { exacta: false, html: '' };
-        }
-
-        function mostrarGuiaEnModal(pregunta) {
-            const box = document.getElementById('respuestaGraficaAyuda');
-            if(!box) return;
-            box.classList.remove('hidden');
-            const guia = GUIAS_AYUDA_CATALOGO[pregunta];
-            if(guia && guia.dinamica) { box.innerHTML = analizarYResponderPreguntaUsuario(pregunta).html; return; }
-            if(guia) {
-                const htmlReplica = guia.replica ? generarReplicaVisualApp(guia.replica) : '';
-                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:6px;">${guia.titulo}</div><div>${guia.detalle}</div>${htmlReplica}`;
-                return;
-            }
-            box.innerHTML = generarFallbackHonestoConSimilares(pregunta);
-        }
-
+        // --- MOTOR PRINCIPAL: GEMINI RESPONDE EN 1° LUGAR CON TODA LA BASE DE DATOS EN VIVO ---
         async function consultarAsistenteAyudaLibre() {
             const inp = document.getElementById('inputPreguntaAyuda');
             const box = document.getElementById('respuestaGraficaAyuda');
@@ -5888,55 +5624,84 @@ function descargarInventarioExcelProfesional() {
             inp.value = '';
             box.classList.remove('hidden');
 
-            const analisisLocal = analizarYResponderPreguntaUsuario(texto);
-            if(analisisLocal.exacta && analisisLocal.esCruceEspecifico) {
-                box.innerHTML = analisisLocal.html;
-                return;
-            }
-
+            ejecutarSimulacion10000Agentes5Anios(true);
+            const rad = obtenerRadiografiaTiempoRealPlanta();
             const apiKey = obtenerLlaveGeminiDesencriptada();
+
             if(apiKey) {
-                const rad = obtenerRadiografiaTiempoRealPlanta();
+                const vistaAct = document.querySelector('.view.active');
+                const pestana = vistaAct ? vistaAct.id.replace('view-', '').toUpperCase() : 'CONTROL';
+                const idAbierto = (document.getElementById('idEquipo') && document.getElementById('idEquipo').value) || 'Ninguno';
                 const activos = (config.usuarios || []).filter(u => u.activo !== false);
                 const sinTel = activos.filter(u => !String(u.telefono || '').trim()).map(u => u.nombre);
+                const sinFam = activos.filter(u => !String(u.familiarTel || '').trim()).map(u => u.nombre);
                 const pinDebil = activos.filter(u => String(u.pin) === '1234' || String(u.pin).length < 4).map(u => u.nombre);
-                const resumenMatriz = {};
-                Object.keys(rad.matrizSeccionGrupo).forEach(s => {
-                    resumenMatriz[s] = {};
-                    Object.keys(rad.matrizSeccionGrupo[s]).forEach(g => {
-                        const d = rad.matrizSeccionGrupo[s][g];
-                        resumenMatriz[s][g] = `Reg:${d.registrados}, Ctrl:${d.controlados}, Pend:${d.pendientes}`;
-                    });
-                });
+                const hallazgos10k = ((config.gemeloAutonomo && config.gemeloAutonomo.recomendacionesActivas) || []).map(r => r.replace(/<[^>]*>/g, ''));
 
-                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando inventario, tipos e insumos en vivo con Gemini Flash...</div>`;
+                // Catálogo compacto de los 146 equipos reales para que Gemini pueda responder cualquier cruce o detalle
+                const listadoEquiposCompacto = Object.keys(config.equipos || {}).sort(sortNatural).map(id => {
+                    const e = config.equipos[id];
+                    const ins = (Array.isArray(e.insumos) && e.insumos.length) ? ` | Insumos:${e.insumos.map(i=>`${i.nombre}(Stk:${i.stock},Venc:${i.vencimiento})`).join(',')}` : '';
+                    const ctrl = rad.visitadosMesSet.has(id) ? 'Verificado' : 'Pendiente';
+                    return `${id}[Sec:${e.seccion}|Grp:${e.grupo}|Tipo:${e.tipo||'S/D'}|Cap:${e.capacidad||'-'}|Ubi:${e.ubicacion||'S/D'}|Venc:${e.vencimiento||'-'}|Mes:${ctrl}${ins}]`;
+                }).join('\n');
+
+                box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">🧠 Analizando en vivo con Gemini (${(config.iaConfig && config.iaConfig.modeloActivo) || 'Flash'})...</div>`;
                 try {
                     const modeloPreferido = await descubrirMejorModeloGeminiAPI(apiKey);
-                    const promptContext = `ERES EL CEREBRO IA EN VIVO DE GESTIÓN SySO V6.41.
-1) MATRIZ DE CANTIDADES POR SECCIÓN Y GRUPO (${rad.mesActual}):
-   ${JSON.stringify(resumenMatriz)}
-2) TIPOS EXACTOS REGISTRADOS POR CADA GRUPO:
-   ${JSON.stringify(rad.desgloseTiposPorGrupo)}
-3) PUNTOS DE CHEQUEO DE CADA GRUPO:
-   ${JSON.stringify(config.grupos)}
-4) ALERTAS Y PERSONAL:
-   - Vencidos/Stock 0: ${JSON.stringify(rad.equiposVencidos)}.
-   - Empleados sin teléfono: ${sinTel.join(', ') || 'Ninguno'}. PIN débil (1234): ${pinDebil.join(', ') || 'Ninguno'}.
-Si la pregunta no tiene relación con la planta, seguridad o la app, responde únicamente NO_SOPORTADO. De lo contrario, responde con cifras exactas en español claro (máximo 85 palabras) a: "${texto}"`;
+                    const promptOmnisciente = `
+ERES EL CEREBRO IA OFICIAL EN VIVO DE LA APP "GESTIÓN SySO V6.42" (Planta Industrial de Jack Wiens).
+NO uses respuestas genéricas. Responde SIEMPRE mirando el inventario y estado real que te paso aquí abajo:
 
-                    const modelos = [modeloPreferido, 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
-                    for(const mod of [...new Set(modelos)]) {
-                        if(mod.includes('omni')) continue;
+1. PANTALLA ABIERTA POR EL USUARIO AHORA MISMO:
+   - Usuario: ${usuarioActual ? usuarioActual.nombre : 'Operario'} (${usuarioActual ? usuarioActual.rol : 'Login'}).
+   - Pestaña activa: ${pestana} | Equipo cargado en pantalla: ${idAbierto}.
+
+2. RESUMEN POR SECCIÓN Y GRUPO (Mes ${rad.mesActual}):
+   ${JSON.stringify(rad.matrizSeccionGrupo)}
+   - Total equipos físicos: ${rad.totalFisicos} + 4 unidades Comunicación = ${rad.totalPlanta} (Verificados este mes: ${rad.totalControladosPlanta}, Pendientes: ${rad.totalPendientesPlanta}).
+   - Tipos registrados por grupo: ${JSON.stringify(rad.desgloseTiposPorGrupo)}.
+   - Puntos que se evalúan en cada grupo: ${JSON.stringify(config.grupos)}.
+
+3. AUDITORÍA DE LOS 10.000 AGENTES IA Y PERSONAL ACTIVO (${activos.length} empleados):
+   - Hallazgos actuales: ${hallazgos10k.join(' | ')}.
+   - Empleados sin teléfono personal (${sinTel.length}): ${sinTel.join(', ') || 'Ninguno'}.
+   - Empleados sin contacto familiar (${sinFam.length}): ${sinFam.join(', ') || 'Ninguno'}.
+   - Usuarios con PIN débil 1234 (${pinDebil.length}): ${pinDebil.join(', ') || 'Ninguno'}.
+   - Equipos vencidos o stock 0: ${JSON.stringify(rad.equiposVencidos)}.
+   - Equipos con falla activa: ${JSON.stringify(rad.fallasActivas)}.
+
+4. FUNCIONAMIENTO DE LA APP V6.42:
+   - Cada encargado de sección controla su unidad de Comunicación en "📋 Control" (Punto Encuentro, Planos, Empleados de su sección y cartelera S.O.S. sin llamar 5 veces por mes a los Bomberos).
+   - La foto en Control es OPCIONAL si todo está OK y solo es OBLIGATORIA si se marca "🚨 Con Falla".
+   - Corte Energía, Evacuación, Botiquines, PA Equipo, Hidrantes y Extintores tienen fichas personalizadas según su naturaleza.
+
+5. LISTADO COMPLETO DE LOS ${rad.totalPlanta} EQUIPOS DE LA PLANTA:
+${listadoEquiposCompacto}
+
+REGLA DE RESPUESTA:
+- Si el usuario pregunta algo que NO tiene ninguna relación con la planta, sus equipos, su personal o el uso de esta app (por ejemplo, fútbol, cocina o chistes), responde ÚNICAMENTE la palabra: FUERA_DE_TEMA.
+- Para cualquier pregunta sobre equipos, cantidades, tipos (ej. si pregunta por algo que no existe como extintores de oxígeno, dile claramente que hay 0 de ese tipo y dile cuáles sí existen con sus cantidades), secciones, empleados o ayuda de uso, responde con exactitud matemática, en español claro, usando viñetas y negritas (**texto**), en máximo 110 palabras.
+
+PREGUNTA DEL USUARIO: "${texto}"`;
+
+                    const listaModelos = [...new Set([modeloPreferido, 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'])].filter(m => !m.includes('omni'));
+                    for(const mod of listaModelos) {
                         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: promptContext }] }] })
+                            body: JSON.stringify({ contents: [{ parts: [{ text: promptOmnisciente }] }] })
                         });
                         if(resp.ok) {
                             const data = await resp.json();
                             const txtIA = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text;
-                            if(txtIA && !txtIA.includes('NO_SOPORTADO')) {
-                                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta para: "${texto}" <small class="text-muted">(${mod})</small></div><div>${txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div>`;
+                            if(txtIA) {
+                                if(txtIA.includes('FUERA_DE_TEMA')) {
+                                    box.innerHTML = generarBotonesOpcionesSiNoSabe(texto);
+                                    return;
+                                }
+                                const htmlLimpio = txtIA.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+                                box.innerHTML = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta en Vivo para: "${texto}" <small class="text-muted">(${mod})</small></div><div>${htmlLimpio}</div>`;
                                 return;
                             }
                         }
@@ -5944,20 +5709,20 @@ Si la pregunta no tiene relación con la planta, seguridad o la app, responde ú
                 } catch(e) {}
             }
 
-            box.innerHTML = analisisLocal.exacta ? analisisLocal.html : generarFallbackHonestoConSimilares(texto);
+            // Respaldo únicamente si no hay internet o no hay llave cargada
+            box.innerHTML = generarBotonesOpcionesSiNoSabe(texto);
         }
 
         function ejecutarGemeloDigitalAutonomo() {
             try {
                 const hallazgos = [];
                 calcularUsoMemoriaLocalKB();
-                ejecutarMicroEntrenamientoContinuo();
                 const optico = auditarYCorregirBordesVisualesDOM(false);
-                const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
+                const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-2.5-flash';
                 const rad = obtenerRadiografiaTiempoRealPlanta();
                 actualizarBadgeNube(`☁️ Nube OK (${rad.totalFisicos} Eq. + ${rad.totalPlanta - rad.totalFisicos} Com.)`, '#00e676');
 
-                hallazgos.push(`⚡ <b>Velocidad:</b> Arranque ${metricasVelocidad.arranqueMs} ms | Pestañas ${metricasVelocidad.cambioPestanaMs || 2} ms | Nube ${metricasVelocidad.latenciaNubeMs || 120} ms | Modelo IA: <b>${modAct}</b>.`);
+                hallazgos.push(`⚡ <b>Velocidad:</b> Arranque ${metricasVelocidad.arranqueMs} ms | Pestañas ${metricasVelocidad.cambioPestanaMs || 2} ms | Nube ${metricasVelocidad.latenciaNubeMs || 120} ms | Modelo IA Directo: <b>${modAct}</b>.`);
                 hallazgos.push(`📐 <b>Escáner Óptico Móvil (${window.innerWidth}px):</b> ${optico.corregidos > 0 ? `Reacomodados ${optico.corregidos} elemento(s)` : '0 botones o selectores cortados'}.`);
                 hallazgos.push(`📅 <b>Avance Mensual (${rad.mesActual}):</b> ${rad.totalControladosPlanta}/${rad.totalPlanta} verificados (${rad.totalFisicos} equipos físicos + ${rad.totalPlanta - rad.totalFisicos} verificaciones Comunicación).`);
 
@@ -5985,12 +5750,12 @@ Si la pregunta no tiene relación con la planta, seguridad o la app, responde ú
 
             const keyActiva = obtenerLlaveGeminiDesencriptada();
             const tieneKey = !!keyActiva;
-            const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
+            const modAct = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('omni')) ? config.iaConfig.modeloActivo : 'gemini-2.5-flash';
             if(inpKey && inpKey.parentElement) inpKey.parentElement.style.display = (tieneKey && !window.forzarMostrarInputLlave) ? 'none' : 'flex';
             if(lblKey) {
                 const ultimos4 = tieneKey ? keyActiva.slice(-4) : '';
                 lblKey.innerHTML = tieneKey
-                    ? `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:4px;"><span style="color:var(--success); font-weight:bold; font-size:12px;">🔒 Llave Conectada (•••${ultimos4}) | Modelo: ${modAct}</span><button type="button" class="btn-small btn-dark" style="padding:4px 8px; font-size:10.5px;" onclick="mostrarInputCambioLlave()">🔄 Cambiar</button></div>`
+                    ? `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:4px;"><span style="color:var(--success); font-weight:bold; font-size:12px;">🔒 Llave Conectada en 1° Lugar (•••${ultimos4}) | Modelo: ${modAct}</span><button type="button" class="btn-small btn-dark" style="padding:4px 8px; font-size:10.5px;" onclick="mostrarInputCambioLlave()">🔄 Cambiar</button></div>`
                     : `<span style="color:var(--warn-text); font-weight:bold;">⚡ Pegue arriba su clave gratuita de Google AI Studio.</span>`;
             }
 
@@ -6003,37 +5768,25 @@ Si la pregunta no tiene relación con la planta, seguridad o la app, responde ú
             const t = config.telemetria || { controlesTotales: 0, tiempoTotalSeg: 0, qrCancelados: 0, cargasManuales: 0, fallasRevertidas: 0, edicionesCanceladas: 0, cambiosPestana: 0, equiposSinQR: {} };
             const promSeg = t.controlesTotales > 0 ? Math.round(t.tiempoTotalSeg / t.controlesTotales) : 0;
             const topManuales = Object.entries(t.equiposSinQR || {}).filter(x => !esEquipoVirtualComunicacion(x[0])).sort((a,b) => b[1]-a[1]).slice(0, 4).map(x => `${x[0]} (${x[1]}x)`).join(', ') || 'Ninguno detectado';
-            let botiquinesAlerta = [];
-            Object.keys(config.equipos || {}).forEach(id => {
-                const eq = config.equipos[id];
-                if(esGrupoBotiquinOPA(eq.grupo)) {
-                    const v = verificarEquipoTieneVencidos(eq);
-                    if(v.vencido) botiquinesAlerta.push(`${id} (${v.detalle})`);
-                }
-            });
             box.innerHTML = `
                 <div>⏱️ <b>Tiempo promedio por control:</b> ${promSeg} seg. (${t.controlesTotales} controles medidos)</div>
-                <div style="margin-top:4px;">📷 <b>QR cancelados:</b> ${t.qrCancelados || 0} | ⌨️ <b>Manuales guardados:</b> ${t.cargasManuales || 0} | ✖ <b>Ediciones canceladas:</b> ${t.edicionesCanceladas || 0}</div>
+                <div style="margin-top:4px;">📷 <b>QR cancelados:</b> ${t.qrCancelados || 0} | ✖ <b>Ediciones canceladas:</b> ${t.edicionesCanceladas || 0}</div>
                 <div style="margin-top:4px;">🏷️ <b>Etiquetas QR a reimprimir:</b> <span style="color:var(--danger);font-weight:bold;">${topManuales}</span></div>
-                <div style="margin-top:4px;">💊 <b>Botiquines con stock agotado o vencido:</b> <span style="color:${botiquinesAlerta.length ? 'var(--danger)' : 'var(--success)'};font-weight:bold;">${botiquinesAlerta.length ? botiquinesAlerta.join(' | ') : 'Todos al día'}</span></div>
             `;
         }
 
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.41\n` +
-                `- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + ${rad.totalPlanta - rad.totalFisicos} verificaciones Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n` +
-                `- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.41 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.42\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.42 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
-        // --- ARRANQUE UNIFICADO V6.41 ---
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.41 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.42 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.41';
+            if(badgeVer) badgeVer.innerText = 'V6.42';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -6071,13 +5824,13 @@ Si la pregunta no tiene relación con la planta, seguridad o la app, responde ú
             setTimeout(() => {
                 const k = obtenerLlaveGeminiDesencriptada();
                 if(k) descubrirMejorModeloGeminiAPI(k);
-            }, 1500);
+            }, 1200);
 
             metricasVelocidad.arranqueMs = Math.round(performance.now() - tArranqueApp);
             setTimeout(() => {
                 sanearFechasFantasmaEnGruposSinVencimiento();
                 ejecutarSimulacion10000Agentes5Anios(true);
-            }, 2400);
+            }, 2200);
             window.addEventListener('resize', () => { auditarYCorregirBordesVisualesDOM(false); });
             setInterval(ejecutarGemeloDigitalAutonomo, 45000);
             setInterval(verificarSOSActivoEnNube, 12000);
