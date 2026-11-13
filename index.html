@@ -5307,8 +5307,8 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.46): INSIGNIA V6.46 SINCRONIZADA, ZONAS "👈 TOCA AQUÍ"
-        // CLICABLES Y CEREBRO IA CON CONOCIMIENTO DE COLA DE QRs DAÑADOS
+        // MOTOR 7B FINAL (V6.47): BLINDAJE ESTRICTO DE PERMISOS POR GRUPO Y SECCIÓN
+        // EN AYUDA IA, ZONAS "👈 TOCA AQUÍ" CLICABLES Y CEREBRO AUTO-EVOLUTIVO
         // =========================================================================
 
         async function descubrirMejorModeloGeminiAPI(apiKey) {
@@ -5406,9 +5406,9 @@ function descargarInventarioExcelProfesional() {
             listaBit.parentElement.insertBefore(inpBusq, listaBit);
         }
 
-        const _obtenerRegFiltradosBaseV646 = obtenerRegistrosFiltradosHistorial;
+        const _obtenerRegFiltradosBaseV647 = obtenerRegistrosFiltradosHistorial;
         obtenerRegistrosFiltradosHistorial = function() {
-            const base = _obtenerRegFiltradosBaseV646();
+            const base = _obtenerRegFiltradosBaseV647();
             const q = (document.getElementById('buscadorTextoHistorial') ? document.getElementById('buscadorTextoHistorial').value : '').toLowerCase().trim();
             if(!q) return base;
             return base.filter(r => `${r.ID_Equipo||''} ${r.Seccion||''} ${r.Grupo||''} ${r.Inspector||''} ${r.Detalle_Fallas||''} ${r.Observaciones||''}`.toLowerCase().includes(q));
@@ -5700,7 +5700,7 @@ function descargarInventarioExcelProfesional() {
             if(tipo === 'SOS') {
                 return `<div style="${caja}">${tag}
                     <div onclick="irDirectoDesdeAyudaIA('SOS')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:var(--primary); color:#fff; padding:9px 12px; border-radius:8px;">
-                        <b>Gestión SySO V6.46</b>
+                        <b>Gestión SySO V6.47</b>
                         <span style="background:#dc3545; color:#fff; border:2px solid #fff; padding:5px 10px; border-radius:8px; font-weight:bold;">🚨 S.O.S. ${flecha}</span>
                     </div>
                 </div>`;
@@ -5708,12 +5708,19 @@ function descargarInventarioExcelProfesional() {
             return '';
         }
 
+        // --- MAPA VIVO CON SEPARACIÓN ESTRICTA ENTRE GRUPOS/SECCIONES PERMITIDOS Y PROHIBIDOS ---
         function construirMapaVivoDeLaApp() {
             const u = usuarioActual || { nombre: 'Visitante (Sin iniciar sesión)', rol: 'Ninguno', secciones: [], grupo: [] };
             const esAdmin = u.rol === 'Admin';
+            const todasSecs = (config.secciones || []).slice().sort(sortNatural);
+            const todosGrps = Object.keys(config.grupos || {}).filter(g => g !== 'Todos').sort(sortNatural);
             const adminsPlanta = (config.usuarios || []).filter(x => x.activo !== false && x.rol === 'Admin').map(x => x.nombre);
-            const secsUsuario = (!u.secciones || u.secciones.includes('Todas')) ? (config.secciones || []) : u.secciones;
-            const grpsUsuario = (!u.grupo || u.grupo.includes('Todos')) ? Object.keys(config.grupos || {}).filter(g => g !== 'Todos') : u.grupo;
+
+            const secsUsuario = (esAdmin || !u.secciones || u.secciones.includes('Todas')) ? todasSecs : u.secciones.filter(s => todasSecs.includes(s));
+            const grpsUsuario = (esAdmin || !u.grupo || u.grupo.includes('Todos')) ? todosGrps : todosGrps.filter(g => u.grupo.includes(g) || (esGrupoComunicacionNombre(g) && u.grupo.some(ug => esGrupoComunicacionNombre(ug))));
+
+            const secsProhibidas = todasSecs.filter(s => !secsUsuario.includes(s));
+            const grpsProhibidos = todosGrps.filter(g => !grpsUsuario.includes(g));
             const soloTieneComunicacion = !esAdmin && grpsUsuario.length === 1 && esGrupoComunicacionNombre(grpsUsuario[0]);
 
             const pestanasVisibles = Array.from(document.querySelectorAll('#menuNavegacion .tab-btn'))
@@ -5727,22 +5734,24 @@ function descargarInventarioExcelProfesional() {
             const idAbierto = (document.getElementById('idEquipo') && document.getElementById('idEquipo').value) || 'Ninguno';
 
             return {
-                versionActual: 'V6.46',
+                versionActual: 'V6.47',
                 usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : (u.rol === 'Inspector' ? 'Inspector / Brigadista' : 'Sin sesión'),
                 esAdmin,
                 soloTieneComunicacion,
                 seccionesHabilitadasUsuario: secsUsuario,
+                seccionesPROHIBIDASUsuario: secsProhibidas,
                 gruposHabilitadosUsuario: grpsUsuario,
+                gruposPROHIBIDOSUsuario: grpsProhibidos,
                 administradoresDeLaPlanta: adminsPlanta,
                 pestanasVisiblesParaEsteUsuario: pestanasVisibles.length ? pestanasVisibles : (esAdmin ? ['📋 Control', '📊 Historial', '📦 Equipos', '⚙️ Ajustes'] : ['📋 Control', '📊 Historial', '⚙️ Ajustes']),
                 desplegablesRealesEnLaApp: acordeonesApp,
                 pestanaAbiertaAhora: pestanaActiva,
                 equipoCargadoEnControl: idAbierto,
                 reglasExactasDeModulos: {
-                    registrarNuevoEquipo: "SOLO Administradores: Pestaña inferior '📦 Equipos' ➔ abrir desplegable azul '➕ Registrar Nuevo Equipo / Generar QR' ➔ elegir '1. Sección de Planta' y '2. Grupo de Equipo' ➔ completar campos y tocar 'Guardar Equipo'. Los Inspectores/Brigadistas NO tienen visible la pestaña '📦 Equipos'; deben pedir el alta a un Administrador (" + adminsPlanta.join(', ') + ").",
-                    editarEnTerrenoOComunicacion: "En '📋 Control', los brigadistas de equipos físicos pueden tocar '✏️ Actualizar Ubicación / Foto Ref. / Vencimiento', y los encargados de Comunicación pueden editar teléfonos de empleados y contactos de su sección directamente en su ficha.",
-                    qrsDanadosYBotonesEquipos: "En '📋 Control' existe el botón '🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir' (y la casilla opcional en '⌨️ Lista') para enviar stickers rotos a la cola sin pedir foto obligatoria si el equipo está OK. En '📦 Equipos', los 3 botones superiores sirven para: 1) '🖨️ QRs Dañados' genera la plancha lista para imprimir solo con las etiquetas dañadas; 2) '🧹 Limpiar Cont. QR' reinicia en cero la cola después de pegar las etiquetas nuevas; 3) '📥 Exportar Excel' descarga la planilla completa del inventario."
+                    permisosDeControlPorGrupoYSeccion: "REGLA ESTRICTA: Un usuario con rol Inspector/Brigadista SOLO puede controlar equipos que pertenezcan simultáneamente a sus 'seccionesHabilitadasUsuario' y a sus 'gruposHabilitadosUsuario'. Si pregunta cómo controlar o quiere controlar un grupo en 'gruposPROHIBIDOSUsuario' (ej. si está en Comunicación y quiere controlar Extintores) o una sección en 'seccionesPROHIBIDASUsuario', la app bloquea el acceso y DEBES decirle claramente que NO tiene permiso para ese grupo/sección y que solo puede controlar sus grupos asignados (" + grpsUsuario.join(', ') + " en " + secsUsuario.join(', ') + ").",
+                    registrarNuevoEquipo: "SOLO Administradores: Pestaña inferior '📦 Equipos' ➔ abrir desplegable azul '➕ Registrar Nuevo Equipo / Generar QR' ➔ elegir '1. Sección de Planta' y '2. Grupo de Equipo' ➔ completar campos y tocar 'Guardar Equipo'. Los Inspectores/Brigadistas NO tienen visible la pestaña '📦 Equipos'; deben pedir el alta a un Administrador (" + adminsPlanta.slice(0, 3).join(', ') + ").",
+                    qrsDanadosYBotonesEquipos: "En '📋 Control' existe el botón '🏷️ ¿Etiqueta QR Dañada? ➔ Reimprimir' (y la casilla opcional en '⌨️ Lista') para enviar stickers rotos a la cola sin pedir foto obligatoria si el equipo está OK."
                 }
             };
         }
@@ -5758,7 +5767,7 @@ function descargarInventarioExcelProfesional() {
             const misPendientesIds = misIds.filter(id => !visitadosMesSet.has(id));
             const misControladosIds = misIds.filter(id => visitadosMesSet.has(id));
 
-            const matrizSeccionGrupo = {}, desgloseTiposPorGrupo = {};
+            const matrizSeccionGrupo = {}, matrizSoloPermitidaUsuario = {}, desgloseTiposPorGrupo = {};
             const seccionesSinIniciar = [], seccionesEnProgreso = [], seccionesCompletas = [];
             Object.keys(config.grupos || {}).filter(g => g !== 'Todos').forEach(g => desgloseTiposPorGrupo[g] = {});
             todosIds.filter(id => !esEquipoVirtualComunicacion(id)).forEach(id => {
@@ -5784,7 +5793,12 @@ function descargarInventarioExcelProfesional() {
                         const ctrlSG = idsSG.filter(id => visitadosMesSet.has(id)).length;
                         const tiposSG = {};
                         idsSG.forEach(k => { const t = config.equipos[k].tipo || 'S/D'; tiposSG[t] = (tiposSG[t] || 0) + 1; });
-                        matrizSeccionGrupo[sec][grp] = { registrados: idsSG.length, controlados: ctrlSG, pendientes: idsSG.length - ctrlSG, tipos: tiposSG, codigos: idsSG };
+                        const infoNodo = { registrados: idsSG.length, controlados: ctrlSG, pendientes: idsSG.length - ctrlSG, tipos: tiposSG, codigos: idsSG };
+                        matrizSeccionGrupo[sec][grp] = infoNodo;
+                        if(usuarioActual && usuarioTienePermisoEquipo(usuarioActual, config.equipos[idsSG[0]])) {
+                            if(!matrizSoloPermitidaUsuario[sec]) matrizSoloPermitidaUsuario[sec] = {};
+                            matrizSoloPermitidaUsuario[sec][grp] = infoNodo;
+                        }
                     }
                 });
             });
@@ -5806,8 +5820,8 @@ function descargarInventarioExcelProfesional() {
             return {
                 mesActual, totalPlanta: todosIds.length, totalFisicos: todosIds.filter(id => !esEquipoVirtualComunicacion(id)).length,
                 totalControladosPlanta: visitadosMesSet.size, totalPendientesPlanta: todosIds.length - visitadosMesSet.size,
-                misTotal: misIds.length, misControlados: misControladosIds.length, misPendientes: misPendientesIds.length,
-                misPendientesPorSec, misPendientesPorGrp, matrizSeccionGrupo, desgloseTiposPorGrupo, visitadosMesSet,
+                misIds, misPendientesIds, misTotal: misIds.length, misControlados: misControladosIds.length, misPendientes: misPendientesIds.length,
+                misPendientesPorSec, misPendientesPorGrp, matrizSeccionGrupo, matrizSoloPermitidaUsuario, desgloseTiposPorGrupo, visitadosMesSet,
                 seccionesSinIniciar, seccionesEnProgreso, seccionesCompletas, equiposVencidos, fallasActivas: config.fallas || {}
             };
         }
@@ -5894,20 +5908,64 @@ function descargarInventarioExcelProfesional() {
                 </div>`;
         }
 
+        function detectarGrupoYSeccionEnTexto(pNorm) {
+            const secsOrdenadas = (config.secciones || []).slice().sort((a, b) => b.length - a.length);
+            let seccionDetectada = null;
+            for(const s of secsOrdenadas) {
+                const sNorm = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if(pNorm.includes(sNorm)) { seccionDetectada = s; break; }
+            }
+            let grupoDetectado = null;
+            const grps = Object.keys(config.grupos || {}).filter(g => g !== 'Todos');
+            for(const g of grps) {
+                const gNorm = g.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if(pNorm.includes(gNorm) ||
+                   (gNorm.includes('extintor') && (pNorm.includes('extintor') || pNorm.includes('matafuego'))) ||
+                   (gNorm.includes('hidrante') && (pNorm.includes('hidrante') || pNorm.includes('manguera') || pNorm.includes('bie'))) ||
+                   (gNorm.includes('botiquin') && (pNorm.includes('botiquin') || pNorm.includes('medicamento'))) ||
+                   (gNorm.includes('pa equipo') && (pNorm.includes('pa equipo') || pNorm.includes('camilla'))) ||
+                   (gNorm.includes('corte') && (pNorm.includes('corte') || pNorm.includes('energia') || pNorm.includes('tablero'))) ||
+                   (gNorm.includes('evacua') && (pNorm.includes('evacua') || pNorm.includes('salida'))) ||
+                   (gNorm.includes('jefe') && (pNorm.includes('jefe') || pNorm.includes('brigada'))) ||
+                   (gNorm.includes('comunica') && pNorm.includes('comunica'))) {
+                    grupoDetectado = g;
+                    break;
+                }
+            }
+            let codigoEquipoDetectado = null;
+            for(const id of Object.keys(config.equipos || {})) {
+                if(pNorm.includes(id.toLowerCase())) { codigoEquipoDetectado = id; break; }
+            }
+            return { seccionDetectada, grupoDetectado, codigoEquipoDetectado };
+        }
+
         function detectarReplicaVisualApropiada(preguntaNorm) {
             const mapaApp = construirMapaVivoDeLaApp();
+            const { seccionDetectada, grupoDetectado } = detectarGrupoYSeccionEnTexto(preguntaNorm);
+
+            // Si el usuario NO es Admin y preguntó por un grupo o sección que NO tiene habilitado, mostrarle solo la tarjeta de lo que SÍ tiene permitido
+            if(!mapaApp.esAdmin) {
+                const pideGrupoProhibido = grupoDetectado && !mapaApp.gruposHabilitadosUsuario.includes(grupoDetectado);
+                const pideSeccionProhibida = seccionDetectada && !mapaApp.seccionesHabilitadasUsuario.includes(seccionDetectada);
+                if(pideGrupoProhibido || pideSeccionProhibida) {
+                    return generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'HILO_RECORRIDO');
+                }
+            }
+
             if((preguntaNorm.includes('registrar') || preguntaNorm.includes('crear') || preguntaNorm.includes('agregar') || preguntaNorm.includes('nuevo') || preguntaNorm.includes('alta') || preguntaNorm.includes('imagen')) && (preguntaNorm.includes('equipo') || preguntaNorm.includes('qr') || preguntaNorm.includes('donde'))) {
                 if(mapaApp.esAdmin) return generarReplicaVisualApp('ALTA_EQUIPO');
                 if(mapaApp.soloTieneComunicacion) return generarReplicaVisualApp('COMUNICACION_CONTROL');
                 return generarReplicaVisualApp('ACTUALIZAR_FICHA');
             }
             if(preguntaNorm.includes('actualizar') || preguntaNorm.includes('terreno') || (preguntaNorm.includes('cambiar') && preguntaNorm.includes('ubicacion'))) {
-                return generarReplicaVisualApp('ACTUALIZAR_FICHA');
+                return generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'ACTUALIZAR_FICHA');
             }
             if(preguntaNorm.includes('comunicacion')) return generarReplicaVisualApp('COMUNICACION_CONTROL');
             if(preguntaNorm.includes('porcentaje') || preguntaNorm.includes('historial')) return generarReplicaVisualApp('HISTORIAL_GRUPOS');
             if(preguntaNorm.includes('sos') || preguntaNorm.includes('emergencia') || preguntaNorm.includes('ntfy')) return generarReplicaVisualApp('SOS');
-            if(preguntaNorm.includes('control') || preguntaNorm.includes('escanear') || preguntaNorm.includes('faltan')) return generarReplicaVisualApp('HILO_RECORRIDO');
+            if(preguntaNorm.includes('control') || preguntaNorm.includes('escanear') || preguntaNorm.includes('faltan')) {
+                return generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'HILO_RECORRIDO');
+            }
             return '';
         }
 
@@ -5917,7 +5975,43 @@ function descargarInventarioExcelProfesional() {
             const mapaApp = construirMapaVivoDeLaApp();
             const encabezado = `<div style="font-weight:bold; color:var(--primary); margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">🤖 Respuesta para ${mapaApp.usuarioNombre}: "${pregCorregida}"</div>`;
 
-            // Explicación instantánea si preguntan por QRs Dañados / Limpiar Cont. QR / Exportar Excel
+            // 1. VALIDACIÓN ESTRICTA DE PERMISOS: Si el usuario pregunta por controlar/ver un Grupo, Sección o Equipo que NO tiene habilitado en su perfil
+            const { seccionDetectada, grupoDetectado, codigoEquipoDetectado } = detectarGrupoYSeccionEnTexto(p);
+            if(!mapaApp.esAdmin && usuarioActual) {
+                // A. Si menciona un código de equipo específico para el cual no tiene permiso
+                if(codigoEquipoDetectado && config.equipos[codigoEquipoDetectado] && !usuarioTienePermisoEquipo(usuarioActual, config.equipos[codigoEquipoDetectado])) {
+                    const eqP = config.equipos[codigoEquipoDetectado];
+                    return encabezado +
+                        `Hola <b>${mapaApp.usuarioNombre}</b>, el equipo <b>${codigoEquipoDetectado}</b> pertenece a la sección <b>${eqP.seccion}</b> y al grupo <b>${eqP.grupo}</b>, pero <b>no tienes permiso habilitado en tu perfil para controlarlo</b>.<br><br>` +
+                        `• 🔒 <b>Tus permisos actuales:</b> Sección <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b> | Grupo <b>${mapaApp.gruposHabilitadosUsuario.join(', ')}</b>.<br>` +
+                        `• ⛔ <b>Por qué no puedes cargarlo:</b> La app bloquea la carga de equipos fuera de tu grupo o sección asignada. Si necesitas este permiso, solicítalo a un Administrador (<b>${mapaApp.administradoresDeLaPlanta.slice(0, 3).join(', ')}</b>).<br>` +
+                        `• ✅ <b>Lo que SÍ tienes habilitado hoy:</b> Tienes <b>${rad.misPendientes} pendiente(s)</b> en <b>${mapaApp.gruposHabilitadosUsuario.join(', ')}</b> (${rad.misIds.slice(0, 6).join(', ')}).` +
+                        generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'HILO_RECORRIDO');
+                }
+
+                // B. Si pregunta por un Grupo o Sección que NO tiene habilitado en su cuenta (ej. Rosana preguntando "Quiero controlar extintores")
+                const grupoNoPermitido = grupoDetectado && !mapaApp.gruposHabilitadosUsuario.includes(grupoDetectado);
+                const seccionNoPermitida = seccionDetectada && !mapaApp.seccionesHabilitadasUsuario.includes(seccionDetectada);
+                if(grupoNoPermitido || seccionNoPermitida) {
+                    const motivoBloqueo = (grupoNoPermitido && seccionNoPermitida)
+                        ? `el grupo <b>${grupoDetectado}</b> ni la sección <b>${seccionDetectada}</b>`
+                        : (grupoNoPermitido ? `el grupo <b>${grupoDetectado}</b>` : `la sección <b>${seccionDetectada}</b>`);
+                    const secRef = seccionDetectada || mapaApp.seccionesHabilitadasUsuario[0] || 'la planta';
+                    const cantEnPlanta = (grupoDetectado && rad.matrizSeccionGrupo[secRef] && rad.matrizSeccionGrupo[secRef][grupoDetectado])
+                        ? ` (aunque existen ${rad.matrizSeccionGrupo[secRef][grupoDetectado].registrados} registrados en ${secRef})`
+                        : '';
+                    return encabezado +
+                        `Hola <b>${mapaApp.usuarioNombre}</b>, actualmente <b>no tienes permiso habilitado para controlar ${motivoBloqueo}</b>${cantEnPlanta}.<br><br>` +
+                        `• 🔒 <b>Tu asignación actual en el sistema:</b><br>` +
+                        `&nbsp;&nbsp;— <b>Sección habilitada:</b> ${mapaApp.seccionesHabilitadasUsuario.join(', ')}<br>` +
+                        `&nbsp;&nbsp;— <b>Grupo habilitado:</b> ${mapaApp.gruposHabilitadosUsuario.join(', ')}<br>` +
+                        `• ⛔ <b>Acceso restringido:</b> Si intentas escanear o elegir un equipo de <b>${grupoDetectado || seccionDetectada}</b> en <b>📋 Control</b>, la aplicación bloqueará la acción porque no perteneces a ese grupo/sección. Si necesitas que te agreguen ese permiso, pídeselo a un Administrador (<b>${mapaApp.administradoresDeLaPlanta.slice(0, 3).join(', ')}</b>).<br>` +
+                        `• ✅ <b>Lo que SÍ puedes controlar ahora mismo:</b> Tienes habilitado <b>${mapaApp.gruposHabilitadosUsuario.join(', ')}</b> en <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b> (${rad.misPendientes} pendiente(s) de ${rad.misTotal}: <b>${rad.misIds.slice(0, 6).join(', ')}</b>).` +
+                        generarReplicaVisualApp(mapaApp.soloTieneComunicacion ? 'COMUNICACION_CONTROL' : 'HILO_RECORRIDO');
+                }
+            }
+
+            // 2. Explicación instantánea si preguntan por QRs Dañados / Limpiar Cont. QR / Exportar Excel
             if(p.includes('qr danado') || p.includes('qrs danados') || p.includes('limpiar cont') || p.includes('reimprimir')) {
                 const mapaSinQR = (config.telemetria && config.telemetria.equiposSinQR) || {};
                 const listaDanados = Object.keys(mapaSinQR).filter(id => mapaSinQR[id] >= 1 && !esEquipoVirtualComunicacion(id));
@@ -5928,6 +6022,7 @@ function descargarInventarioExcelProfesional() {
                     `• <b>🧹 Limpiar Cont. QR:</b> Reinicia en cero la cola una vez que ya imprimiste y pegaste las etiquetas nuevas.`;
             }
 
+            // 3. Si pregunta sobre crear / registrar nuevos equipos
             if((p.includes('registrar') || p.includes('crear') || p.includes('agregar') || p.includes('alta') || p.includes('imagen')) && (p.includes('equipo') || p.includes('nuevo') || p.includes('donde'))) {
                 if(mapaApp.esAdmin) {
                     return encabezado +
@@ -5951,12 +6046,13 @@ function descargarInventarioExcelProfesional() {
                 }
             }
 
+            // 4. Si pregunta "¿Qué puedo hacer con tu ayuda?"
             if(p.includes('con tu ayuda') || p.includes('que puedes hacer') || p.includes('para que sirves') || p.includes('en que me ayudas') || p.includes('que sabes hacer')) {
                 return encabezado +
-                    `Hola <b>${mapaApp.usuarioNombre}</b> (${mapaApp.usuarioRol} — Secciones: <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b>). Con mi ayuda puedes:<br>` +
-                    `• 🧭 <b>Guiarte con botones interactivos:</b> Pregúntame dónde está cualquier función y al tocar <b>👈 TOCA AQUÍ</b> te llevaré directo a esa pantalla.<br>` +
-                    `• 🔎 <b>Consultar cualquier dato del inventario en vivo:</b> Cantidades, tipos, ubicaciones o vencimientos por sección y grupo.<br>` +
-                    `• ⏳ <b>Ver tus pendientes del mes:</b> Hoy tienes <b>${rad.misPendientes} verificaciones pendientes</b> en tus sectores habilitados.<br><br>` +
+                    `Hola <b>${mapaApp.usuarioNombre}</b> (${mapaApp.usuarioRol} — Secciones: <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b> | Grupos: <b>${mapaApp.gruposHabilitadosUsuario.join(', ')}</b>). Con mi ayuda puedes:<br>` +
+                    `• 🧭 <b>Guiarte según tus permisos exactos:</b> Te indico qué sectores y grupos tienes habilitados y al tocar <b>👈 TOCA AQUÍ</b> te llevo directo a tu panel.<br>` +
+                    `• 🔎 <b>Consultar datos en vivo:</b> Cantidades, tipos, ubicaciones o vencimientos.<br>` +
+                    `• ⏳ <b>Ver tus pendientes del mes:</b> Hoy tienes <b>${rad.misPendientes} verificaciones pendientes</b> de ${rad.misTotal} en tus sectores habilitados.<br><br>` +
                     generarBotonesOpcionesSiNoSabe(pregCorregida, false);
             }
 
@@ -5980,24 +6076,22 @@ function descargarInventarioExcelProfesional() {
                     generarReplicaVisualApp('COMUNICACION_CONTROL');
             }
 
-            for(const id of Object.keys(config.equipos || {})) {
-                if(p.includes(id.toLowerCase())) {
-                    const eq = config.equipos[id];
-                    const yaVerif = rad.visitadosMesSet.has(id);
-                    const infoV = verificarEquipoTieneVencidos(eq);
-                    return encabezado +
-                        `🔎 <b>Ficha en Vivo de ${id}:</b><br>` +
-                        `• 📍 <b>Sección:</b> ${eq.seccion} | <b>Grupo:</b> ${eq.grupo}<br>` +
-                        `• 🏷️ <b>Tipo:</b> ${eq.tipo || 'S/D'} ${eq.capacidad ? '('+eq.capacidad+')' : ''} | <b>Ubicación:</b> ${eq.ubicacion || 'S/D'}<br>` +
-                        `• 📅 <b>Vencimiento:</b> ${eq.vencimiento || 'Sin fecha'} | <b>Estado (${rad.mesActual}):</b> ${yaVerif ? '✅ Verificado' : '⏳ Pendiente'} (${infoV.vencido ? infoV.detalle : 'Vigente'})`;
-                }
+            if(codigoEquipoDetectado && config.equipos[codigoEquipoDetectado]) {
+                const eq = config.equipos[codigoEquipoDetectado];
+                const yaVerif = rad.visitadosMesSet.has(codigoEquipoDetectado);
+                const infoV = verificarEquipoTieneVencidos(eq);
+                return encabezado +
+                    `🔎 <b>Ficha en Vivo de ${codigoEquipoDetectado}:</b><br>` +
+                    `• 📍 <b>Sección:</b> ${eq.seccion} | <b>Grupo:</b> ${eq.grupo}<br>` +
+                    `• 🏷️ <b>Tipo:</b> ${eq.tipo || 'S/D'} ${eq.capacidad ? '('+eq.capacidad+')' : ''} | <b>Ubicación:</b> ${eq.ubicacion || 'S/D'}<br>` +
+                    `• 📅 <b>Vencimiento:</b> ${eq.vencimiento || 'Sin fecha'} | <b>Estado (${rad.mesActual}):</b> ${yaVerif ? '✅ Verificado' : '⏳ Pendiente'} (${infoV.vencido ? infoV.detalle : 'Vigente'})`;
             }
 
             if(p.includes('faltan este mes') || p.includes('me falta')) {
                 const dSec = Object.entries(rad.misPendientesPorSec).map(x => `<b>${x[0]}</b>: ${x[1]}`).join(' | ') || '0';
                 const dGrp = Object.entries(rad.misPendientesPorGrp).map(x => `${x[0]} (${x[1]})`).join(', ') || '0';
                 return encabezado +
-                    `Hola <b>${mapaApp.usuarioNombre}</b> (Secciones asignadas: <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b>):<br>` +
+                    `Hola <b>${mapaApp.usuarioNombre}</b> (Secciones asignadas: <b>${mapaApp.seccionesHabilitadasUsuario.join(', ')}</b> | Grupos: <b>${mapaApp.gruposHabilitadosUsuario.join(', ')}</b>):<br>` +
                     `• ⏳ <b>Te faltan verificar este mes (${rad.mesActual}):</b> <b style="color:var(--danger);">${rad.misPendientes}</b> de ${rad.misTotal} ítems.<br>` +
                     `• 📍 <b>Por Sección:</b> ${dSec}<br>` +
                     `• 🔧 <b>Por Grupo:</b> ${dGrp}` +
@@ -6032,24 +6126,27 @@ function descargarInventarioExcelProfesional() {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Consultando a Gemini (${modInicial})...</div>`;
                 try {
                     const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO ${mapaApp.versionActual}".
-REGLAS OBLIGATORIAS DE PERSONALIZACIÓN Y EXACTITUD:
-1. Dirígete siempre al usuario por su nombre: "${mapaApp.usuarioNombre}".
-2. Rol de ${mapaApp.usuarioNombre}: ${mapaApp.usuarioRol}.
-   - Secciones habilitadas: ${mapaApp.seccionesHabilitadasUsuario.join(', ')}.
-   - Grupos habilitados: ${mapaApp.gruposHabilitadosUsuario.join(', ')}.
+REGLAS OBLIGATORIAS DE PERMISOS, PERSONALIZACIÓN Y EXACTITUD:
+1. Usuario conectado ahora: "${mapaApp.usuarioNombre}" (Rol: ${mapaApp.usuarioRol}).
+   - Secciones HABILITADAS para ${mapaApp.usuarioNombre}: ${mapaApp.seccionesHabilitadasUsuario.join(', ')}.
+   - Secciones PROHIBIDAS (NO habilitadas) para ${mapaApp.usuarioNombre}: ${mapaApp.seccionesPROHIBIDASUsuario.join(', ') || 'Ninguna'}.
+   - Grupos HABILITADOS para ${mapaApp.usuarioNombre}: ${mapaApp.gruposHabilitadosUsuario.join(', ')}.
+   - Grupos PROHIBIDOS (NO habilitados) para ${mapaApp.usuarioNombre}: ${mapaApp.gruposPROHIBIDOSUsuario.join(', ') || 'Ninguno'}.
    - Pestañas visibles abajo: ${mapaApp.pestanasVisiblesParaEsteUsuario.join(', ')}.
    - Administradores de la planta: ${mapaApp.administradoresDeLaPlanta.slice(0, 3).join(', ')}.
+2. REGLA CRÍTICA ANTI-ERROR DE PERMISOS:
+   - NUNCA le digas a ${mapaApp.usuarioNombre} que tiene habilitados o que puede controlar equipos de un grupo que esté en "Grupos PROHIBIDOS" o de una sección en "Secciones PROHIBIDAS". Si pregunta cómo controlarlos, dile claramente que NO tiene permiso para ese grupo/sección y que solo tiene permiso para: ${mapaApp.gruposHabilitadosUsuario.join(', ')} en ${mapaApp.seccionesHabilitadasUsuario.join(', ')}.
+   - Equipos que ${mapaApp.usuarioNombre} SÍ tiene permiso para controlar: ${JSON.stringify(rad.matrizSoloPermitidaUsuario)}.
 3. NUNCA inventes nombres de botones. Usa ÚNICAMENTE los nombres reales del DOM:
    - Desplegables reales: ${JSON.stringify(mapaApp.desplegablesRealesEnLaApp)}.
    - Reglas exactas de módulos: ${JSON.stringify(mapaApp.reglasExactasDeModulos)}.
-4. DATOS EN VIVO (${rad.mesActual}):
+4. DATOS GLOBALES DE LA PLANTA (${rad.mesActual}):
    - Total planta: ${rad.totalFisicos} equipos físicos + 4 unidades Comunicación = ${rad.totalPlanta}.
-   - Pendientes de ${mapaApp.usuarioNombre} este mes: ${rad.misPendientes} de ${rad.misTotal} (${JSON.stringify(rad.misPendientesPorSec)}).
-   - Matriz por Sección y Grupo: ${JSON.stringify(rad.matrizSeccionGrupo)}.
+   - Matriz general de la planta: ${JSON.stringify(rad.matrizSeccionGrupo)}.
    - Tipos por Grupo: ${JSON.stringify(rad.desgloseTiposPorGrupo)}.
    - Hallazgos hoy: ${hallazgos10k.join(' | ')}.
 5. Si la pregunta NO tiene ninguna relación con la planta, sus equipos, su personal o la app, responde solo: FUERA_DE_TEMA.
-De lo contrario, responde en español claro, personalizado para ${mapaApp.usuarioNombre} según sus permisos y secciones, en máximo 95 palabras a: "${texto}"`;
+De lo contrario, responde en español claro, respetando estrictamente los permisos de ${mapaApp.usuarioNombre}, en máximo 95 palabras a: "${texto}"`;
 
                     const candidatos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
                     for(const mod of candidatos) {
@@ -6152,15 +6249,15 @@ De lo contrario, responde en español claro, personalizado para ${mapaApp.usuari
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.46\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.46 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.47\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.47 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.46 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.47 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.46';
+            if(badgeVer) badgeVer.innerText = 'V6.47';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
