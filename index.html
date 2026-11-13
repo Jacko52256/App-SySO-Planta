@@ -4580,16 +4580,16 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 6 DE 7 ===
 // =========================================================================
-        // MOTOR 7 DEFINITIVO (V6.53): BOTONES DE EQUIPOS 100% AUTO-CONTENIDOS
-        // (QR, EDITAR, TRASLADAR INLINE, ELIMINAR, EXCEL), ORDEN 1° SECCIÓN ➔ 2° GRUPO,
-        // FOTO OPCIONAL EN OK, ESCUDO BORRADOR 30M Y CEREBRO IA GEMINI 3.5 FLASH-LITE
+        // MOTOR 7 DEFINITIVO (V6.54): BOTONES QR ALINEADOS A LA DERECHA EN MÓVIL Y PC,
+        // ACCIONES DE EQUIPO AUTO-CONTENIDAS (QR, EDITAR, TRASLADAR, ELIMINAR, EXCEL),
+        // ORDEN 1° SECCIÓN ➔ 2° GRUPO, FOTO OPCIONAL EN OK, BORRADOR 30M E IA GEMINI
         // =========================================================================
 
         window.qrDanadoMarcadoEnControl = false;
         window.seccionesAbiertasInventario = {};
         window.gruposAbiertosInventario = {};
         window.ultimaPreguntaUsuarioIA = '';
-        var BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V653';
+        var BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V654';
         var TIEMPO_GRACIA_BORRADOR_MS = 30 * 60 * 1000;
 
         // --- 1. REGLA FOTO OPCIONAL SI ESTÁ OK Y COLA EXACTA DE QRs DAÑADOS ---
@@ -5092,9 +5092,7 @@ function descargarInventarioExcelProfesional() {
             actualizarEstadoRequisitoFoto();
         };
 
-        // --- 3. FUNCIONES 100% AUTO-CONTENIDAS DE TODOS LOS BOTONES DE EQUIPOS (QR, EDITAR, TRASLADAR, ELIMINAR, FOTO) ---
-
-        // A. Impresora Universal Auto-Contenida de Planchas y Etiquetas QR
+        // --- 3. FUNCIONES 100% AUTO-CONTENIDAS DE TODOS LOS BOTONES DE EQUIPOS ---
         window.abrirImpresionQRsSySO = function(listaIds, tituloPlancha) {
             const idsValidos = (listaIds || []).filter(id => config.equipos && config.equipos[id] && !esEquipoVirtualComunicacion(id));
             if(idsValidos.length === 0) return alert("⚠️ No hay equipos físicos en esta selección para imprimir QR.");
@@ -5177,7 +5175,6 @@ function descargarInventarioExcelProfesional() {
 
         window.resetearContadorQRs = window.limpiarContadorQRsDanados;
 
-        // B. Botón 📷 Foto: Ver Foto de Referencia del Equipo
         window.verFotoReferenciaEquipo = async function(id, event) {
             if(event) event.stopPropagation();
             const modal = document.getElementById('modalFotoRef');
@@ -5187,8 +5184,8 @@ function descargarInventarioExcelProfesional() {
             try {
                 const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
                 b64 = cacheF[id] || null;
-                if(!b64 && config. syncUrl) {
-                    const res = await fetch(`${ obtenerUrlBaseFirebase() }/syso_eq_photos/${encodeURIComponent(id)}.json`);
+                if(!b64 && config.syncUrl) {
+                    const res = await fetch(`${obtenerUrlBaseFirebase()}/syso_eq_photos/${encodeURIComponent(id)}.json`);
                     if(res.ok) {
                         const d = await res.json();
                         if(d && d.f) { b64 = d.f; cacheF[id] = b64; localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF)); }
@@ -5206,7 +5203,6 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // C. Botón ✏️ Editar: Abre el desplegable de Registro/Edición, carga todos los datos del equipo y desliza la vista
         window.prepararEdicionQR = function(id, event) {
             if(event) event.stopPropagation();
             const eq = config.equipos && config.equipos[id];
@@ -5258,14 +5254,11 @@ function descargarInventarioExcelProfesional() {
 
         window.editarQR = window.prepararEdicionQR;
 
-        // D. Botón 🚚 Trasladar: Despliega un panel visual inline en la misma fila del equipo (Nunca se bloquea)
         window.abrirTrasladoInline = function(idOrigin, event) {
             if(event) event.stopPropagation();
             const boxId = `boxTrasladoInline_${idOrigin.replace(/[^a-zA-Z0-9]/g, '_')}`;
             const box = document.getElementById(boxId);
-            if(box) {
-                box.classList.toggle('hidden');
-            }
+            if(box) box.classList.toggle('hidden');
         };
 
         window.confirmarTrasladoInline = async function(idOrigin, event) {
@@ -5306,7 +5299,6 @@ function descargarInventarioExcelProfesional() {
             mostrarToastGuardado(`🚚 ${idOrigin} trasladado a ${nuevaSec} como ${nuevoId}`);
         };
 
-        // E. Botón 🗑️ Eliminar: Despliega confirmación inline o directa y elimina el equipo de Local y Firebase
         window.abrirConfirmarEliminarInline = function(id, event) {
             if(event) event.stopPropagation();
             const boxId = `boxEliminarInline_${id.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -5346,7 +5338,7 @@ function descargarInventarioExcelProfesional() {
         window.eliminarQR = window.abrirConfirmarEliminarInline;
         window.borrarQR = window.abrirConfirmarEliminarInline;
 
-        // --- 4. RENDERIZADOR DEL INVENTARIO EN ORDEN 1° SECCIÓN ➔ 2° GRUPO CON BOTONES VINCULADOS ---
+        // --- 4. RENDERIZADOR CON BOTÓN QR ANCLADO A LA DERECHA (MÓVIL Y PC) Y ORDEN 1° SECCIÓN ➔ 2° GRUPO ---
         function obtenerContenedorInventarioDOM() {
             const filtroViejo = document.getElementById('boxDobleFiltroInventario');
             if(filtroViejo) filtroViejo.remove();
@@ -5382,7 +5374,7 @@ function descargarInventarioExcelProfesional() {
             vincularBotonesSuperioresInventarioDOM();
 
             const selBulkSec = document.getElementById('bulkSeccion'), selBulkGrp = document.getElementById('bulkGrupo');
-            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV653) {
+            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV654) {
                 const wrapSec = selBulkSec.parentElement, wrapGrp = selBulkGrp.parentElement;
                 const gridPadre = wrapSec ? wrapSec.parentElement : null;
                 if(gridPadre && wrapSec && wrapGrp) {
@@ -5392,7 +5384,7 @@ function descargarInventarioExcelProfesional() {
                     gridPadre.insertBefore(wrapSec, wrapGrp);
                     selBulkSec.onchange = () => actualizarGuiaColumnasImportacionExcel();
                     selBulkGrp.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    window.ordenBulkInvertidoV653 = true;
+                    window.ordenBulkInvertidoV654 = true;
                 }
             }
 
@@ -5519,6 +5511,10 @@ function descargarInventarioExcelProfesional() {
             const secsOrdenadas = (config.secciones || []).slice().sort(sortNatural);
             const grpsOrdenados = Object.keys(config.grupos || {}).filter(g => g !== 'Todos').sort(sortNatural);
 
+            // Estilo blindado del botón 🖨️ QR para que SIEMPRE quede anclado a la derecha con recuadro visible en Celular y PC
+            const estiloBtnQRHeader = `width:auto !important; min-width:64px; flex:0 0 auto; margin:0 0 0 auto !important; padding:5px 11px; font-size:12px; font-weight:bold; border-radius:6px; background:rgba(15,23,42,0.78); color:#ffffff !important; border:1.5px solid rgba(255,255,255,0.65); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; line-height:1.1; box-shadow:0 1px 3px rgba(0,0,0,0.25);`;
+            const estiloBtnItem = `width:auto !important; flex:0 0 auto; margin:0 !important; padding:6px 10px; font-size:12px;`;
+
             let totalMostrados = 0;
 
             secsOrdenadas.forEach(sec => {
@@ -5572,33 +5568,31 @@ function descargarInventarioExcelProfesional() {
 
                         return `<div class="list-item" style="padding:10px; border-bottom:1px solid var(--border); display:block;">
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                                <div style="flex:1; min-width:190px;">
+                                <div style="flex:1; min-width:180px;">
                                     <div style="font-size:13.5px;"><b>${id}</b> ${badgesEstado}</div>
                                     <div class="text-muted" style="font-size:11.5px; margin-top:2px;">${metaDetalles.join(' | ') || 'Sin detalles adicionales'}</div>
                                 </div>
-                                <div class="action-btns">
-                                    ${eq.tieneFotoRef ? `<button type="button" class="btn-small btn-info" onclick="window.verFotoReferenciaEquipo('${id}', event)">📷 Foto</button>` : ''}
-                                    <button type="button" class="btn-small btn-dark" onclick="window.imprimirQRIndividual('${id}', event)">🖨️ QR</button>
-                                    <button type="button" class="btn-small btn-s-edit" onclick="window.prepararEdicionQR('${id}', event)">✏️ Editar</button>
-                                    <button type="button" class="btn-small btn-warning" style="color:#000;" onclick="window.abrirTrasladoInline('${id}', event)">🚚 Trasladar</button>
-                                    <button type="button" class="btn-small btn-s-del" onclick="window.abrirConfirmarEliminarInline('${id}', event)">🗑️ Eliminar</button>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; align-items:center; margin-left:auto;">
+                                    ${eq.tieneFotoRef ? `<button type="button" class="btn-small btn-info" style="${estiloBtnItem}" onclick="window.verFotoReferenciaEquipo('${id}', event)">📷 Foto</button>` : ''}
+                                    <button type="button" class="btn-small btn-dark" style="${estiloBtnItem}" onclick="window.imprimirQRIndividual('${id}', event)">🖨️ QR</button>
+                                    <button type="button" class="btn-small btn-s-edit" style="${estiloBtnItem}" onclick="window.prepararEdicionQR('${id}', event)">✏️ Editar</button>
+                                    <button type="button" class="btn-small btn-warning" style="${estiloBtnItem} color:#000;" onclick="window.abrirTrasladoInline('${id}', event)">🚚 Trasladar</button>
+                                    <button type="button" class="btn-small btn-s-del" style="${estiloBtnItem}" onclick="window.abrirConfirmarEliminarInline('${id}', event)">🗑️ Eliminar</button>
                                 </div>
                             </div>
-                            <!-- Panel Inline de Traslado (Se abre al tocar 🚚 Trasladar) -->
                             <div id="boxTrasladoInline_${idDomSafe}" class="hidden" style="margin-top:8px; padding:8px 10px; background:var(--input-bg); border:1.5px solid #ffc107; border-radius:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                                 <span style="font-size:12px; font-weight:bold;">🚚 Mudar <b>${id}</b> hacia la sección:</span>
                                 <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                                     <select id="selTrasladoSec_${idDomSafe}" style="padding:5px 8px; font-size:12px; width:auto;">${opcionesOtrasSecs}</select>
-                                    <button type="button" class="btn-small btn-success" onclick="window.confirmarTrasladoInline('${id}', event)">✅ Confirmar Mudanza</button>
-                                    <button type="button" class="btn-small btn-dark" onclick="window.abrirTrasladoInline('${id}', event)">✖ Cancelar</button>
+                                    <button type="button" class="btn-small btn-success" style="${estiloBtnItem}" onclick="window.confirmarTrasladoInline('${id}', event)">✅ Confirmar Mudanza</button>
+                                    <button type="button" class="btn-small btn-dark" style="${estiloBtnItem}" onclick="window.abrirTrasladoInline('${id}', event)">✖ Cancelar</button>
                                 </div>
                             </div>
-                            <!-- Panel Inline de Eliminación (Se abre al tocar 🗑️ Eliminar) -->
                             <div id="boxEliminarInline_${idDomSafe}" class="hidden" style="margin-top:8px; padding:8px 10px; background:#ffebee; border:1.5px solid var(--danger); border-radius:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                                 <span style="font-size:12px; font-weight:bold; color:var(--danger);">⚠️ ¿Confirmas eliminar definitivamente el equipo <b>${id}</b>?</span>
                                 <div style="display:flex; gap:6px;">
-                                    <button type="button" class="btn-small btn-s-del" onclick="window.ejecutarEliminacionDefinitivaQR('${id}', event)">🗑️ Sí, Eliminar Ahora</button>
-                                    <button type="button" class="btn-small btn-dark" onclick="window.abrirConfirmarEliminarInline('${id}', event)">✖ Cancelar</button>
+                                    <button type="button" class="btn-small btn-s-del" style="${estiloBtnItem}" onclick="window.ejecutarEliminacionDefinitivaQR('${id}', event)">🗑️ Sí, Eliminar Ahora</button>
+                                    <button type="button" class="btn-small btn-dark" style="${estiloBtnItem}" onclick="window.abrirConfirmarEliminarInline('${id}', event)">✖ Cancelar</button>
                                 </div>
                             </div>
                         </div>`;
@@ -5606,11 +5600,9 @@ function descargarInventarioExcelProfesional() {
 
                     htmlGruposDentroDeSeccion += `
                         <div class="accordion ${grpAbierto ? 'active' : ''}" style="margin:6px 0;">
-                            <div class="accordion-header" onclick="window.toggleAcordeonGrupoInventario('${claveEsc}')" style="background:#3b6998; padding:10px 14px;">
-                                <span>${grp} (${idsSecGrp.length})</span>
-                                <div class="action-btns" onclick="event.stopPropagation();">
-                                    <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="window.imprimirLoteGrupoSeccion('${grpEsc}', '${secEsc}', event)">🖨️ QR</button>
-                                </div>
+                            <div class="accordion-header" onclick="window.toggleAcordeonGrupoInventario('${claveEsc}')" style="background:#3b6998; color:#ffffff; padding:10px 14px; display:flex; flex-direction:row; justify-content:space-between; align-items:center; width:100%; gap:10px;">
+                                <span style="flex:1; text-align:left; font-weight:bold;">${grp} (${idsSecGrp.length})</span>
+                                <button type="button" style="${estiloBtnQRHeader}" onclick="window.imprimirLoteGrupoSeccion('${grpEsc}', '${secEsc}', event)">🖨️ QR</button>
                             </div>
                             <div class="accordion-content" style="display:${grpAbierto ? 'block' : 'none'}; padding:6px 8px;">
                                 ${filasEquiposHTML}
@@ -5620,11 +5612,9 @@ function descargarInventarioExcelProfesional() {
 
                 contQR.innerHTML += `
                     <div class="accordion ${secAbierta ? 'active' : ''}">
-                        <div class="accordion-header" onclick="window.toggleAcordeonSeccionInventario('${secEsc}')">
-                            <span>${sec} (${idsDeSeccion.length})</span>
-                            <div class="action-btns" onclick="event.stopPropagation();">
-                                <button type="button" class="btn-small btn-outline" style="color:#fff; border-color:#fff; padding:4px 10px; font-size:11.5px;" onclick="window.imprimirLoteSeccionCompleta('${secEsc}', event)">🖨️ QR</button>
-                            </div>
+                        <div class="accordion-header" onclick="window.toggleAcordeonSeccionInventario('${secEsc}')" style="display:flex; flex-direction:row; justify-content:space-between; align-items:center; width:100%; padding:11px 14px; gap:10px;">
+                            <span style="flex:1; text-align:left; font-weight:bold;">${sec} (${idsDeSeccion.length})</span>
+                            <button type="button" style="${estiloBtnQRHeader}" onclick="window.imprimirLoteSeccionCompleta('${secEsc}', event)">🖨️ QR</button>
                         </div>
                         <div class="accordion-content" style="display:${secAbierta ? 'block' : 'none'}; padding:8px 10px;">
                             ${htmlGruposDentroDeSeccion}
@@ -6069,7 +6059,7 @@ function descargarInventarioExcelProfesional() {
             } catch(e) {}
         }
 
-        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ACCESO RÁPIDO (V6.53) ---
+        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ACCESO RÁPIDO (V6.54) ---
         async function descubrirMejorModeloGeminiAPI(apiKey) {
             const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             if(!apiKey) return 'gemini-3.5-flash-lite';
@@ -6365,7 +6355,7 @@ function descargarInventarioExcelProfesional() {
             const secsUsuario = (esAdmin || !u.secciones || u.secciones.includes('Todas')) ? todasSecs : u.secciones.filter(s => todasSecs.includes(s));
             const grpsUsuario = (esAdmin || !u.grupo || u.grupo.includes('Todos')) ? todosGrps : todosGrps.filter(g => u.grupo.includes(g) || (esGrupoComunicacionNombre(g) && u.grupo.some(ug => esGrupoComunicacionNombre(ug))));
             return {
-                versionActual: 'V6.53', usuarioNombre: u.nombre,
+                versionActual: 'V6.54', usuarioNombre: u.nombre,
                 usuarioRol: esAdmin ? 'Administrador (Acceso Total)' : 'Inspector / Brigadista',
                 esAdmin, soloTieneComunicacion: (!esAdmin && grpsUsuario.length === 1 && esGrupoComunicacionNombre(grpsUsuario[0])),
                 seccionesHabilitadasUsuario: secsUsuario, seccionesPROHIBIDASUsuario: todasSecs.filter(s => !secsUsuario.includes(s)),
@@ -6433,7 +6423,7 @@ function descargarInventarioExcelProfesional() {
         const PREGUNTAS_ANALISTA_JACK = [
             "🚀 ¿Qué detectaron los 10.000 Perfiles IA con nombres y códigos exactos?",
             "🚿 ¿Cuántos equipos de hidrantes tiene registrado Balanceados y de qué tipos son?",
-            "📥 ¿Cómo importo o exporto documentos enteros de Excel en la V6.53?",
+            "📥 ¿Cómo importo o exporto documentos enteros de Excel en la V6.54?",
             "📞 ¿Qué empleados activos no tienen teléfono personal o contacto familiar?"
         ];
 
@@ -6563,10 +6553,10 @@ function descargarInventarioExcelProfesional() {
                 const modInicial = (config.iaConfig && config.iaConfig.modeloActivo && !config.iaConfig.modeloActivo.includes('3.8')) ? config.iaConfig.modeloActivo : 'gemini-3.5-flash-lite';
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando tu pregunta exacta con Gemini (${modInicial})...</div>`;
                 try {
-                    const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO V6.53".
+                    const promptAutoEvolutivo = `ERES EL CEREBRO IA OFICIAL DE LA APP "GESTIÓN SySO V6.54".
 Responde DIRECTAMENTE a la frase ("${texto}").
 1. USUARIO: "${mapaApp.usuarioNombre}" (${mapaApp.usuarioRol}) | Secciones habilitadas: ${mapaApp.seccionesHabilitadasUsuario.join(', ')} | Grupos habilitados: ${mapaApp.gruposHabilitadosUsuario.join(', ')} | Grupos PROHIBIDOS: ${mapaApp.gruposPROHIBIDOSUsuario.join(', ') || 'Ninguno'}.
-2. NOVEDADES V6.53: En Equipos el inventario se despliega 1° por Sección y 2° por Grupo, con botones operativos para Imprimir QR, Editar, Trasladar (con selector inline) y Eliminar. Permite importar/exportar documentos completos de Excel y tiene borrador de 30 minutos.
+2. NOVEDADES V6.54: En Equipos el inventario se despliega 1° por Sección y 2° por Grupo, con botones QR alineados a la derecha en móvil y PC, y acciones para Editar, Trasladar y Eliminar. Permite importar/exportar documentos completos de Excel y tiene borrador de 30 minutos.
 3. DATOS EN VIVO (${rad.mesActual}): Total: ${rad.totalFisicos} equipos físicos + 4 Comunicación = ${rad.totalPlanta}. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Tipos: ${JSON.stringify(rad.desgloseTiposPorGrupo)}. Hallazgos: ${hallazgos10k.join(' | ')}.
 Si no tiene relación con la planta o la app, responde solo: FUERA_DE_TEMA. De lo contrario responde en español claro en máximo 90 palabras.`;
 
@@ -6638,15 +6628,15 @@ Si no tiene relación con la planta o la app, responde solo: FUERA_DE_TEMA. De l
         function copiarInformeDiagnosticoIA() {
             const rad = obtenerRadiografiaTiempoRealPlanta();
             const gemeloH = ((config.gemeloAutonomo && config.gemeloAutonomo.hallazgos) || []).map(h => h.replace(/<[^>]*>/g, '')).join('\n  * ');
-            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.53\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
-            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.53 copiado al portapapeles."));
+            const informe = `📊 INFORME CEREBRO IA - GESTIÓN SySO V6.54\n- Ítems totales: ${rad.totalPlanta} (${rad.totalFisicos} equipos físicos + 4 Comunicación) | Pendientes: ${rad.totalPendientesPlanta}\n- Hallazgos:\n  * ${gemeloH || 'Todo en orden'}`;
+            if(navigator.clipboard) navigator.clipboard.writeText(informe).then(() => alert("✅ Informe V6.54 copiado al portapapeles."));
             else prompt("Copie este informe:", informe);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.53 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.54 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.53';
+            if(badgeVer) badgeVer.innerText = 'V6.54';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
