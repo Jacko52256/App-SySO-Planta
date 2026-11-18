@@ -4580,19 +4580,184 @@ function descargarInventarioExcelProfesional() {
         }
 // === FIN DE LA PARTE 6 DE 7 ===
 // =========================================================================
-        // MOTOR 7A (V6.55 - PARTE 1 DE 2): EDICIÓN S.O.S. EN CONTROL, VISOR Y
-        // SANEAMIENTO DE FOTOS DE REFERENCIA, LIMPIEZA DE FALLAS FANTASMA (LABFIL)
-        // Y ALTA ATÓMICA DE EQUIPOS Y NUEVAS SECCIONES EN MULTIUSUARIO
+        // MOTOR 7A DEFINITIVO (V6.58 - PARTE 1 DE 2): CERO RE-DECLARACIONES CONST/VAR,
+        // VISOR DE FOTOS CONECTADO A FIREBASE + NATIVO, EDICIÓN S.O.S. EN CONTROL,
+        // LIMPIEZA DE FALLAS FANTASMA Y ALTA ATÓMICA DE EQUIPOS Y NUEVAS SECCIONES
         // =========================================================================
+
+        // Preservar referencias nativas de las Partes 1 a 6 antes de cualquier extensión
+        if(!window._nativoVerFotoReferenciaEquipo && typeof verFotoReferenciaEquipo === 'function') {
+            window._nativoVerFotoReferenciaEquipo = verFotoReferenciaEquipo;
+        }
+        if(!window._origRenderListasBase && typeof renderListas === 'function') {
+            window._origRenderListasBase = renderListas;
+        }
+        if(!window._abrirModalContingenciaOrig && typeof abrirModalContingencia === 'function') {
+            window._abrirModalContingenciaOrig = abrirModalContingencia;
+        }
+        if(!window._guardarRegistroOrig && typeof guardarRegistro === 'function') {
+            window._guardarRegistroOrig = guardarRegistro;
+        }
 
         window.qrDanadoMarcadoEnControl = false;
         window.seccionesAbiertasInventario = window.seccionesAbiertasInventario || {};
         window.gruposAbiertosInventario = window.gruposAbiertosInventario || {};
         window.ultimaPreguntaUsuarioIA = '';
-        var BORRADOR_TRABAJO_KEY = 'SySO_Borrador_Trabajo_V655';
-        var TIEMPO_GRACIA_BORRADOR_MS = 30 * 60 * 1000;
+        window.SYSO_BORRADOR_KEY = 'SySO_Borrador_Trabajo_V658';
+        window.SYSO_TIEMPO_BORRADOR_MS = 30 * 60 * 1000;
+        window.SYSO_CACHE_FOTOS_KEY = 'SySO_Eq_Photos_Cache';
 
-        // --- 1. REGLA FOTO OPCIONAL SI ESTÁ OK Y COLA EXACTA DE QRs DAÑADOS ---
+        // Localizador infalible de la URL de Firebase de la planta
+        window.obtenerUrlFirebasePlanta = function() {
+            try {
+                if(typeof FIREBASE_URL !== 'undefined' && FIREBASE_URL) return String(FIREBASE_URL).replace(/\/$/, '');
+            } catch(e) {}
+            try {
+                if(typeof DEFAULT_SYNC_URL !== 'undefined' && DEFAULT_SYNC_URL) return String(DEFAULT_SYNC_URL).replace(/\/$/, '');
+            } catch(e) {}
+            try {
+                if(config && config.syncUrl) return String(config.syncUrl).replace(/\/$/, '');
+            } catch(e) {}
+            try {
+                if(typeof obtenerUrlBaseFirebase === 'function') {
+                    const u = obtenerUrlBaseFirebase();
+                    if(u) return String(u).replace(/\/$/, '');
+                }
+            } catch(e) {}
+            try {
+                const htmlCompleto = document.documentElement.innerHTML || '';
+                const m = htmlCompleto.match(/https:\/\/[a-zA-Z0-9-]+(?:-default-rtdb)?\.firebaseio\.com|https:\/\/[a-zA-Z0-9.-]+\.firebasedatabase\.app/);
+                if(m && m[0]) return m[0].replace(/\/$/, '');
+            } catch(e) {}
+            return '';
+        };
+
+        window.extraerBase64DeNodoFoto = function(data) {
+            if(!data) return null;
+            if(typeof data === 'string') {
+                const s = data.trim();
+                if(s.startsWith('data:image') || s.startsWith('http') || s.startsWith('blob:')) return s;
+                if(s.length > 100 && !s.includes(' ') && !s.includes('<')) return 'data:image/jpeg;base64,' + s;
+                return null;
+            }
+            if(typeof data === 'object') {
+                const campos = ['f', 'foto', 'base64', 'img', 'data', 'src', 'url', 'fotoRef', 'imagen'];
+                for(let i = 0; i < campos.length; i++) {
+                    if(data[campos[i]]) {
+                        const res = window.extraerBase64DeNodoFoto(data[campos[i]]);
+                        if(res) return res;
+                    }
+                }
+                const claves = Object.keys(data);
+                for(let i = 0; i < claves.length; i++) {
+                    const res = window.extraerBase64DeNodoFoto(data[claves[i]]);
+                    if(res) return res;
+                }
+            }
+            return null;
+        };
+
+        // --- 1. VISOR DE FOTOS DE REFERENCIA (CONECTADO A FIREBASE + CACHÉ + VISOR NATIVO) ---
+        window.verFotoReferenciaEquipo = async function(id, event) {
+            if(event) event.stopPropagation();
+            const modal = document.getElementById('modalFotoRef');
+            const img = document.getElementById('imgFotoRefGrande') || (modal ? modal.querySelector('img') : null);
+            const tit = document.getElementById('tituloModalFotoRef') || (modal ? modal.querySelector('h3, h4, b') : null);
+            let b64 = null;
+
+            // 1° Revisar si está en el objeto del equipo o en alguna caché de localStorage
+            try {
+                if(config && config.equipos && config.equipos[id]) {
+                    b64 = window.extraerBase64DeNodoFoto(config.equipos[id].fotoRef || config.equipos[id].foto || config.equipos[id].img);
+                }
+            } catch(e) {}
+
+            if(!b64) {
+                try {
+                    for(let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if(!k || k === CFG_KEY || k === DB_KEY) continue;
+                        const raw = localStorage.getItem(k);
+                        if(raw && raw.includes(id) && raw.includes('data:image')) {
+                            const parsed = JSON.parse(raw);
+                            if(parsed && parsed[id]) {
+                                b64 = window.extraerBase64DeNodoFoto(parsed[id]);
+                                if(b64) break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // 2° Descargar directamente desde Firebase (/syso_eq_photos/{id}.json)
+            const baseFb = window.obtenerUrlFirebasePlanta();
+            if(!b64 && baseFb) {
+                try {
+                    if(typeof mostrarToastGuardado === 'function') mostrarToastGuardado(`⏳ Cargando foto de ${id}...`);
+                    const res = await fetch(`${baseFb}/syso_eq_photos/${encodeURIComponent(id)}.json`);
+                    if(res.ok) {
+                        const d = await res.json();
+                        b64 = window.extraerBase64DeNodoFoto(d);
+                    }
+                } catch(e) {}
+            }
+
+            // 3° Si aún no se encontró y existe el visor nativo de la Parte 5, delegar en él
+            if(!b64 && typeof window._nativoVerFotoReferenciaEquipo === 'function') {
+                try {
+                    return await window._nativoVerFotoReferenciaEquipo(id);
+                } catch(e) {}
+            }
+
+            if(!b64) {
+                alert(`⚠️ Aún no hay una imagen guardada en la nube para ${id}.\n\nPuedes cargarle una foto tocando el botón "✏️ Editar".`);
+                return;
+            }
+
+            try {
+                const c = JSON.parse(localStorage.getItem(window.SYSO_CACHE_FOTOS_KEY) || '{}');
+                c[id] = b64;
+                localStorage.setItem(window.SYSO_CACHE_FOTOS_KEY, JSON.stringify(c));
+            } catch(e) {}
+
+            if(modal && img) {
+                if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
+                img.src = b64;
+                modal.classList.remove('hidden');
+            } else {
+                const w = window.open('', '_blank');
+                if(w) w.document.write(`<body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${b64}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body>`);
+            }
+        };
+
+        // Restaurar automáticamente el botón 📷 Foto en todos los equipos que tienen imagen en Firebase (Sin borrar nunca iconos válidos)
+        window.restaurarIconosFotoDesdeNube = async function() {
+            const baseFb = window.obtenerUrlFirebasePlanta();
+            if(!config || !config.equipos || !baseFb) return;
+            try {
+                const res = await fetch(`${baseFb}/syso_eq_photos.json?shallow=true`);
+                if(!res.ok) return;
+                const mapaNube = await res.json();
+                if(!mapaNube || typeof mapaNube !== 'object') return;
+
+                const parcheEq = {};
+                let restaurados = 0;
+                Object.keys(mapaNube).forEach(id => {
+                    if(mapaNube[id] && config.equipos[id] && !config.equipos[id].tieneFotoRef) {
+                        config.equipos[id].tieneFotoRef = true;
+                        parcheEq[id] = config.equipos[id];
+                        restaurados++;
+                    }
+                });
+                if(restaurados > 0) {
+                    guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
+                    await parchearSubnodoConfigNube('equipos', parcheEq);
+                    if(usuarioActual && usuarioActual.rol === 'Admin') renderListas();
+                }
+            } catch(e) {}
+        };
+
+        // --- 2. REGLA FOTO OPCIONAL SI ESTÁ OK Y COLA EXACTA DE QRs DAÑADOS ---
         actualizarEstadoRequisitoFoto = function() {
             const id = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value : '';
             const badge = document.getElementById('badgeEstadoFotoControl'), btnCam = document.getElementById('btnAdjuntarFoto');
@@ -4647,9 +4812,8 @@ function descargarInventarioExcelProfesional() {
             btn.innerHTML = enCola ? `🖨️ Etiqueta QR en Cola de Reimpresión (Tocar para desmarcar)` : `🏷️ ¿Etiqueta QR Dañada o Ilegible? ➔ Enviar a Reimprimir`;
         }
 
-        if(!window._abrirModalContingenciaOrig) window._abrirModalContingenciaOrig = abrirModalContingencia;
         abrirModalContingencia = function() {
-            window._abrirModalContingenciaOrig();
+            if(typeof window._abrirModalContingenciaOrig === 'function') window._abrirModalContingenciaOrig();
             esCargaManual = false;
             const modal = document.getElementById('modalContingencia');
             if(modal) {
@@ -4690,13 +4854,12 @@ function descargarInventarioExcelProfesional() {
             actualizarEstadoRequisitoFoto();
         };
 
-        if(!window._guardarRegistroOrig) window._guardarRegistroOrig = guardarRegistro;
         guardarRegistro = async function() {
             esCargaManual = false;
             return await window._guardarRegistroOrig();
         };
 
-        // --- 2. RECONCILIACIÓN AUTOMÁTICA DE FALLAS FANTASMA Y ALTA ATÓMICA MULTIUSUARIO ---
+        // --- 3. LIMPIEZA DE FALLAS FANTASMA Y ALTA ATÓMICA MULTIUSUARIO ---
         window.reconciliarFallasConHistorialReal = async function() {
             if(!config || !config.fallas) return;
             try {
@@ -4707,21 +4870,18 @@ function descargarInventarioExcelProfesional() {
                         ultimoEstadoPorEquipo[r.ID_Equipo] = (r.Detalle_Fallas && r.Detalle_Fallas.trim().length > 0) ? r.Detalle_Fallas.trim() : 'OK';
                     }
                 });
-
                 const parcheLimpieza = {};
                 let limpiados = 0;
                 Object.keys(config.fallas).forEach(id => {
                     const txtFalla = String(config.fallas[id] || '');
                     if(txtFalla.includes('Venció:')) return;
                     const ult = ultimoEstadoPorEquipo[id];
-                    // Si el equipo no tiene ningún control con falla en el historial o su último control fue OK, limpiar la falla fantasma
                     if(!ult || ult === 'OK') {
                         delete config.fallas[id];
                         parcheLimpieza[id] = null;
                         limpiados++;
                     }
                 });
-
                 if(limpiados > 0) {
                     guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
                     await parchearSubnodoConfigNube('fallas', parcheLimpieza);
@@ -4741,9 +4901,8 @@ function descargarInventarioExcelProfesional() {
             mostrarToastGuardado(`✅ Falla limpiada en ${id}`);
         };
 
-        // Blindar crearQR para que guarde atómicamente por PATCH sin pisar otras secciones y limpie la foto temporal
-        if(!window._crearQRBaseV655 && typeof crearQR === 'function') {
-            window._crearQRBaseV655 = crearQR;
+        if(!window._crearQRBaseV658 && typeof crearQR === 'function') {
+            window._crearQRBaseV658 = crearQR;
             crearQR = async function() {
                 const sec = document.getElementById('qrSeccion') ? document.getElementById('qrSeccion').value : '';
                 const grp = document.getElementById('qrGrupo') ? document.getElementById('qrGrupo').value : '';
@@ -4751,15 +4910,11 @@ function descargarInventarioExcelProfesional() {
                 const idEsperado = editQRId || (sec && grp && num ? (obtenerPrefijoCompuesto(grp, sec) + num.padStart(3, '0')) : '');
                 const habiaFotoNueva = !!(typeof fotoRefTempBase64 !== 'undefined' && fotoRefTempBase64);
 
-                await window._crearQRBaseV655();
+                await window._crearQRBaseV658();
 
-                // Si se creó un equipo nuevo sin haber subido foto nueva para él, asegurar que no herede tieneFotoRef del equipo anterior
                 if(idEsperado && config.equipos && config.equipos[idEsperado]) {
                     if(!habiaFotoNueva && !editQRId) {
-                        const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                        if(!cacheF[idEsperado]) {
-                            config.equipos[idEsperado].tieneFotoRef = false;
-                        }
+                        config.equipos[idEsperado].tieneFotoRef = false;
                     }
                     await parchearSubnodoConfigNube('equipos', { [idEsperado]: config.equipos[idEsperado] });
                 }
@@ -4774,11 +4929,10 @@ function descargarInventarioExcelProfesional() {
             };
         }
 
-        // Blindar el registro de Nueva Sección para que sincronice y guarde por PATCH sin fallas ni choques multiusuario
-        if(!window._agregarSeccionBaseV655 && typeof agregarSeccion === 'function') {
-            window._agregarSeccionBaseV655 = agregarSeccion;
+        if(!window._agregarSeccionBaseV658 && typeof agregarSeccion === 'function') {
+            window._agregarSeccionBaseV658 = agregarSeccion;
             agregarSeccion = async function() {
-                await window._agregarSeccionBaseV655();
+                await window._agregarSeccionBaseV658();
                 asegurarUnidadesVerificacionComunicacion();
                 guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
                 await parchearSubnodoConfigNube(null, {
@@ -4790,15 +4944,21 @@ function descargarInventarioExcelProfesional() {
                 mostrarToastGuardado("🏢 Sección sincronizada en toda la planta");
             };
         }
+// === FIN DE LA PARTE 7A DE 7 ===
+// =========================================================================
+        // MOTOR 7B DEFINITIVO (V6.58 - PARTE 2 DE 2): PERFILADOR DE GRUPOS, EDICIÓN
+        // S.O.S., BOTONES DE EQUIPOS ALINEADOS EN MÓVIL, EXCEL COMPLETO, BORRADOR
+        // 30M E IA GEMINI 3.5 FLASH-LITE (CERO VARIABLES GLOBALES DUPLICADAS)
+        // =========================================================================
 
-        // --- 3. PERFILADOR PERSONALIZADO POR GRUPO ---
-        function obtenerPerfilVisualGrupo(nomGrupo) {
+        // --- 1. PERFILADOR PERSONALIZADO POR GRUPO Y FORMULARIO DE CONTROL ---
+        window.obtenerPerfilVisualGrupo = function(nomGrupo) {
             const g = String(nomGrupo || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             if(g.includes('corte') || g.includes('energia') || g.includes('electr') || g.includes('tablero')) {
                 return {
                     codigo: 'CORTE_ENERGIA', icono: '⚡', camposActivos: ['capacidad'],
-                    lblUbi: '📍 Ubicación del Tablero / Llave de Corte:', phUbi: 'Ej. Sala de máquinas / Entrada galpón principal',
-                    lblTipo: '⚡ Tipo de Tablero / Corte Eléctrico', phTipo: 'Ej. Tablero General / Seccionador / Parada de Emergencia',
+                    lblUbi: '📍 Ubicación del Tablero / Llave de Corte:', phUbi: 'Ej. Sala de máquinas / Entrada galpón',
+                    lblTipo: '⚡ Tipo de Tablero / Corte Eléctrico', phTipo: 'Ej. Tablero General / Seccionador',
                     lblCap: '🔌 Tensión / Sectores que Corta:', phCap: 'Ej. Trifásico 380V - Corta Línea Producción',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Tipo de Tablero / Foto Ref.',
                     colExcelTipo: 'Tipo de Tablero / Corte', colExcelCap: 'Tensión / Sectores que Corta',
@@ -4810,8 +4970,8 @@ function descargarInventarioExcelProfesional() {
             if(g.includes('evacua') || g.includes('salida')) {
                 return {
                     codigo: 'EVACUACION', icono: '🏃', camposActivos: ['capacidad'],
-                    lblUbi: '📍 Ubicación del Punto / Ruta de Evacuación:', phUbi: 'Ej. Salida Sur Galpón / Pasillo Central / Escalera',
-                    lblTipo: '🏃 Punto / Elemento de Evacuación', phTipo: 'Ej. Puerta de Emergencia / Luz Autónoma / Ruta y Alarma',
+                    lblUbi: '📍 Ubicación del Punto / Ruta de Evacuación:', phUbi: 'Ej. Salida Sur Galpón / Pasillo Central',
+                    lblTipo: '🏃 Punto / Elemento de Evacuación', phTipo: 'Ej. Puerta de Emergencia / Luz Autónoma',
                     lblCap: '🚨 Elementos en el Punto (Puertas, Luces, Sirena):', phCap: 'Ej. Barra antipánico + 2 Luces LED + Cartel Salida',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Elementos de Evacuación / Foto Ref.',
                     colExcelTipo: 'Punto / Salida de Evacuación', colExcelCap: 'Elementos (Puertas, Luces, Alarma)',
@@ -4824,11 +4984,11 @@ function descargarInventarioExcelProfesional() {
                 return {
                     codigo: 'COMUNICACION', icono: '📞', camposActivos: ['capacidad'],
                     lblUbi: '📍 Ubicación de Cartelera / Punto de Encuentro:', phUbi: 'Ej. Punto de Encuentro Sector / Entrada Oficina',
-                    lblTipo: '📞 Elemento de Comunicación de la Sección', phTipo: 'Ej. Punto de Encuentro, Planos y Nómina de Sección',
-                    lblCap: '🗺️ Detalle (Punto de Encuentro / Planos):', phCap: 'Ej. Cartel Punto Encuentro + Plano Evacuación + Cartelera S.O.S.',
+                    lblTipo: '📞 Elemento de Comunicación de la Sección', phTipo: 'Ej. Punto de Encuentro, Planos y Nómina',
+                    lblCap: '🗺️ Detalle (Punto de Encuentro / Planos):', phCap: 'Ej. Cartel Punto Encuentro + Plano Evacuación',
                     lblBtnTerreno: '✏️ Actualizar Ubicación de Punto de Encuentro / Planos / Foto',
                     colExcelTipo: 'Elemento de Comunicación', colExcelCap: 'Detalle (Punto Encuentro / Planos)',
-                    ejemploExcel: 'Explanada Principal ; Punto de Encuentro y Planos ; Cartel Punto Encuentro + Plano Usted Está Aquí',
+                    ejemploExcel: 'Explanada Principal ; Punto de Encuentro y Planos ; Cartel Punto Encuentro + Plano',
                     tiposSugeridos: ["Verificación Mensual de Sección (Punto Encuentro, Planos y Empleados)", "Punto de Encuentro Señalizado", "Plano de Evacuación ('Usted está aquí')", "Cartelera Informativa S.O.S."],
                     tagsNotas: ["Punto de encuentro despejado y señalizado", "Planos de evacuación visibles y actualizados", "Nómina de empleados de la sección al día", "Cartelera de teléfonos de emergencia legible"]
                 };
@@ -4837,20 +4997,20 @@ function descargarInventarioExcelProfesional() {
                 return {
                     codigo: 'JEFES_BRIGADA', icono: '👨‍🚒', camposActivos: ['capacidad'],
                     lblUbi: '📍 Ubicación de Base / Puesto de Brigada:', phUbi: 'Ej. Jefatura de Sector / Gabinete de Brigada',
-                    lblTipo: '👨‍🚒 Equipamiento / Puesto de Jefe de Brigada', phTipo: 'Ej. Kit de Mando, Chalecos, Megáfono y Equipos del Sector',
+                    lblTipo: '👨‍🚒 Equipamiento / Puesto de Jefe de Brigada', phTipo: 'Ej. Kit de Mando, Chalecos y Megáfono',
                     lblCap: '🎽 Dotación / Elementos Asignados:', phCap: 'Ej. Chalecos reflectivos, linternas, handy y megáfono',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Dotación de Brigada / Foto Ref.',
                     colExcelTipo: 'Puesto / Kit de Brigada', colExcelCap: 'Dotación y Elementos Asignados',
-                    ejemploExcel: 'Jefatura de Planta ; Gabinete de Equipamiento de Brigada ; 4 Chalecos + Megáfono + 2 Linternas',
+                    ejemploExcel: 'Jefatura de Planta ; Gabinete de Equipamiento de Brigada ; 4 Chalecos + Megáfono',
                     tiposSugeridos: ["Puesto de Jefatura de Brigada", "Gabinete de Equipamiento de Brigada", "Kit de Mando (Megáfono, Chaleco y Handy)", "Supervisión General de Brigada en Sección"],
-                    tagsNotas: ["Equipamiento de brigada completo y operativo", "Dotación de brigadistas del sector activa", "Equipos de comunicación interna verificados", "Sector supervisado en orden"]
+                    tagsNotas: ["Equipamiento de brigada completo y operativo", "Dotación de brigadistas del sector activa", "Equipos de comunicación interna verificados"]
                 };
             }
             if(g.includes('botiqu')) {
                 return {
                     codigo: 'PA_BOTIQUINES', icono: '💊', camposActivos: ['insumos'],
                     lblUbi: '📍 Ubicación Exacta del Botiquín:', phUbi: 'Ej. Enfermería / Comedor / Oficina de Planta',
-                    lblTipo: '💊 Tipo de Botiquín', phTipo: 'Ej. Botiquín Mural / Mochila Portátil / Gabinete PA',
+                    lblTipo: '💊 Tipo de Botiquín', phTipo: 'Ej. Botiquín Mural / Mochila Portátil',
                     lblCap: 'Detalle:', phCap: '',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Tipo de Botiquín / Foto Ref.',
                     colExcelTipo: 'Tipo de Botiquín', colExcelCap: 'Medicamentos / Insumos (Nombre:Stock:Vencimiento)',
@@ -4862,14 +5022,14 @@ function descargarInventarioExcelProfesional() {
             if(g.includes('pa ') || g.includes('auxilio') || g.includes('medico')) {
                 return {
                     codigo: 'PA_EQUIPO', icono: '🩺', camposActivos: ['capacidad'],
-                    lblUbi: '📍 Ubicación del Equipo de Primeros Auxilios:', phUbi: 'Ej. Pasillo Central / Puesto de Socorro / Enfermería',
-                    lblTipo: '🩺 Equipo de Primeros Auxilios / Rescate', phTipo: 'Ej. Camilla Rígida / Silla de Ruedas / Collar Cervical / DEA',
+                    lblUbi: '📍 Ubicación del Equipo de Primeros Auxilios:', phUbi: 'Ej. Pasillo Central / Puesto de Socorro',
+                    lblTipo: '🩺 Equipo de Primeros Auxilios / Rescate', phTipo: 'Ej. Camilla Rígida / Silla de Ruedas / DEA',
                     lblCap: '🩺 Componentes / Accesorios:', phCap: 'Ej. Con 3 correas de sujeción e inmovilizador cabezal',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Componentes de PA / Foto Ref.',
                     colExcelTipo: 'Equipo de Rescate / PA', colExcelCap: 'Componentes / Accesorios',
                     ejemploExcel: 'Pasillo Principal ; Camilla Rígida con Correas ; 3 Correas + Inmovilizador Cervical',
                     tiposSugeridos: ["Camilla Rígida con Correas", "Tabla Espinal con Inmovilizador", "Silla de Ruedas Plegable", "Kit de Férulas y Collar Cervical", "Desfibrilador Externo Automático (DEA)"],
-                    tagsNotas: ["Camilla y correas en perfecto estado", "Equipo de rescate limpio y accesible", "Inmovilizadores completos", "Señalización de primeros auxilios visible"]
+                    tagsNotas: ["Camilla y correas en perfecto estado", "Equipo de rescate limpio y accesible", "Inmovilizadores completos"]
                 };
             }
             if(g.includes('hidrante') || g.includes('manguera') || g.includes('agua')) {
@@ -4877,10 +5037,10 @@ function descargarInventarioExcelProfesional() {
                     codigo: 'HIDRANTES', icono: '🚿', camposActivos: ['capacidad'],
                     lblUbi: '📍 Ubicación del Hidrante / BIE:', phUbi: 'Ej. Exterior Galpón / Columna 4 / Patio Maniobras',
                     lblTipo: '🚿 Tipo de Hidrante / BIE', phTipo: 'Ej. Gabinete BIE / Salida Hidrante / Monitor',
-                    lblCap: '📏 Largo de Manguera / Diámetro / Pico:', phCap: 'Ej. Manguera 25 metros (1 ½") con pico chorro/niebla',
+                    lblCap: '📏 Largo de Manguera / Diámetro / Pico:', phCap: 'Ej. Manguera 25m (1 ½") con pico chorro/niebla',
                     lblBtnTerreno: '✏️ Actualizar Ubicación / Medida de Manguera / Foto Ref.',
                     colExcelTipo: 'Tipo de Hidrante / BIE', colExcelCap: 'Medida de Manguera / Diámetro / Pico',
-                    ejemploExcel: 'Exterior Galpón 2 ; Gabinete BIE Completo ; Manguera 25m (1 ½") con pico chorro/niebla',
+                    ejemploExcel: 'Exterior Galpón 2 ; Gabinete BIE Completo ; Manguera 25m (1 ½") con pico',
                     tiposSugeridos: ["Gabinete BIE Completo", "Salida Hidrante", "BIE con Manguera 25m", "Monitor Contra Incendio", "Boca de Impulsión"],
                     tagsNotas: ["Presión y caudal de agua normal", "Manguera sana sin pérdidas", "Pico, acople y llave completos", "Gabinete limpio y despejado"]
                 };
@@ -4897,11 +5057,11 @@ function descargarInventarioExcelProfesional() {
                 tiposSugeridos: ["PQS ABC", "CO2 (Dióxido de Carbono)", "HCFC / Haloclean", "Agua Presurizada", "Espuma Mecánica", "Carro PQS 50 kg"],
                 tagsNotas: ["Revisión en orden", "Limpieza exterior realizada", "Acceso despejado", "Señalética visible"]
             };
-        }
+        };
 
-        deducirCamposPorDefecto = function(nomGrupo) { return obtenerPerfilVisualGrupo(nomGrupo).camposActivos; };
+        deducirCamposPorDefecto = function(nomGrupo) { return window.obtenerPerfilVisualGrupo(nomGrupo).camposActivos; };
         obtenerCamposActivosGrupo = function(nomGrupo) {
-            const perf = obtenerPerfilVisualGrupo(nomGrupo);
+            const perf = window.obtenerPerfilVisualGrupo(nomGrupo);
             if(perf.codigo !== 'EXTINTORES') return perf.camposActivos;
             if(config.camposGrupo && Array.isArray(config.camposGrupo[nomGrupo])) return config.camposGrupo[nomGrupo].filter(c => c !== 'responsable' && c !== 'vencimientoPH');
             return perf.camposActivos;
@@ -4919,7 +5079,7 @@ function descargarInventarioExcelProfesional() {
             if(bloqueCampos) bloqueCampos.classList.remove('hidden');
             if(prefijoInput) prefijoInput.value = obtenerPrefijoCompuesto(grp, sec);
 
-            const perf = obtenerPerfilVisualGrupo(grp), activos = obtenerCamposActivosGrupo(grp);
+            const perf = window.obtenerPerfilVisualGrupo(grp), activos = obtenerCamposActivosGrupo(grp);
             const inpUbi = document.getElementById('qrUbicacion');
             if(inpUbi) {
                 inpUbi.placeholder = perf.phUbi;
@@ -4964,7 +5124,6 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- 4. EDICIÓN FUNCIONAL DE NÚMEROS S.O.S. EN CONTROL Y FORMULARIO DINÁMICO ---
         window.abrirEditorEmergenciaEnControl = function(emId) {
             asegurarEstructuraEmergencias();
             const c = (config.contactosEmergencia || []).find(x => String(x.id) === String(emId));
@@ -5026,18 +5185,14 @@ function descargarInventarioExcelProfesional() {
                 }
             } else {
                 config.contactosEmergencia.push({
-                    id: 'em_' + Date.now(),
-                    categoria: cat,
-                    nombre: nom,
-                    telefono: tel,
-                    verificadoTS: Date.now(),
-                    verificadoFecha: hoy
+                    id: 'em_' + Date.now(), categoria: cat, nombre: nom, telefono: tel,
+                    verificadoTS: Date.now(), verificadoFecha: hoy
                 });
             }
             window.ctrlEditEmId = null;
             guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
             await parchearSubnodoConfigNube('contactosEmergencia', config.contactosEmergencia);
-            mostrarToastGuardado(`✅ Número de ${nom} guardado y verificado`);
+            mostrarToastGuardado(`✅ Número de ${nom} actualizado`);
             if(idEquipoCtrl) renderFormularioControlInspeccion(idEquipoCtrl);
         };
 
@@ -5050,7 +5205,7 @@ function descargarInventarioExcelProfesional() {
 
             motivosFallaPorIndex = {};
             actualizarCajaResumenFallas();
-            const perf = obtenerPerfilVisualGrupo(eq.grupo);
+            const perf = window.obtenerPerfilVisualGrupo(eq.grupo);
             const esCom = (perf.codigo === 'COMUNICACION') || esEquipoVirtualComunicacion(id);
             const boxThumb = document.getElementById('boxThumbControl');
             if(boxThumb) boxThumb.classList.toggle('hidden', esEquipoVirtualComunicacion(id));
@@ -5185,7 +5340,7 @@ function descargarInventarioExcelProfesional() {
                         <div style="max-height:260px; overflow-y:auto;">${htmlEmpleados}</div>
                     </div>
                     <details id="detailsEmergenciasControl" open style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:8px;">
-                        <summary style="font-weight:bold; font-size:12px; cursor:pointer; color:${emVigentesPlanta ? 'var(--success)' : 'var(--danger)'};">${emVigentesPlanta ? '✅ Números S.O.S. Externos ya verificados este mes (No volver a llamar a Bomberos — Tocar para editar)' : '🚨 Números S.O.S. Externos de Planta (Verificar 1 sola vez al mes)'}</summary>
+                        <summary style="font-weight:bold; font-size:12px; cursor:pointer; color:${emVigentesPlanta ? 'var(--success)' : 'var(--danger)'};">${emVigentesPlanta ? '✅ Números S.O.S. Externos ya verificados este mes (Tocar ✏️ Editar para modificar)' : '🚨 Números S.O.S. Externos de Planta (Verificar 1 sola vez al mes)'}</summary>
                         <div style="margin-top:8px;">
                             <div id="boxFormEmergenciaCtrl" style="margin-bottom:8px;">
                                 <div class="form-grid-pc" style="margin-bottom:6px;">
@@ -5241,237 +5396,7 @@ function descargarInventarioExcelProfesional() {
             actualizarEstadoRequisitoFoto();
         };
 
-        // --- 5. VISOR UNIVERSAL DE FOTOS DE REFERENCIA Y BOTONES DE EQUIPO ---
-        window.verFotoReferenciaEquipo = async function(id, event) {
-            if(event) event.stopPropagation();
-            const modal = document.getElementById('modalFotoRef');
-            const img = document.getElementById('imgFotoRefGrande');
-            const tit = document.getElementById('tituloModalFotoRef');
-            let b64 = null;
-            try {
-                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                const valLocal = cacheF[id];
-                if(typeof valLocal === 'string' && valLocal.startsWith('data:image')) b64 = valLocal;
-                else if(valLocal && typeof valLocal === 'object') b64 = valLocal.f || valLocal.foto || valLocal.base64 || valLocal.img || null;
-
-                if(!b64 && config.equipos && config.equipos[id] && config.equipos[id].fotoRef) {
-                    b64 = config.equipos[id].fotoRef;
-                }
-                if(!b64 && config.syncUrl) {
-                    const res = await fetch(`${obtenerUrlBaseFirebase()}/syso_eq_photos/${encodeURIComponent(id)}.json`);
-                    if(res.ok) {
-                        const d = await res.json();
-                        if(typeof d === 'string' && d.startsWith('data:image')) b64 = d;
-                        else if(d && typeof d === 'object') {
-                            b64 = d.f || d.foto || d.base64 || d.img || d.data || Object.values(d).find(v => typeof v === 'string' && v.startsWith('data:image')) || null;
-                        }
-                        if(b64) {
-                            cacheF[id] = b64;
-                            localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF));
-                        }
-                    }
-                }
-            } catch(e) {}
-
-            if(!b64) {
-                // Si el equipo tenía marcada tieneFotoRef por arrastre pero no existe foto en la nube, corregir la marca automáticamente
-                if(config.equipos && config.equipos[id]) {
-                    config.equipos[id].tieneFotoRef = false;
-                    guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
-                    parchearSubnodoConfigNube('equipos', { [id]: config.equipos[id] });
-                    renderListas();
-                }
-                if(confirm(`⚠️ El equipo ${id} aún no tiene una foto de referencia subida en la nube (se corrigió el icono).\n\n¿Deseas abrir la ficha de ${id} ahora mismo para tomar o subir su foto?`)) {
-                    window.prepararEdicionQR(id);
-                }
-                return;
-            }
-            if(modal && img) {
-                if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
-                img.src = b64;
-                modal.classList.remove('hidden');
-            } else {
-                const w = window.open('', '_blank');
-                if(w) w.document.write(`<img src="${b64}" style="max-width:100%;">`);
-            }
-        };
-// === FIN DE LA PARTE 7A DE 7 ===
-// =========================================================================
-        // MOTOR 7B FINAL (V6.57): DESCARGA DE FOTOS FIREBASE DESBLOQUEADA (SIN ERROR
-        // DE EQ_PHOTO_KEY), RESTAURACIÓN AUTOMÁTICA DE ICONOS "📷 FOTO", BOTONES
-        // DE EQUIPOS, EXCEL COMPLETO, ESCUDO BORRADOR 30M E IA GEMINI
-        // =========================================================================
-
-        var EQ_PHOTO_KEY = window.EQ_PHOTO_KEY || 'SySO_Eq_Photos';
-        var LOCAL_GEMINI_KEY_BACKUP = window.LOCAL_GEMINI_KEY_BACKUP || 'SySO_Gemini_Key_Backup';
-
-        function obtenerUrlFirebaseSegura() {
-            try {
-                if(typeof obtenerUrlBaseFirebase === 'function') {
-                    const u = obtenerUrlBaseFirebase();
-                    if(u) return String(u).replace(/\/$/, '');
-                }
-            } catch(e) {}
-            try {
-                if(config && config.syncUrl) return String(config.syncUrl).replace(/\/$/, '');
-            } catch(e) {}
-            try {
-                const scripts = document.querySelectorAll('script');
-                for(const s of scripts) {
-                    const m = (s.textContent || '').match(/https:\/\/[a-zA-Z0-9-]+(?:-default-rtdb)?\.firebaseio\.com|https:\/\/[a-zA-Z0-9.-]+\.firebasedatabase\.app/);
-                    if(m && m[0]) return m[0].replace(/\/$/, '');
-                }
-            } catch(e) {}
-            return '';
-        }
-
-        function extraerImagenBase64Valida(data) {
-            if(!data) return null;
-            if(typeof data === 'string') {
-                const s = data.trim();
-                if(s.startsWith('data:image') || s.startsWith('http') || s.startsWith('blob:')) return s;
-                if(s.length > 150 && !s.includes(' ') && !s.includes('<')) return 'data:image/jpeg;base64,' + s;
-                return null;
-            }
-            if(typeof data === 'object') {
-                const prioridades = ['f', 'foto', 'base64', 'img', 'data', 'src', 'url', 'fotoRef', 'imagen'];
-                for(const p of prioridades) {
-                    if(data[p]) {
-                        const r = extraerImagenBase64Valida(data[p]);
-                        if(r) return r;
-                    }
-                }
-                for(const k of Object.keys(data)) {
-                    const r = extraerImagenBase64Valida(data[k]);
-                    if(r) return r;
-                }
-            }
-            return null;
-        }
-
-        // --- 1. VISOR DE FOTOS CON BLOQUES TRY/CATCH INDEPENDIENTES ---
-        window.verFotoReferenciaEquipo = async function(id, event) {
-            if(event) event.stopPropagation();
-            const modal = document.getElementById('modalFotoRef');
-            const img = document.getElementById('imgFotoRefGrande') || (modal ? modal.querySelector('img') : null);
-            const tit = document.getElementById('tituloModalFotoRef') || (modal ? modal.querySelector('h3, h4, b') : null);
-            let b64 = null;
-
-            // Paso 1: Buscar en el propio objeto del equipo
-            try {
-                if(config && config.equipos && config.equipos[id]) {
-                    b64 = extraerImagenBase64Valida(config.equipos[id].fotoRef || config.equipos[id].foto || config.equipos[id].img);
-                }
-            } catch(e) {}
-
-            // Paso 2: Buscar en todas las cachés de fotos de localStorage sin depender de un nombre fijo
-            if(!b64) {
-                try {
-                    const cacheDirecta = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                    if(cacheDirecta && cacheDirecta[id]) b64 = extraerImagenBase64Valida(cacheDirecta[id]);
-                } catch(e) {}
-            }
-            if(!b64) {
-                try {
-                    for(let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i);
-                        if(!k || k === CFG_KEY || k === DB_KEY) continue;
-                        const raw = localStorage.getItem(k);
-                        if(raw && raw.includes(id) && raw.includes('data:image')) {
-                            const parsed = JSON.parse(raw);
-                            if(parsed && parsed[id]) {
-                                b64 = extraerImagenBase64Valida(parsed[id]);
-                                if(b64) break;
-                            }
-                        }
-                    }
-                } catch(e) {}
-            }
-
-            // Paso 3: Descargar desde Firebase (/syso_eq_photos/{id}.json)
-            const baseFb = obtenerUrlFirebaseSegura();
-            if(!b64 && baseFb) {
-                try {
-                    if(typeof mostrarToastGuardado === 'function') mostrarToastGuardado(`⏳ Descargando foto de ${id}...`);
-                    const res = await fetch(`${baseFb}/syso_eq_photos/${encodeURIComponent(id)}.json`);
-                    if(res.ok) {
-                        const d = await res.json();
-                        b64 = extraerImagenBase64Valida(d);
-                    }
-                } catch(e) {}
-            }
-
-            // Paso 4: Respaldo en /syso_photos/{id}.json por si fue guardada desde Control
-            if(!b64 && baseFb) {
-                try {
-                    const res2 = await fetch(`${baseFb}/syso_photos/${encodeURIComponent(id)}.json`);
-                    if(res2.ok) {
-                        const d2 = await res2.json();
-                        b64 = extraerImagenBase64Valida(d2);
-                    }
-                } catch(e) {}
-            }
-
-            if(!b64) {
-                alert(`⚠️ El equipo ${id} aún no tiene foto almacenada en el servidor.\n\nPuedes subirle una foto desde "✏️ Editar" o desde Control.`);
-                return;
-            }
-
-            // Guardar en caché local para apertura instantánea en el próximo clic
-            try {
-                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                cacheF[id] = b64;
-                localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF));
-            } catch(e) {}
-
-            if(modal && img) {
-                if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
-                img.src = b64;
-                modal.classList.remove('hidden');
-            } else {
-                const w = window.open('', '_blank');
-                if(w) w.document.write(`<body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${b64}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body>`);
-            }
-        };
-
-        // --- 2. RESTAURADOR AUTOMÁTICO DE ICONOS "📷 FOTO" REALES EN FIREBASE ---
-        window.sanearFotosRefFantasmaConNube = async function() {
-            const baseFb = obtenerUrlFirebaseSegura();
-            if(!config || !config.equipos || !baseFb) return;
-            try {
-                const res = await fetch(`${baseFb}/syso_eq_photos.json?shallow=true`);
-                if(!res.ok) return;
-                const mapaNube = await res.json();
-                if(!mapaNube || typeof mapaNube !== 'object') return;
-
-                let cacheLocal = {};
-                try { cacheLocal = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}'); } catch(e) {}
-
-                const parcheEq = {};
-                let cambios = 0;
-                Object.keys(config.equipos).forEach(id => {
-                    const eq = config.equipos[id];
-                    if(!eq || esEquipoVirtualComunicacion(id)) return;
-                    const existeFotoReal = !!(mapaNube[id] || cacheLocal[id] || eq.fotoRef);
-                    if(existeFotoReal && !eq.tieneFotoRef) {
-                        eq.tieneFotoRef = true;
-                        parcheEq[id] = eq;
-                        cambios++;
-                    } else if(!existeFotoReal && eq.tieneFotoRef) {
-                        eq.tieneFotoRef = false;
-                        parcheEq[id] = eq;
-                        cambios++;
-                    }
-                });
-                if(cambios > 0) {
-                    guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
-                    await parchearSubnodoConfigNube('equipos', parcheEq);
-                    if(usuarioActual && usuarioActual.rol === 'Admin') renderListas();
-                }
-            } catch(e) {}
-        };
-
-        // --- 3. IMPRESIÓN QR, EDICIÓN, TRASLADO INLINE Y ELIMINACIÓN ---
+        // --- 2. IMPRESIÓN QR, EDICIÓN, TRASLADO INLINE Y ELIMINACIÓN EN INVENTARIO ---
         window.abrirImpresionQRsSySO = function(listaIds, tituloPlancha) {
             const idsValidos = (listaIds || []).filter(id => config.equipos && config.equipos[id] && !esEquipoVirtualComunicacion(id));
             if(idsValidos.length === 0) return alert("⚠️ No hay equipos físicos en esta selección para imprimir QR.");
@@ -5606,7 +5531,7 @@ function descargarInventarioExcelProfesional() {
         window.eliminarQR = window.abrirConfirmarEliminarInline;
         window.borrarQR = window.abrirConfirmarEliminarInline;
 
-        // --- 4. RENDERIZADOR DEL INVENTARIO (1° SECCIÓN ➔ 2° GRUPO) Y EXCEL COMPLETO ---
+        // --- 3. RENDERIZADOR DEL INVENTARIO (1° SECCIÓN ➔ 2° GRUPO) Y EXCEL COMPLETO ---
         function obtenerContenedorInventarioDOM() {
             const filtroViejo = document.getElementById('boxDobleFiltroInventario');
             if(filtroViejo) filtroViejo.remove();
@@ -5638,7 +5563,7 @@ function descargarInventarioExcelProfesional() {
             vincularBotonesSuperioresInventarioDOM();
 
             const selBulkSec = document.getElementById('bulkSeccion'), selBulkGrp = document.getElementById('bulkGrupo');
-            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV657) {
+            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV658) {
                 const wrapSec = selBulkSec.parentElement, wrapGrp = selBulkGrp.parentElement;
                 const gridPadre = wrapSec ? wrapSec.parentElement : null;
                 if(gridPadre && wrapSec && wrapGrp) {
@@ -5646,9 +5571,9 @@ function descargarInventarioExcelProfesional() {
                     if(lblS) lblS.innerHTML = '1. Sección de Planta <span style="color:var(--danger)">*</span>:';
                     if(lblG) lblG.innerHTML = '2. Grupo de Equipo <span style="color:var(--danger)">*</span>:';
                     gridPadre.insertBefore(wrapSec, wrapGrp);
-                    selBulkSec.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    selBulkGrp.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    window.ordenBulkInvertidoV657 = true;
+                    selBulkSec.onchange = () => window.actualizarGuiaColumnasImportacionExcel();
+                    selBulkGrp.onchange = () => window.actualizarGuiaColumnasImportacionExcel();
+                    window.ordenBulkInvertidoV658 = true;
                 }
             }
 
@@ -5677,7 +5602,7 @@ function descargarInventarioExcelProfesional() {
                 lbl.innerHTML = `🌎 <b>Modo Documento Completo:</b> 1° Sección ; 2° Grupo ; 3° Código ID (Opcional) ; 4° Ubicación ; 5° Tipo ; 6° Capacidad ; 7° Serie ; 8° Vencimiento ; 9° Insumos`;
                 txt.placeholder = "Agrochaco ; Combate Extintores ; AGR-EXT-106 ; Entrada Silo ; PQS ABC ; 10 kg ; Melisam ; 2027-08";
             } else {
-                const perf = obtenerPerfilVisualGrupo(grp), activos = obtenerCamposActivosGrupo(grp);
+                const perf = window.obtenerPerfilVisualGrupo(grp), activos = obtenerCamposActivosGrupo(grp);
                 let cols = [`1° Ubicación Exacta`, `2° ${perf.colExcelTipo}`];
                 if(activos.includes('capacidad')) cols.push(`3° ${perf.colExcelCap}`);
                 if(activos.includes('serie')) cols.push(`4° Marca / N° Serie`);
@@ -5733,15 +5658,13 @@ function descargarInventarioExcelProfesional() {
             configurarExclusionCheckboxes('.chk-usu-sec', 'Todas');
             configurarExclusionCheckboxes('.chk-usu-grupo', 'Todos');
             actualizarPrefijoUI();
-            actualizarGuiaColumnasImportacionExcel();
+            window.actualizarGuiaColumnasImportacionExcel();
             renderListas();
             if(esUsuarioCreador() && typeof renderPanelTelemetriaIA === 'function') renderPanelTelemetriaIA();
         };
 
         window.toggleAcordeonSeccionInventario = function(sec) { window.seccionesAbiertasInventario[sec] = !window.seccionesAbiertasInventario[sec]; renderListas(); };
         window.toggleAcordeonGrupoInventario = function(claveSecGrp) { window.gruposAbiertosInventario[claveSecGrp] = !window.gruposAbiertosInventario[claveSecGrp]; renderListas(); };
-
-        if(!window._origRenderListasBase && typeof renderListas === 'function') window._origRenderListasBase = renderListas;
 
         renderListas = function() {
             if(typeof window._origRenderListasBase === 'function') { try { window._origRenderListasBase(); } catch(e) {} }
@@ -5780,7 +5703,7 @@ function descargarInventarioExcelProfesional() {
                 grpsOrdenados.forEach(grp => {
                     const idsSecGrp = idsDeSeccion.filter(id => config.equipos[id].grupo === grp);
                     if(idsSecGrp.length === 0) return;
-                    const perf = obtenerPerfilVisualGrupo(grp);
+                    const perf = window.obtenerPerfilVisualGrupo(grp);
                     const claveSG = `${sec}__${grp}`;
                     const grpAbierto = hayBusqueda || !!window.gruposAbiertosInventario[claveSG];
                     const claveEsc = claveSG.replace(/'/g, "\\'"), grpEsc = grp.replace(/'/g, "\\'");
@@ -5864,7 +5787,7 @@ function descargarInventarioExcelProfesional() {
             if(totalMostrados === 0) contQR.innerHTML = `<p class="text-muted" style="text-align:center; padding:14px;">No se encontraron equipos registrados.</p>`;
         };
 
-        // --- 5. EXPORTACIÓN E IMPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
+        // --- 4. EXPORTACIÓN E IMPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
         function serializarInsumosParaTextoExcel(insumosArr) {
             if(!Array.isArray(insumosArr) || insumosArr.length === 0) return '';
             return insumosArr.map(i => `${i.nombre}:${i.stock ?? 0}:${i.vencimiento || 'N/A'}`).join(' | ');
@@ -5919,7 +5842,7 @@ function descargarInventarioExcelProfesional() {
             const grp = document.getElementById('bulkGrupo') ? document.getElementById('bulkGrupo').value : 'TODOS';
             let lineas = ["Seccion;Grupo;Codigo_ID (Opcional);Ubicacion_Exacta;Tipo_Descripcion;Capacidad_Tension_Elementos;Marca_Serie;Vencimiento_Carga;Insumos_Botiquin", "Agrochaco;Combate Extintores;;Entrada Principal Silo;PQS ABC;10 kg;Melisam;2027-08;"];
             if(sec && grp && sec !== 'TODAS' && grp !== 'TODOS') {
-                const perf = obtenerPerfilVisualGrupo(grp);
+                const perf = window.obtenerPerfilVisualGrupo(grp);
                 lineas = [`Ubicacion_Exacta;${perf.colExcelTipo};${perf.colExcelCap}`, perf.ejemploExcel];
             }
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(["\uFEFF" + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8;' })); a.download = `Plantilla_Equipos_SySO.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -5971,7 +5894,7 @@ function descargarInventarioExcelProfesional() {
                         idExplicito = posId; ubi = cols[3]||''; tipo = cols[4]||''; cap = cols[5]||''; serie = cols[6]||''; venc = cols[7]||''; insumosStr = cols[8]||'';
                     } else { ubi = cols[2]||''; tipo = cols[3]||''; cap = cols[4]||''; serie = cols[5]||''; venc = cols[6]||''; insumosStr = cols[7]||''; }
                 } else {
-                    const perf = obtenerPerfilVisualGrupo(grpFila), activos = obtenerCamposActivosGrupo(grpFila);
+                    const perf = window.obtenerPerfilVisualGrupo(grpFila), activos = obtenerCamposActivosGrupo(grpFila);
                     let offset = 0;
                     const posId = (cols[0] || '').toUpperCase().trim();
                     if(/^[A-Z0-9]{2,5}-[A-Z0-9]{2,5}-\d+/i.test(posId) || (config.equipos && config.equipos[posId])) { idExplicito = posId; offset = 1; }
@@ -5980,7 +5903,7 @@ function descargarInventarioExcelProfesional() {
                     else { cap = activos.includes('capacidad') ? (cols[offset + 2] || '') : ''; serie = activos.includes('serie') ? (cols[offset + 3] || '') : ''; venc = activos.includes('vencimiento') ? (cols[offset + 4] || '') : ''; }
                 }
 
-                const perfActual = obtenerPerfilVisualGrupo(grpFila), activosActual = obtenerCamposActivosGrupo(grpFila);
+                const perfActual = window.obtenerPerfilVisualGrupo(grpFila), activosActual = obtenerCamposActivosGrupo(grpFila);
                 const finalId = idExplicito || (obtenerPrefijoCompuesto(grpFila, secFila) + calcularSiguienteCorrelativo(grpFila, secFila));
                 const existia = !!(config.equipos && config.equipos[finalId]);
                 const eqPrevio = (config.equipos && config.equipos[finalId]) || {};
@@ -6010,7 +5933,7 @@ function descargarInventarioExcelProfesional() {
             alert(`✅ ¡IMPORTACIÓN EXCEL COMPLETADA!\n• Creados: ${creados}\n• Actualizados: ${actualizados}`);
         };
 
-        // --- 6. ESCUDO ANTI-SALIDA Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
+        // --- 5. ESCUDO ANTI-SALIDA Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
         function hayTrabajoEnCursoSinGuardar() {
             const idCtrl = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value.trim() : '';
             const modDin = document.getElementById('moduloDinamico');
@@ -6044,30 +5967,30 @@ function descargarInventarioExcelProfesional() {
                     idEquipo: idCtrl, motivosFalla: JSON.parse(JSON.stringify(motivosFallaPorIndex || {})),
                     observaciones: document.getElementById('observaciones') ? document.getElementById('observaciones').value : ''
                 } : null;
-                localStorage.setItem(BORRADOR_TRABAJO_KEY, JSON.stringify({ ts: Date.now(), usuarioNombre: usuarioActual.nombre, pestanaId, borradorAlta, borradorControl }));
+                localStorage.setItem(window.SYSO_BORRADOR_KEY, JSON.stringify({ ts: Date.now(), usuarioNombre: usuarioActual.nombre, pestanaId, borradorAlta, borradorControl }));
             } catch(e) {}
         }
 
         window.limpiarBorradorTrabajoEnVivo = function(tipo = 'TODOS') {
             try {
-                if(tipo === 'TODOS') return localStorage.removeItem(BORRADOR_TRABAJO_KEY);
-                const raw = localStorage.getItem(BORRADOR_TRABAJO_KEY);
+                if(tipo === 'TODOS') return localStorage.removeItem(window.SYSO_BORRADOR_KEY);
+                const raw = localStorage.getItem(window.SYSO_BORRADOR_KEY);
                 if(!raw) return;
                 const data = JSON.parse(raw);
                 if(tipo === 'ALTA_EQUIPO') data.borradorAlta = null;
                 if(tipo === 'CONTROL') data.borradorControl = null;
-                localStorage.setItem(BORRADOR_TRABAJO_KEY, JSON.stringify(data));
+                localStorage.setItem(window.SYSO_BORRADOR_KEY, JSON.stringify(data));
             } catch(e) {}
         };
 
         function restaurarBorradorTrabajoEnVivo() {
             if(!usuarioActual) return;
             try {
-                const raw = localStorage.getItem(BORRADOR_TRABAJO_KEY);
+                const raw = localStorage.getItem(window.SYSO_BORRADOR_KEY);
                 if(!raw) return;
                 const data = JSON.parse(raw);
                 if(!data || data.usuarioNombre !== usuarioActual.nombre) return;
-                if((Date.now() - (data.ts || 0)) > TIEMPO_GRACIA_BORRADOR_MS) return localStorage.removeItem(BORRADOR_TRABAJO_KEY);
+                if((Date.now() - (data.ts || 0)) > window.SYSO_TIEMPO_BORRADOR_MS) return localStorage.removeItem(window.SYSO_BORRADOR_KEY);
                 const tieneAlta = data.borradorAlta && (data.borradorAlta.ubicacion || data.borradorAlta.tipo || data.borradorAlta.capacidad);
                 const tieneCtrl = data.borradorControl && data.borradorControl.idEquipo && config.equipos && config.equipos[data.borradorControl.idEquipo];
                 if(!tieneAlta && !tieneCtrl) return;
@@ -6109,46 +6032,10 @@ function descargarInventarioExcelProfesional() {
             });
         }
 
-        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.57 ---
-        async function descubrirMejorModeloGeminiAPI(apiKey) {
-            const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
-            if(!apiKey) return 'gemini-3.5-flash-lite';
-            try {
-                const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 4500);
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`, { signal: ctrl.signal });
-                clearTimeout(timer);
-                if(res.ok) {
-                    const data = await res.json();
-                    const disp = (data.models || []).filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')).map(m => m.name.replace('models/', ''));
-                    let elegido = preferidos.find(p => disp.includes(p)) || 'gemini-2.5-flash';
-                    if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: elegido, cacheRespuestas: {}, bitacoraAprendizaje: [] };
-                    config.iaConfig.modeloActivo = elegido;
-                    return elegido;
-                }
-            } catch(e) {}
-            return 'gemini-2.5-flash';
-        }
-
-        async function guardarLlaveGeminiSegura() {
-            if(!esUsuarioCreador()) return;
-            const inp = document.getElementById('inputGeminiApiKey'), rawKey = inp ? inp.value.trim() : '';
-            if(!rawKey || rawKey.length < 18) return alert("⚠️ Pegue una clave válida de Google AI Studio.");
-            const obf = btoa(rawKey.split('').reverse().join(''));
-            if(!config.iaConfig) config.iaConfig = { apiKeyObf: "", modeloActivo: "", cacheRespuestas: {}, bitacoraAprendizaje: [] };
-            config.iaConfig.apiKeyObf = obf;
-            localStorage.setItem(LOCAL_GEMINI_KEY_BACKUP, obf);
-            config.iaConfig.modeloActivo = await descubrirMejorModeloGeminiAPI(rawKey);
-            await parchearSubnodoConfigNube('iaConfig', config.iaConfig);
-            if(inp) inp.value = '';
-            window.forzarMostrarInputLlave = false;
-            renderPanelTelemetriaIA();
-            alert(`✅ Llave Gemini conectada: ${config.iaConfig.modeloActivo}`);
-        }
-
-        window.mostrarInputCambioLlave = function() { window.forzarMostrarInputLlave = true; renderPanelTelemetriaIA(); };
+        // --- 6. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.58 ---
         function obtenerLlaveGeminiDesencriptada() {
             try {
-                let obf = (config.iaConfig && config.iaConfig.apiKeyObf) || localStorage.getItem(LOCAL_GEMINI_KEY_BACKUP) || "";
+                let obf = (config.iaConfig && config.iaConfig.apiKeyObf) || localStorage.getItem('SySO_Gemini_Key_Backup') || "";
                 return obf ? atob(obf).split('').reverse().join('') : "";
             } catch(e) { return ""; }
         }
@@ -6245,20 +6132,20 @@ function descargarInventarioExcelProfesional() {
             };
         }
 
-        const PREGUNTAS_SUGERIDAS_OPERARIO = [
+        window.LISTA_PREGUNTAS_AYUDA_V658 = [
             "📊 ¿Cuántos equipos o verificaciones me faltan este mes?",
             "➕ ¿Dónde puedo registrar un nuevo equipo y cómo?",
             "📞 ¿Cómo controla cada encargado de sección el grupo Comunicación?",
             "📈 ¿Cómo veo el porcentaje (%) por cada grupo dentro de una sección?"
         ];
 
-        function abrirModalAyuda() {
+        abrirModalAyuda = function() {
             const boxResp = document.getElementById('respuestaGraficaAyuda');
             if(boxResp) { boxResp.innerHTML = ''; boxResp.classList.add('hidden'); }
             const contBtns = document.getElementById('botonesPreguntasAyuda');
             if(contBtns) {
                 contBtns.innerHTML = '';
-                PREGUNTAS_SUGERIDAS_OPERARIO.forEach(q => {
+                window.LISTA_PREGUNTAS_AYUDA_V658.forEach(q => {
                     const btn = document.createElement('button');
                     btn.type = 'button'; btn.className = 'btn-small btn-info btn-chip-wrap'; btn.style.padding = '7px 10px'; btn.innerText = q;
                     btn.onclick = () => { document.getElementById('inputPreguntaAyuda').value = q; consultarAsistenteAyudaLibre(); };
@@ -6266,9 +6153,9 @@ function descargarInventarioExcelProfesional() {
                 });
             }
             document.getElementById('modalAyudaIA').classList.remove('hidden');
-        }
+        };
 
-        async function consultarAsistenteAyudaLibre() {
+        consultarAsistenteAyudaLibre = async function() {
             const inp = document.getElementById('inputPreguntaAyuda'), box = document.getElementById('respuestaGraficaAyuda');
             const rawTexto = inp ? inp.value.trim() : '';
             if(!rawTexto || !box) return;
@@ -6279,7 +6166,7 @@ function descargarInventarioExcelProfesional() {
             if(apiKey) {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando con Gemini...</div>`;
                 try {
-                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.57". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
+                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.58". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
                     for(const mod of ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
                         const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 6000);
                         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -6300,7 +6187,7 @@ function descargarInventarioExcelProfesional() {
                 } catch(e) {}
             }
             box.innerHTML = `<div>💡 <b>Estado en vivo (${rad.mesActual}):</b> ${rad.totalFisicos} equipos físicos registrados (${rad.misPendientes} pendientes en tu perfil).</div>`;
-        }
+        };
 
         function ejecutarGemeloDigitalAutonomo() {
             try {
@@ -6310,23 +6197,23 @@ function descargarInventarioExcelProfesional() {
             } catch(e) {}
         }
 
-        function renderPanelTelemetriaIA() {
+        renderPanelTelemetriaIA = function() {
             if(!esUsuarioCreador()) return;
             const box = document.getElementById('panelTelemetriaIA'), lblKey = document.getElementById('lblEstadoLlaveIA'), inpKey = document.getElementById('inputGeminiApiKey');
             if(!box) return;
             const keyActiva = obtenerLlaveGeminiDesencriptada(), tieneKey = !!keyActiva;
             const modAct = (config.iaConfig && config.iaConfig.modeloActivo) || 'gemini-3.5-flash-lite';
             if(inpKey && inpKey.parentElement) inpKey.parentElement.style.display = (tieneKey && !window.forzarMostrarInputLlave) ? 'none' : 'flex';
-            if(lblKey) lblKey.innerHTML = tieneKey ? `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--success); font-weight:bold; font-size:12px;">🔒 Llave Activa (•••${keyActiva.slice(-4)}) | ${modAct}</span><button type="button" class="btn-small btn-dark" style="width:auto !important; padding:4px 8px;" onclick="mostrarInputCambioLlave()">🔄 Cambiar</button></div>` : `<span>Pegue su clave de Google AI Studio.</span>`;
+            if(lblKey) lblKey.innerHTML = tieneKey ? `<div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--success); font-weight:bold; font-size:12px;">🔒 Llave Activa (•••${keyActiva.slice(-4)}) | ${modAct}</span><button type="button" class="btn-small btn-dark" style="width:auto !important; padding:4px 8px;" onclick="window.forzarMostrarInputLlave=true; renderPanelTelemetriaIA();">🔄 Cambiar</button></div>` : `<span>Pegue su clave de Google AI Studio.</span>`;
             const t = config.telemetria || { equiposSinQR: {} };
             const topManuales = Object.entries(t.equiposSinQR || {}).filter(x => !esEquipoVirtualComunicacion(x[0])).map(x => `${x[0]} (${x[1]}x)`).join(', ') || 'Ninguno detectado';
             box.innerHTML = `<div>🏷️ <b>Etiquetas QR en cola para reimprimir:</b> <span style="color:var(--danger);font-weight:bold;">${topManuales}</span></div>`;
-        }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.57 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.58 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.57';
+            if(badgeVer) badgeVer.innerText = 'V6.58';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -6365,9 +6252,9 @@ function descargarInventarioExcelProfesional() {
             if(localStorage.getItem('SySO_SOS_Guard_Active') === 'true') iniciarPulsoSilenciosoSegundoPlano();
             setTimeout(actualizarEstadoVisualBotonGuardia, 400);
             setTimeout(() => {
-                reconciliarFallasConHistorialReal();
-                sanearFotosRefFantasmaConNube();
-                ejecutarSimulacion10000Agentes5Anios(true);
+                window.reconciliarFallasConHistorialReal();
+                window.restaurarIconosFotoDesdeNube();
+                window.ejecutarSimulacion10000Agentes5Anios(true);
             }, 1500);
             setInterval(ejecutarGemeloDigitalAutonomo, 45000);
             setInterval(verificarSOSActivoEnNube, 12000);
