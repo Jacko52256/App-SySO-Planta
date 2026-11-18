@@ -5297,12 +5297,59 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.56): DESCARGA DIRECTA DE FOTOS DE REFERENCIA DESDE
-        // FIREBASE (SIN BLOQUEO DE syncUrl), AUTO-RESTAURACIÓN DE ICONOS "📷 FOTO",
-        // BOTONES DE EQUIPOS, EXCEL COMPLETO, ESCUDO BORRADOR 30M E IA GEMINI
+        // MOTOR 7B FINAL (V6.57): DESCARGA DE FOTOS FIREBASE DESBLOQUEADA (SIN ERROR
+        // DE EQ_PHOTO_KEY), RESTAURACIÓN AUTOMÁTICA DE ICONOS "📷 FOTO", BOTONES
+        // DE EQUIPOS, EXCEL COMPLETO, ESCUDO BORRADOR 30M E IA GEMINI
         // =========================================================================
 
-        // --- 1. VISOR UNIVERSAL DE FOTOS CONECTADO DIRECTO A obtenerUrlBaseFirebase() ---
+        var EQ_PHOTO_KEY = window.EQ_PHOTO_KEY || 'SySO_Eq_Photos';
+        var LOCAL_GEMINI_KEY_BACKUP = window.LOCAL_GEMINI_KEY_BACKUP || 'SySO_Gemini_Key_Backup';
+
+        function obtenerUrlFirebaseSegura() {
+            try {
+                if(typeof obtenerUrlBaseFirebase === 'function') {
+                    const u = obtenerUrlBaseFirebase();
+                    if(u) return String(u).replace(/\/$/, '');
+                }
+            } catch(e) {}
+            try {
+                if(config && config.syncUrl) return String(config.syncUrl).replace(/\/$/, '');
+            } catch(e) {}
+            try {
+                const scripts = document.querySelectorAll('script');
+                for(const s of scripts) {
+                    const m = (s.textContent || '').match(/https:\/\/[a-zA-Z0-9-]+(?:-default-rtdb)?\.firebaseio\.com|https:\/\/[a-zA-Z0-9.-]+\.firebasedatabase\.app/);
+                    if(m && m[0]) return m[0].replace(/\/$/, '');
+                }
+            } catch(e) {}
+            return '';
+        }
+
+        function extraerImagenBase64Valida(data) {
+            if(!data) return null;
+            if(typeof data === 'string') {
+                const s = data.trim();
+                if(s.startsWith('data:image') || s.startsWith('http') || s.startsWith('blob:')) return s;
+                if(s.length > 150 && !s.includes(' ') && !s.includes('<')) return 'data:image/jpeg;base64,' + s;
+                return null;
+            }
+            if(typeof data === 'object') {
+                const prioridades = ['f', 'foto', 'base64', 'img', 'data', 'src', 'url', 'fotoRef', 'imagen'];
+                for(const p of prioridades) {
+                    if(data[p]) {
+                        const r = extraerImagenBase64Valida(data[p]);
+                        if(r) return r;
+                    }
+                }
+                for(const k of Object.keys(data)) {
+                    const r = extraerImagenBase64Valida(data[k]);
+                    if(r) return r;
+                }
+            }
+            return null;
+        }
+
+        // --- 1. VISOR DE FOTOS CON BLOQUES TRY/CATCH INDEPENDIENTES ---
         window.verFotoReferenciaEquipo = async function(id, event) {
             if(event) event.stopPropagation();
             const modal = document.getElementById('modalFotoRef');
@@ -5310,46 +5357,72 @@ function descargarInventarioExcelProfesional() {
             const tit = document.getElementById('tituloModalFotoRef') || (modal ? modal.querySelector('h3, h4, b') : null);
             let b64 = null;
 
+            // Paso 1: Buscar en el propio objeto del equipo
             try {
-                // 1° Buscar en memoria caché local del dispositivo
-                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                const valLocal = cacheF[id];
-                if(typeof valLocal === 'string' && valLocal.startsWith('data:image')) b64 = valLocal;
-                else if(valLocal && typeof valLocal === 'object') b64 = valLocal.f || valLocal.foto || valLocal.base64 || valLocal.img || null;
-
-                // 2° Buscar en el propio objeto del equipo si estuviera embebida
-                if(!b64 && config.equipos && config.equipos[id]) {
-                    const eqObj = config.equipos[id];
-                    const emb = eqObj.fotoRef || eqObj.foto || eqObj.img;
-                    if(typeof emb === 'string' && emb.startsWith('data:image')) b64 = emb;
-                }
-
-                // 3° Descargar directamente desde Firebase usando obtenerUrlBaseFirebase()
-                if(!b64 && typeof obtenerUrlBaseFirebase === 'function') {
-                    const baseFb = obtenerUrlBaseFirebase();
-                    if(baseFb) {
-                        mostrarToastGuardado(`⏳ Cargando foto de ${id} desde la nube...`);
-                        const res = await fetch(`${baseFb}/syso_eq_photos/${encodeURIComponent(id)}.json`);
-                        if(res.ok) {
-                            const d = await res.json();
-                            if(typeof d === 'string' && d.startsWith('data:image')) {
-                                b64 = d;
-                            } else if(d && typeof d === 'object') {
-                                b64 = d.f || d.foto || d.base64 || d.img || d.data || Object.values(d).find(v => typeof v === 'string' && v.startsWith('data:image')) || null;
-                            }
-                            if(b64) {
-                                cacheF[id] = b64;
-                                try { localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF)); } catch(e) {}
-                            }
-                        }
-                    }
+                if(config && config.equipos && config.equipos[id]) {
+                    b64 = extraerImagenBase64Valida(config.equipos[id].fotoRef || config.equipos[id].foto || config.equipos[id].img);
                 }
             } catch(e) {}
 
+            // Paso 2: Buscar en todas las cachés de fotos de localStorage sin depender de un nombre fijo
             if(!b64) {
-                alert(`⚠️ No se encontró una imagen subida en la nube para el código ${id}.\n\nSi deseas cargarle una foto, toca el botón "✏️ Editar" de este equipo.`);
+                try {
+                    const cacheDirecta = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
+                    if(cacheDirecta && cacheDirecta[id]) b64 = extraerImagenBase64Valida(cacheDirecta[id]);
+                } catch(e) {}
+            }
+            if(!b64) {
+                try {
+                    for(let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if(!k || k === CFG_KEY || k === DB_KEY) continue;
+                        const raw = localStorage.getItem(k);
+                        if(raw && raw.includes(id) && raw.includes('data:image')) {
+                            const parsed = JSON.parse(raw);
+                            if(parsed && parsed[id]) {
+                                b64 = extraerImagenBase64Valida(parsed[id]);
+                                if(b64) break;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // Paso 3: Descargar desde Firebase (/syso_eq_photos/{id}.json)
+            const baseFb = obtenerUrlFirebaseSegura();
+            if(!b64 && baseFb) {
+                try {
+                    if(typeof mostrarToastGuardado === 'function') mostrarToastGuardado(`⏳ Descargando foto de ${id}...`);
+                    const res = await fetch(`${baseFb}/syso_eq_photos/${encodeURIComponent(id)}.json`);
+                    if(res.ok) {
+                        const d = await res.json();
+                        b64 = extraerImagenBase64Valida(d);
+                    }
+                } catch(e) {}
+            }
+
+            // Paso 4: Respaldo en /syso_photos/{id}.json por si fue guardada desde Control
+            if(!b64 && baseFb) {
+                try {
+                    const res2 = await fetch(`${baseFb}/syso_photos/${encodeURIComponent(id)}.json`);
+                    if(res2.ok) {
+                        const d2 = await res2.json();
+                        b64 = extraerImagenBase64Valida(d2);
+                    }
+                } catch(e) {}
+            }
+
+            if(!b64) {
+                alert(`⚠️ El equipo ${id} aún no tiene foto almacenada en el servidor.\n\nPuedes subirle una foto desde "✏️ Editar" o desde Control.`);
                 return;
             }
+
+            // Guardar en caché local para apertura instantánea en el próximo clic
+            try {
+                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
+                cacheF[id] = b64;
+                localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF));
+            } catch(e) {}
 
             if(modal && img) {
                 if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
@@ -5361,18 +5434,18 @@ function descargarInventarioExcelProfesional() {
             }
         };
 
-        // --- 2. RESTAURADOR Y SINCRONIZADOR DE ICONOS "📷 FOTO" REALES EN FIREBASE ---
+        // --- 2. RESTAURADOR AUTOMÁTICO DE ICONOS "📷 FOTO" REALES EN FIREBASE ---
         window.sanearFotosRefFantasmaConNube = async function() {
-            if(!config || !config.equipos || typeof obtenerUrlBaseFirebase !== 'function') return;
+            const baseFb = obtenerUrlFirebaseSegura();
+            if(!config || !config.equipos || !baseFb) return;
             try {
-                const baseFb = obtenerUrlBaseFirebase();
-                if(!baseFb) return;
-                const cacheLocal = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
                 const res = await fetch(`${baseFb}/syso_eq_photos.json?shallow=true`);
                 if(!res.ok) return;
                 const mapaNube = await res.json();
-                // Solo actuar si Firebase devolvió un mapa válido de fotos
                 if(!mapaNube || typeof mapaNube !== 'object') return;
+
+                let cacheLocal = {};
+                try { cacheLocal = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}'); } catch(e) {}
 
                 const parcheEq = {};
                 let cambios = 0;
@@ -5381,12 +5454,10 @@ function descargarInventarioExcelProfesional() {
                     if(!eq || esEquipoVirtualComunicacion(id)) return;
                     const existeFotoReal = !!(mapaNube[id] || cacheLocal[id] || eq.fotoRef);
                     if(existeFotoReal && !eq.tieneFotoRef) {
-                        // Restaura el botón 📷 Foto si se había ocultado por error (ej. AGR-HID-007)
                         eq.tieneFotoRef = true;
                         parcheEq[id] = eq;
                         cambios++;
                     } else if(!existeFotoReal && eq.tieneFotoRef) {
-                        // Limpia únicamente si el código no existe en syso_eq_photos de Firebase
                         eq.tieneFotoRef = false;
                         parcheEq[id] = eq;
                         cambios++;
@@ -5567,7 +5638,7 @@ function descargarInventarioExcelProfesional() {
             vincularBotonesSuperioresInventarioDOM();
 
             const selBulkSec = document.getElementById('bulkSeccion'), selBulkGrp = document.getElementById('bulkGrupo');
-            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV656) {
+            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV657) {
                 const wrapSec = selBulkSec.parentElement, wrapGrp = selBulkGrp.parentElement;
                 const gridPadre = wrapSec ? wrapSec.parentElement : null;
                 if(gridPadre && wrapSec && wrapGrp) {
@@ -5577,7 +5648,7 @@ function descargarInventarioExcelProfesional() {
                     gridPadre.insertBefore(wrapSec, wrapGrp);
                     selBulkSec.onchange = () => actualizarGuiaColumnasImportacionExcel();
                     selBulkGrp.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    window.ordenBulkInvertidoV656 = true;
+                    window.ordenBulkInvertidoV657 = true;
                 }
             }
 
@@ -6038,7 +6109,7 @@ function descargarInventarioExcelProfesional() {
             });
         }
 
-        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.56 ---
+        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.57 ---
         async function descubrirMejorModeloGeminiAPI(apiKey) {
             const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             if(!apiKey) return 'gemini-3.5-flash-lite';
@@ -6208,7 +6279,7 @@ function descargarInventarioExcelProfesional() {
             if(apiKey) {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando con Gemini...</div>`;
                 try {
-                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.56". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
+                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.57". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
                     for(const mod of ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
                         const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 6000);
                         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -6253,9 +6324,9 @@ function descargarInventarioExcelProfesional() {
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.56 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.57 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.56';
+            if(badgeVer) badgeVer.innerText = 'V6.57';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
