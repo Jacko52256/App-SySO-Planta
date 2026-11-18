@@ -5297,35 +5297,102 @@ function descargarInventarioExcelProfesional() {
         };
 // === FIN DE LA PARTE 7A DE 7 ===
 // =========================================================================
-        // MOTOR 7B FINAL (V6.55 - PARTE 2 DE 2): SANEAMIENTO DE FOTOS FANTASMA,
-        // BOTONES DE EQUIPOS, ALTA DE SECCIONES, EXCEL COMPLETO, BORRADOR E IA
+        // MOTOR 7B FINAL (V6.56): DESCARGA DIRECTA DE FOTOS DE REFERENCIA DESDE
+        // FIREBASE (SIN BLOQUEO DE syncUrl), AUTO-RESTAURACIÓN DE ICONOS "📷 FOTO",
+        // BOTONES DE EQUIPOS, EXCEL COMPLETO, ESCUDO BORRADOR 30M E IA GEMINI
         // =========================================================================
 
-        // --- 1. SANEAMIENTO ULTRARRÁPIDO DE BOTONES "📷 FOTO" FANTASMA EN NUBE ---
-        window.sanearFotosRefFantasmaConNube = async function() {
-            if(!config || !config.equipos || !config.syncUrl) return;
+        // --- 1. VISOR UNIVERSAL DE FOTOS CONECTADO DIRECTO A obtenerUrlBaseFirebase() ---
+        window.verFotoReferenciaEquipo = async function(id, event) {
+            if(event) event.stopPropagation();
+            const modal = document.getElementById('modalFotoRef');
+            const img = document.getElementById('imgFotoRefGrande') || (modal ? modal.querySelector('img') : null);
+            const tit = document.getElementById('tituloModalFotoRef') || (modal ? modal.querySelector('h3, h4, b') : null);
+            let b64 = null;
+
             try {
+                // 1° Buscar en memoria caché local del dispositivo
+                const cacheF = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
+                const valLocal = cacheF[id];
+                if(typeof valLocal === 'string' && valLocal.startsWith('data:image')) b64 = valLocal;
+                else if(valLocal && typeof valLocal === 'object') b64 = valLocal.f || valLocal.foto || valLocal.base64 || valLocal.img || null;
+
+                // 2° Buscar en el propio objeto del equipo si estuviera embebida
+                if(!b64 && config.equipos && config.equipos[id]) {
+                    const eqObj = config.equipos[id];
+                    const emb = eqObj.fotoRef || eqObj.foto || eqObj.img;
+                    if(typeof emb === 'string' && emb.startsWith('data:image')) b64 = emb;
+                }
+
+                // 3° Descargar directamente desde Firebase usando obtenerUrlBaseFirebase()
+                if(!b64 && typeof obtenerUrlBaseFirebase === 'function') {
+                    const baseFb = obtenerUrlBaseFirebase();
+                    if(baseFb) {
+                        mostrarToastGuardado(`⏳ Cargando foto de ${id} desde la nube...`);
+                        const res = await fetch(`${baseFb}/syso_eq_photos/${encodeURIComponent(id)}.json`);
+                        if(res.ok) {
+                            const d = await res.json();
+                            if(typeof d === 'string' && d.startsWith('data:image')) {
+                                b64 = d;
+                            } else if(d && typeof d === 'object') {
+                                b64 = d.f || d.foto || d.base64 || d.img || d.data || Object.values(d).find(v => typeof v === 'string' && v.startsWith('data:image')) || null;
+                            }
+                            if(b64) {
+                                cacheF[id] = b64;
+                                try { localStorage.setItem(EQ_PHOTO_KEY, JSON.stringify(cacheF)); } catch(e) {}
+                            }
+                        }
+                    }
+                }
+            } catch(e) {}
+
+            if(!b64) {
+                alert(`⚠️ No se encontró una imagen subida en la nube para el código ${id}.\n\nSi deseas cargarle una foto, toca el botón "✏️ Editar" de este equipo.`);
+                return;
+            }
+
+            if(modal && img) {
+                if(tit) tit.innerText = `📷 Foto de Referencia: ${id}`;
+                img.src = b64;
+                modal.classList.remove('hidden');
+            } else {
+                const w = window.open('', '_blank');
+                if(w) w.document.write(`<body style="margin:0;background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${b64}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body>`);
+            }
+        };
+
+        // --- 2. RESTAURADOR Y SINCRONIZADOR DE ICONOS "📷 FOTO" REALES EN FIREBASE ---
+        window.sanearFotosRefFantasmaConNube = async function() {
+            if(!config || !config.equipos || typeof obtenerUrlBaseFirebase !== 'function') return;
+            try {
+                const baseFb = obtenerUrlBaseFirebase();
+                if(!baseFb) return;
                 const cacheLocal = JSON.parse(localStorage.getItem(EQ_PHOTO_KEY) || '{}');
-                const res = await fetch(`${obtenerUrlBaseFirebase()}/syso_eq_photos.json?shallow=true`);
+                const res = await fetch(`${baseFb}/syso_eq_photos.json?shallow=true`);
                 if(!res.ok) return;
-                const mapaNube = (await res.json()) || {};
+                const mapaNube = await res.json();
+                // Solo actuar si Firebase devolvió un mapa válido de fotos
+                if(!mapaNube || typeof mapaNube !== 'object') return;
+
                 const parcheEq = {};
-                let corregidos = 0;
+                let cambios = 0;
                 Object.keys(config.equipos).forEach(id => {
                     const eq = config.equipos[id];
                     if(!eq || esEquipoVirtualComunicacion(id)) return;
-                    const tieneReal = !!(mapaNube[id] || cacheLocal[id] || eq.fotoRef);
-                    if(eq.tieneFotoRef && !tieneReal) {
-                        eq.tieneFotoRef = false;
-                        parcheEq[id] = eq;
-                        corregidos++;
-                    } else if(!eq.tieneFotoRef && tieneReal) {
+                    const existeFotoReal = !!(mapaNube[id] || cacheLocal[id] || eq.fotoRef);
+                    if(existeFotoReal && !eq.tieneFotoRef) {
+                        // Restaura el botón 📷 Foto si se había ocultado por error (ej. AGR-HID-007)
                         eq.tieneFotoRef = true;
                         parcheEq[id] = eq;
-                        corregidos++;
+                        cambios++;
+                    } else if(!existeFotoReal && eq.tieneFotoRef) {
+                        // Limpia únicamente si el código no existe en syso_eq_photos de Firebase
+                        eq.tieneFotoRef = false;
+                        parcheEq[id] = eq;
+                        cambios++;
                     }
                 });
-                if(corregidos > 0) {
+                if(cambios > 0) {
                     guardarLocalSeguro(CFG_KEY, JSON.stringify(config));
                     await parchearSubnodoConfigNube('equipos', parcheEq);
                     if(usuarioActual && usuarioActual.rol === 'Admin') renderListas();
@@ -5333,7 +5400,7 @@ function descargarInventarioExcelProfesional() {
             } catch(e) {}
         };
 
-        // --- 2. IMPRESIÓN QR, EDICIÓN, TRASLADO INLINE, ELIMINACIÓN Y NUEVAS SECCIONES ---
+        // --- 3. IMPRESIÓN QR, EDICIÓN, TRASLADO INLINE Y ELIMINACIÓN ---
         window.abrirImpresionQRsSySO = function(listaIds, tituloPlancha) {
             const idsValidos = (listaIds || []).filter(id => config.equipos && config.equipos[id] && !esEquipoVirtualComunicacion(id));
             if(idsValidos.length === 0) return alert("⚠️ No hay equipos físicos en esta selección para imprimir QR.");
@@ -5468,7 +5535,7 @@ function descargarInventarioExcelProfesional() {
         window.eliminarQR = window.abrirConfirmarEliminarInline;
         window.borrarQR = window.abrirConfirmarEliminarInline;
 
-        // --- 3. RENDERIZADOR DEL INVENTARIO (1° SECCIÓN ➔ 2° GRUPO) Y EXCEL COMPLETO ---
+        // --- 4. RENDERIZADOR DEL INVENTARIO (1° SECCIÓN ➔ 2° GRUPO) Y EXCEL COMPLETO ---
         function obtenerContenedorInventarioDOM() {
             const filtroViejo = document.getElementById('boxDobleFiltroInventario');
             if(filtroViejo) filtroViejo.remove();
@@ -5500,7 +5567,7 @@ function descargarInventarioExcelProfesional() {
             vincularBotonesSuperioresInventarioDOM();
 
             const selBulkSec = document.getElementById('bulkSeccion'), selBulkGrp = document.getElementById('bulkGrupo');
-            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV655) {
+            if(selBulkSec && selBulkGrp && !window.ordenBulkInvertidoV656) {
                 const wrapSec = selBulkSec.parentElement, wrapGrp = selBulkGrp.parentElement;
                 const gridPadre = wrapSec ? wrapSec.parentElement : null;
                 if(gridPadre && wrapSec && wrapGrp) {
@@ -5510,7 +5577,7 @@ function descargarInventarioExcelProfesional() {
                     gridPadre.insertBefore(wrapSec, wrapGrp);
                     selBulkSec.onchange = () => actualizarGuiaColumnasImportacionExcel();
                     selBulkGrp.onchange = () => actualizarGuiaColumnasImportacionExcel();
-                    window.ordenBulkInvertidoV655 = true;
+                    window.ordenBulkInvertidoV656 = true;
                 }
             }
 
@@ -5726,7 +5793,7 @@ function descargarInventarioExcelProfesional() {
             if(totalMostrados === 0) contQR.innerHTML = `<p class="text-muted" style="text-align:center; padding:14px;">No se encontraron equipos registrados.</p>`;
         };
 
-        // --- 4. EXPORTACIÓN E IMPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
+        // --- 5. EXPORTACIÓN E IMPORTACIÓN DE DOCUMENTOS EXCEL COMPLETOS ---
         function serializarInsumosParaTextoExcel(insumosArr) {
             if(!Array.isArray(insumosArr) || insumosArr.length === 0) return '';
             return insumosArr.map(i => `${i.nombre}:${i.stock ?? 0}:${i.vencimiento || 'N/A'}`).join(' | ');
@@ -5872,7 +5939,7 @@ function descargarInventarioExcelProfesional() {
             alert(`✅ ¡IMPORTACIÓN EXCEL COMPLETADA!\n• Creados: ${creados}\n• Actualizados: ${actualizados}`);
         };
 
-        // --- 5. ESCUDO ANTI-SALIDA Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
+        // --- 6. ESCUDO ANTI-SALIDA Y AUTO-GUARDADO DE BORRADOR (30 MINUTOS) ---
         function hayTrabajoEnCursoSinGuardar() {
             const idCtrl = document.getElementById('idEquipo') ? document.getElementById('idEquipo').value.trim() : '';
             const modDin = document.getElementById('moduloDinamico');
@@ -5971,7 +6038,7 @@ function descargarInventarioExcelProfesional() {
             });
         }
 
-        // --- 6. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.55 ---
+        // --- 7. MOTOR IA GEMINI 3.5 FLASH-LITE, 10.000 PERFILES Y ARRANQUE V6.56 ---
         async function descubrirMejorModeloGeminiAPI(apiKey) {
             const preferidos = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             if(!apiKey) return 'gemini-3.5-flash-lite';
@@ -6046,9 +6113,8 @@ function descargarInventarioExcelProfesional() {
         }
 
         window.auditarYCorregirBordesVisualesDOM = function(mostrarAlerta = false) {
-            let corregidos = 0;
             if(mostrarAlerta) alert(`✅ ESCÁNER ÓPTICO (${window.innerWidth}px): 0 elementos cortados.`);
-            return { corregidos, detalleCortes: [] };
+            return { corregidos: 0, detalleCortes: [] };
         };
 
         function formatearPreguntaConGramatica(texto) {
@@ -6142,7 +6208,7 @@ function descargarInventarioExcelProfesional() {
             if(apiKey) {
                 box.innerHTML = `<div style="color:var(--primary); font-weight:bold;">⚡ Analizando con Gemini...</div>`;
                 try {
-                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.55". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
+                    const prompt = `ERES EL CEREBRO IA DE "GESTIÓN SySO V6.56". Usuario: ${nomU} (${usuarioActual?usuarioActual.rol:'Inspector'}). Secciones habilitadas: ${(usuarioActual&&usuarioActual.secciones||[]).join(', ')}. Grupos habilitados: ${(usuarioActual&&usuarioActual.grupo||[]).join(', ')}. Total planta: ${rad.totalFisicos} equipos + 4 Comunicación. Matriz: ${JSON.stringify(rad.matrizSeccionGrupo)}. Responde directo en español (máx 85 palabras) a: "${texto}"`;
                     for(const mod of ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash']) {
                         const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 6000);
                         const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${encodeURIComponent(apiKey)}`, {
@@ -6187,9 +6253,9 @@ function descargarInventarioExcelProfesional() {
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.title = "Gestión SySO V6.55 - Industrial Cloud IA";
+            document.title = "Gestión SySO V6.56 - Industrial Cloud IA";
             const badgeVer = document.querySelector('.version-badge');
-            if(badgeVer) badgeVer.innerText = 'V6.55';
+            if(badgeVer) badgeVer.innerText = 'V6.56';
 
             migrarDatosLegados();
             blindarAlmacenamientoPersistente();
@@ -6231,13 +6297,13 @@ function descargarInventarioExcelProfesional() {
                 reconciliarFallasConHistorialReal();
                 sanearFotosRefFantasmaConNube();
                 ejecutarSimulacion10000Agentes5Anios(true);
-            }, 1800);
+            }, 1500);
             setInterval(ejecutarGemeloDigitalAutonomo, 45000);
             setInterval(verificarSOSActivoEnNube, 12000);
             setInterval(() => {
                 const tagActivo = document.activeElement ? document.activeElement.tagName : '';
                 const usuarioEscribiendo = (tagActivo === 'INPUT' || tagActivo === 'TEXTAREA' || tagActivo === 'SELECT');
-                if(!usuarioEscribiendo && !edicionActivaLock && !camaraQRActiva && !editQRId && !editGrupoNom && !editUsuId && !editSecNom && !window.ctrlEditEmId && window.ctrlEditUsuId === null) {
+                if(!usuarioEscribiendo && !edicionActivaLock && !camaraQRActiva && !editQRId && !editGrupoNom && !editUsuId && !editSecNom && !window.ctrlEditEmId && !window.ctrlEditUsuId === null) {
                     sincronizarDesdeNube(false);
                 }
             }, 30000);
